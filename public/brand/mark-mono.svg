@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="FindBox emblem">
+  <g transform="translate(1.765 1.765)">
+    <clipPath id="t"><rect width="60.47" height="60.47"/></clipPath>
+    <rect width="60.47" height="60.47" fill="currentColor"/>
+    <g clip-path="url(#t)">
+    <circle cx="30.235" cy="30.235" r="6.437" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="7.724" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="9.011" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="10.299" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="11.586" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="12.874" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="14.161" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="15.448" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="16.736" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="19.311" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="20.598" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="21.885" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="23.047" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="24.335" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    <circle cx="30.235" cy="30.235" r="26.266" fill="none" stroke="#ffffff" stroke-width="0.450"/>
+    </g>
+  </g>
+</svg>

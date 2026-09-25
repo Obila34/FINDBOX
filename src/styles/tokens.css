@@ -1,0 +1,27 @@
+:root {
+  /* FindBox brand palette, sampled from the supplied brand mockup. */
+  --fb-teal-900: #073847; --fb-teal-800: #04414c; --fb-teal-700: #0d6166;
+  --fb-teal-600: #0f7378; --fb-teal-500: #13868e; --fb-teal-400: #22a3a5;
+  --fb-teal-300: #33bab7; --fb-teal-200: #a9d9d8; --fb-teal-100: #d6ebeb; --fb-teal-50: #eef6f6;
+  --fb-tile: #e8e8e8;
+  --fb-ink: #171717; --fb-ink-2: #404040; --fb-ink-3: #666; --fb-ink-4: #757575;
+  --fb-paper: #fff; --fb-paper-2: #f5f5f5; --fb-paper-3: #ededed;
+  --fb-line: #e5e5e5; --fb-line-strong: #cecece;
+  --fb-status-lost: #a35d12; --fb-status-match: #13868e; --fb-status-ready: #0d6166;
+  --fb-status-done: #2e7d4f; --fb-status-review: #6a5aa8; --fb-status-danger: #b3261e;
+  --t-hero: clamp(2rem, 5vw, 4.2rem); --t-display: clamp(2rem, 3.5vw, 3.25rem);
+  --t-h2: clamp(1.5rem, 3vw, 2.5rem); --t-h3: clamp(1.1875rem, 1.1rem + 0.3vw, 1.375rem);
+  --t-body: 0.9375rem; --t-ui: 0.875rem; --t-small: 0.78rem; --t-eyebrow: 0.75rem;
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 24px;
+  --sh-tile: 0 2px 8px rgba(0,0,0,.025);
+  --sh-raise: 0 8px 24px rgba(0,0,0,.07); --sh-sheet: 0 20px 80px rgba(0,0,0,.16);
+  --motion-fast: 200ms; --motion-base: 500ms; --motion-slow: 500ms;
+  --ease-out: cubic-bezier(.25,.1,.25,1); --ease-inout: cubic-bezier(.25,.1,.25,1);
+  --ease-spring: cubic-bezier(.32,.72,0,1); --stagger: 60ms;
+  --gutter: 20px; --content-max: 1440px; --nav-h: 64px; --bottom-nav-h: 64px;
+}
+@media (min-width: 640px) { :root { --gutter: 32px; } }
+@media (min-width: 1024px) { :root { --gutter: 48px; --nav-h: 72px; } }
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; --stagger: 0ms; }
+}

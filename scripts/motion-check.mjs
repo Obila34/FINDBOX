@@ -1,0 +1,12 @@
+import { chromium } from 'playwright'
+const b = await chromium.launch({ channel: 'chrome' }).catch(() => chromium.launch({ channel: 'msedge' }))
+const c = await b.newContext({ viewport: { width: 1440, height: 900 } })
+const p = await c.newPage()
+await p.goto('http://localhost:4173/', { waitUntil: 'networkidle' })
+await p.waitForTimeout(3500)
+const state = await p.evaluate(() => { const v = document.querySelector('video'); return v ? { ready: v.readyState, paused: v.paused, t: v.currentTime, w: v.videoWidth } : null })
+console.log('video', JSON.stringify(state))
+await p.screenshot({ path: 'shots/motion-hero.png' })
+await p.mouse.wheel(0, 2600); await p.waitForTimeout(1800)
+await p.screenshot({ path: 'shots/motion-story.png' })
+await b.close()
