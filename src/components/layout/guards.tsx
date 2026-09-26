@@ -14,9 +14,7 @@ export function RequireRole({ roles }: { roles: Role[] }) {
   return <Outlet />
 }
 
-/** /app: fresh visitors land on the welcome screen; returning sessions go home. */
+/** Stable entry for installed apps, including older manifests that launch /app. */
 export function AppEntry() {
-  const session = useSession()
-  if (!session) return <Navigate to="/app/welcome" replace />
-  return <Navigate to={homeFor(session.role)} replace />
+  return <Navigate to="/app/sign-in" replace />
 }

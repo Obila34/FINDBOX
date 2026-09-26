@@ -29,7 +29,7 @@ interface BeforeInstallPromptEvent extends Event { prompt: () => Promise<void>; 
 /** Captures Chrome's beforeinstallprompt. iOS never fires it: the UI shows manual Share-menu steps instead. */
 export function useInstallPrompt() {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null)
-  const [installed, setInstalled] = useState(false)
+  const [installed, setInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches || !!(navigator as Navigator & { standalone?: boolean }).standalone)
   useEffect(() => {
     const onPrompt = (e: Event) => { e.preventDefault(); setDeferred(e as BeforeInstallPromptEvent) }
     const onInstalled = () => { setInstalled(true); setDeferred(null) }

@@ -5,6 +5,7 @@ import './styles/base.css'
 import './styles/effects.css'
 import './styles/experience.css'
 import './styles/production.css'
+import './styles/mobile-app.css'
 import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(

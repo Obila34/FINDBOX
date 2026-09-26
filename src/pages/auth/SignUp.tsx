@@ -5,7 +5,7 @@ import { AuthFrame, DemoAccountNote } from './AuthFrame'
 import { Input, PasswordInput, Select, Checkbox } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { useStore } from '@/store/useStore'
-import { useSimulatedWork } from '@/lib/hooks'
+import { saveLocalCredential } from '@/lib/localAuth'
 import { cx } from '@/lib/util'
 
 type Role = 'parent' | 'student'
@@ -17,7 +17,7 @@ export function SignUp() {
   const school = useStore((s) => s.school)
   const createLocalAccount = useStore((s) => s.createLocalAccount)
   const accounts = useStore((s) => s.accounts)
-  const { busy, run } = useSimulatedWork()
+  const [busy, setBusy] = useState(false)
   const [step, setStep] = useState(0)
   const [dir, setDir] = useState<'f' | 'b'>('f')
   const [role, setRole] = useState<Role | null>(null)
@@ -48,9 +48,13 @@ export function SignUp() {
     e.preventDefault()
     if (!validate()) return
     if (step < 2) { go(step + 1); return }
-    await run(800)
+    setBusy(true)
+    try {
+    await saveLocalCredential(f.email, f.password)
     createLocalAccount({ role: role!, name: f.name, email: f.email, childName: role === 'parent' ? f.childName : undefined, classLabel: f.classLabel, yearGroup: Number(f.yearGroup) })
     go(3)
+    } catch { setErr({ consent: 'Your account could not be saved. Check device storage and try again.' }) }
+    finally { setBusy(false) }
   }
 
   const students = school.studentAccountsEnabled
@@ -87,8 +91,8 @@ export function SignUp() {
           {step === 1 && (
             <div className="flex flex-col gap-4">
               <Input label="Display name" name="name" autoComplete="name" value={f.name} onChange={set('name')} error={err.name} placeholder={role === 'parent' ? 'e.g. Amina' : 'e.g. Zuri'} required />
-              <Input label="Email" type="email" name="email" autoComplete="email" inputMode="email" value={f.email} onChange={set('email')} error={err.email} hint="Used only as a label on this device." required />
-              <PasswordInput label="Password" name="new-password" autoComplete="new-password" value={f.password} onChange={set('password')} error={err.password} hint="Online authentication will be connected separately." required />
+              <Input label="Email" type="email" name="email" autoComplete="email" inputMode="email" value={f.email} onChange={set('email')} error={err.email} hint="Use this email to sign in on this device." required />
+              <PasswordInput label="Password" name="new-password" autoComplete="new-password" value={f.password} onChange={set('password')} error={err.password} hint="Use at least 6 characters. This account is saved on this device." required />
             </div>
           )}
           {step === 2 && (
