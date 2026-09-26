@@ -33,7 +33,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,woff2}', 'icons/*.png', 'media/catalog/*.webp', 'media/products/*.webp'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2}', 'icons/*.png', 'media/catalog/*.webp', 'media/products/*.webp', 'media/avatars/*.webp', 'media/objects/*.webp'],
         globIgnores: ['**/three-engine-*.js', '**/scene-*.js', '**/Landing-*.js', '**/charts-*.js', '**/scan-*.js', '**/Dashboard-*.js', '**/StudioShader-*.js'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/assets\//, /^\/media\//],

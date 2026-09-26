@@ -1,11 +1,8 @@
-import { useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react'
+import { useEffect, useRef, useState } from 'react'
+import { motion, useAnimationFrame, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react'
 import Balancer from 'react-wrap-balancer'
-import { Group, Vector3 } from 'three'
 import { Pause, Play, ArrowUpRight } from 'lucide-react'
-import { ExperienceCanvas } from './ExperienceCanvas'
-import { ProductModel, type ProductKind } from './ProductModels'
+import { ProductImage, type ProductKind } from '@/components/ui/ProductImage'
 import { Button } from '@/components/ui/Button'
 
 const products: { kind: ProductKind; name: string; eyebrow: string; body: string }[] = [
@@ -14,17 +11,28 @@ const products: { kind: ProductKind; name: string; eyebrow: string; body: string
   { kind: 'airtag', name: 'Keep your essentials close.', eyebrow: '03 / THE TRACKER', body: 'A keyring tracker for the essentials you carry. Connect its item record to your school’s return process.' },
 ]
 function Orbit({ progress, paused, selected, onSelect }: { progress: MotionValue<number>; paused: boolean; selected: number; onSelect: (i: number) => void }) {
-  const groups = useRef<(Group | null)[]>([]); const angle = useRef(0); const scaleTarget = useRef(new Vector3())
-  useFrame((state, delta) => {
-    if (!paused) angle.current += Math.min(delta, 0.04) * 0.13
-    groups.current.forEach((g, i) => { if (!g) return; const a = angle.current + i * Math.PI * 2 / 3 + 1.6 + (paused ? 0 : progress.get() * 1.4)
-      g.position.set(Math.cos(a) * 1.9, Math.sin(a) * -0.63, Math.sin(a) * 0.38)
-      g.rotation.y = paused ? 0 : Math.sin(state.clock.elapsedTime * 0.35 + i) * 0.4 + state.pointer.x * 0.2
-      g.rotation.z = paused ? 0 : Math.sin(a) * 0.12
-      const scale = i === selected ? 1.12 : 0.83; g.scale.lerp(scaleTarget.current.setScalar(scale), 0.08)
-    })
+ const host = useRef<HTMLDivElement>(null)
+ const objects = useRef<(HTMLButtonElement | null)[]>([])
+ const phase = useRef(0); const radius = useRef(200)
+ const visible = useInView(host)
+ useEffect(() => {
+  const observer = new ResizeObserver(([entry]) => { radius.current = entry.contentRect.width * .29 })
+  if (host.current) observer.observe(host.current)
+  return () => observer.disconnect()
+ }, [])
+ useAnimationFrame((_time, delta) => {
+  if (!visible || document.hidden) return
+  if (!paused) phase.current += Math.min(delta, 40) * .00016
+  objects.current.forEach((el, i) => {
+   if (!el) return
+   const a = phase.current + i * Math.PI * 2 / 3 + Math.PI / 2 + (paused ? 0 : progress.get() * 1.4)
+   const x = Math.cos(a) * radius.current, y = Math.sin(a) * 55
+   const scale = (selected === i ? 1 : .85) + Math.sin(a) * .06
+   el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale}) rotate(${Math.cos(a) * 7}deg)`
+   el.style.zIndex = String(Math.round((Math.sin(a) + 1) * 10))
   })
-  return <group>{products.map((p, i) => <group key={p.kind} ref={g => { groups.current[i] = g }} position={[(i - 1) * 1.7, 0, 0]} onClick={e => { e.stopPropagation(); onSelect(i) }} onPointerOver={() => { document.body.style.cursor = 'pointer' }} onPointerOut={() => { document.body.style.cursor = '' }}><ProductModel kind={p.kind} /></group>)}</group>
+ })
+ return <div ref={host} className="fb-photo-orbit">{products.map((p, i) => <button key={p.kind} ref={el => { objects.current[i] = el }} className={`fb-orbit-object is-${p.kind}`} onClick={() => onSelect(i)} aria-label={`Explore ${p.kind === 'airtag' ? 'tracking tag' : p.kind}`} aria-pressed={selected === i}><ProductImage kind={p.kind} eager /></button>)}</div>
 }
 export function HeroExperience() {
   const ref = useRef<HTMLDivElement>(null); const reduced = useReducedMotion(); const [paused, setPaused] = useState(false); const [selected, setSelected] = useState(0)
@@ -38,8 +46,8 @@ export function HeroExperience() {
     </motion.div>
     <motion.div className="fb-orbit-stage" style={reduced || paused ? {} : { y, rotate }}>
       <div className="fb-orbit-ring" /><div className="fb-orbit-ring fb-orbit-ring-inner" /><span className="fb-stage-note">DESIGNED TO COME BACK.</span>
-      <ExperienceCanvas moving={!paused && !reduced}><Orbit progress={scrollYProgress} paused={paused || !!reduced} selected={selected} onSelect={setSelected} /></ExperienceCanvas>
-      <button className="fb-motion-control" onClick={() => setPaused(!paused)} aria-label={paused ? 'Resume object motion' : 'Pause object motion'}>{paused ? <Play size={15} /> : <Pause size={15} />} {paused || reduced ? 'Motion off' : 'Live 3D'}</button>
+      <Orbit progress={scrollYProgress} paused={paused || !!reduced} selected={selected} onSelect={setSelected} />
+      <button className="fb-motion-control" onClick={() => setPaused(!paused)} aria-label={paused ? 'Resume object motion' : 'Pause object motion'}>{paused ? <Play size={15} /> : <Pause size={15} />} {paused || reduced ? 'Motion off' : 'Motion on'}</button>
     </motion.div>
     <div className="fb-product-selector" role="group" aria-label="Explore connected objects">{products.map((p, i) => <button key={p.kind} onClick={() => setSelected(i)} aria-pressed={selected === i}>{p.kind === 'bottle' ? 'QR bottle' : p.kind === 'nfc' ? 'NFC tag' : 'Key finder'}<span>0{i + 1}</span></button>)}</div>
     <div className="fb-product-story" aria-live="polite"><span>{products[selected].eyebrow}</span><h2>{products[selected].name}</h2><p>{products[selected].body}</p></div>

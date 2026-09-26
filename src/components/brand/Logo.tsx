@@ -1,4 +1,4 @@
-import { RINGS } from './brandGeometry'
+import { ScanLine } from 'lucide-react'
 import { cx } from '@/lib/util'
 
 interface LogoProps {
@@ -10,25 +10,19 @@ interface LogoProps {
   title?: string
 }
 
-/** The FINDBOX lockup, traced from the brand PDF. Wordmark + emblem, always in this proportion. */
+/** The shared typographic FINDBOX wordmark. */
 export function Logo({ height = 24, variant = 'brand', className, title = 'FindBox' }: LogoProps) {
- return <span role="img" aria-label={title} className={cx('inline-flex items-center gap-2 shrink-0', className)} style={{ height, color: variant === 'inverted' ? '#fff' : 'currentColor' }}><img src="/icons/icon-512.png" width={height} height={height} alt="" style={{borderRadius:'50%'}} /><strong style={{fontFamily:'Arial, sans-serif',fontSize:height*.58,letterSpacing:'-.05em'}}>FINDBOX</strong></span>
+ return <span role="img" aria-label={title} className={cx('fb-wordmark', className)} style={{ fontSize: height, color: variant === 'inverted' ? '#fff' : undefined }}>FINDBOX</span>
 }
 
 interface MarkProps { size?: number; variant?: 'brand' | 'inverted' | 'mono' | 'outline'; className?: string; pulse?: boolean; strokeWidth?: number }
 
-/** The square emblem alone. `pulse` adds the discovery ring animation (paused on hidden tabs, removed under reduced motion). */
+/** Square app-icon rendition of the same wordmark. */
 export function Mark({ size = 32, className }: MarkProps) {
- return <img src="/icons/icon-512.png" width={size} height={size} alt="" className={cx('shrink-0 rounded-full',className)} />
+ return <img src="/icons/icon-512.png" width={size} height={size} alt="" className={cx('shrink-0 rounded-sm',className)} />
 }
 
-/** Discovery ring: the emblem's rings as a standalone animated signal (used in the hero and on timeline nodes). */
-export function DiscoveryRing({ size = 120, className, active = true }: { size?: number; className?: string; active?: boolean }) {
-  return (
-    <svg viewBox="0 0 64 64" width={size} height={size} aria-hidden="true" className={cx('overflow-visible', className)}>
-      {active && <circle cx="32" cy="32" r="28" fill="none" stroke="var(--fb-teal-300)" strokeWidth="1.2" className="fb-pulse-ring" />}
-      {active && <circle cx="32" cy="32" r="28" fill="none" stroke="var(--fb-teal-300)" strokeWidth="1.2" className="fb-pulse-ring" style={{ animationDelay: '1.2s' }} />}
-      {RINGS.map(([a, b], i) => <circle key={i} cx="32" cy="32" r={(a + b) / 2} fill="none" stroke="currentColor" strokeWidth={0.5} opacity={0.9 - i * 0.03} />)}
-    </svg>
-  )
+/** A simple status icon; branding always uses the wordmark. */
+export function DiscoveryRing({ size = 120, className }: { size?: number; className?: string; active?: boolean }) {
+ return <ScanLine size={size} strokeWidth={1.4} className={className} aria-hidden="true" />
 }

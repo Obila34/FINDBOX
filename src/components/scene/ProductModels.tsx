@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { CanvasTexture, SRGBColorSpace, Vector2 } from 'three'
 import QRCode from 'qrcode'
-export { Explorer } from './ReferenceCharacters'
 export type ProductKind = 'bottle' | 'nfc' | 'airtag'
 export function ProductModel({ kind }: { kind: ProductKind }) {
  const textures = useMemo(() => {

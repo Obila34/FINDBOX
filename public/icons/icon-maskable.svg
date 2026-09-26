@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#0d6166"/>
-  <g fill="none" stroke="#e4e5e8" stroke-width="6" opacity=".86">
-    <ellipse cx="256" cy="256" rx="38" ry="174"/><ellipse cx="256" cy="256" rx="60" ry="174" transform="rotate(18 256 256)"/>
-    <ellipse cx="256" cy="256" rx="82" ry="174" transform="rotate(36 256 256)"/><ellipse cx="256" cy="256" rx="104" ry="174" transform="rotate(54 256 256)"/>
-    <ellipse cx="256" cy="256" rx="126" ry="174" transform="rotate(72 256 256)"/><ellipse cx="256" cy="256" rx="148" ry="174" transform="rotate(90 256 256)"/>
-    <ellipse cx="256" cy="256" rx="126" ry="174" transform="rotate(108 256 256)"/><ellipse cx="256" cy="256" rx="104" ry="174" transform="rotate(126 256 256)"/>
-    <ellipse cx="256" cy="256" rx="82" ry="174" transform="rotate(144 256 256)"/><ellipse cx="256" cy="256" rx="60" ry="174" transform="rotate(162 256 256)"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#e5eade"/><text x="256" y="285" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="84" font-weight="600" letter-spacing="-6" fill="#657b56" textLength="352" lengthAdjust="spacingAndGlyphs">FINDBOX</text></svg>

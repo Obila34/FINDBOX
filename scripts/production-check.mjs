@@ -25,8 +25,7 @@ for(const width of [390,1440]) {
   if(role==='Student'){
    await page.goto(origin+'/app/streaks');await page.getByRole('button',{name:'I checked my belongings today'}).click();assert.equal(await page.getByRole('button',{name:'You showed up today'}).isDisabled(),true)
    await page.reload();assert.equal(await page.getByRole('button',{name:'You showed up today'}).isDisabled(),true)
-   await page.getByRole('button',{name:'Explore in 3D'}).click()
-   await page.getByRole('button',{name:/Noah ·/}).click();await page.reload();await page.getByRole('button',{name:'Explore in 3D'}).click();assert.equal(await page.getByRole('button',{name:/Noah ·/}).getAttribute('aria-pressed'),'true')
+   await page.getByRole('button',{name:'Say hello',exact:true}).click();assert.equal(await page.getByRole('button',{name:'You’ve got this!',exact:true}).getAttribute('aria-pressed'),'true')
    await page.screenshot({path:'shots/production/streak-checked-'+width+'.png',fullPage:true})
   }
  }

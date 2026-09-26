@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Menu, ArrowUpRight, LogOut, WifiOff, type LucideIcon } from 'lucide-react'
 import { StudioBrand } from '@/components/brand/StudioBrand'
+import { Logo } from '@/components/brand/Logo'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
@@ -40,7 +41,7 @@ export function WorkspaceShell({ links, primary, family = false, hideBottomNav =
     <div className="fb-workspace-meta fb-container"><p><span className="fb-brand-dot" />{school.name}<span className="fb-meta-divider">/</span>{ROLE_LABEL[person.role]}</p><span className="hidden sm:inline"><LiveClock /></span></div>
     {!online && <div role="status" className="fb-container mb-5 flex items-center gap-2 text-[13px] text-ink-3"><WifiOff size={15} />You are offline. Changes save on this device only.</div>}
     <main id="main" className="fb-workspace-main fb-container"><Outlet /></main>
-    <footer className="fb-workspace-footer fb-container"><span>A little less lost. A lot more found.</span><span>FINDBOX <span aria-hidden="true">↗</span></span></footer>
+    <footer className="fb-workspace-footer fb-container"><span>A little less lost. A lot more found.</span><Logo height={18} /></footer>
     {!hideBottomNav && <nav aria-label="Mobile primary" className="fb-bottom-nav fb-safe-b">
       {links.slice(0, 2).map(l => navLink(l, true))}
       {primary && navLink(primary, true)}

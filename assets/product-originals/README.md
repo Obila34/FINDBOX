@@ -1,0 +1,17 @@
+# Generated FindBox product photography
+
+Created with the built-in image-generation tool. Originals: `bottle.png`, `nfc.png`, and `airtag.png`. Responsive transparent WebP delivery files are in `public/media/objects`. Rebuild them with `node scripts/build-product-photos.mjs`.
+
+The bottle's QR graphic is decorative product artwork. Functional, scannable item tags continue to come from the app's QR-code generator.
+
+## Bottle prompt
+
+Premium photorealistic ecommerce product cutout for FindBox. One transparent clear reusable water bottle, tall cylindrical glasslike body with gently curved shoulders, glossy black screw cap and black loop handle attached to cap, realistic thick clear base and natural refraction. A small crisp square QR-style identification sticker with dark green modules on a white label on the front upper body; tiny FINDBOX wordmark below the code. Entire bottle visible including cap and base. Slight three-quarter angle, straight upright silhouette, generous breathing room. Exceptional high-resolution studio product photography, physically believable material, precise edges, beautiful softbox highlights, luxurious realistic detail. Actual transparent alpha background, clean isolated cutout, no colored background, no gradient behind object, no scenery, no person, no extra objects, no watermark. Portrait 2:3 composition. Match refined green and cream school belongings brand. Label is an illustrative product label, not a functional QR destination.
+
+## NFC prompt
+
+Premium photorealistic ecommerce product cutout for FindBox. One circular NFC sticker tag shown in a subtly tilted frontal three-quarter perspective, almost front on so NFC is easy to read. Transparent thin round film perimeter with intricate silver metallic concentric antenna coil traces, tiny dark chip detail at top of coil, clean white central circle with bold dark grey text exactly NFC. This is a realistic flat adhesive NFC inlay sticker, NOT a thick coin or puck. Entire round sticker visible, centered, occupying 75 percent of square composition. Exceptional high-resolution macro studio photography, realistic fine metal traces, soft silver reflections, crisp clean cutout edges, refined industrial design. Genuine transparent alpha background, no white rectangular background, no scenery, no shadow rectangle, no extra objects, no watermark, no hands. Believable premium product photography consistent with a clear black-cap water bottle and matte charcoal keyring tracking tag.
+
+## Tracker prompt
+
+Premium photorealistic ecommerce product cutout for FindBox. One compact round charcoal-black key finder tracking tag, like a slim rounded circular pebble 4cm across, with brushed polished silver split keyring threaded through the small hole at the upper edge. Matte soft-touch dark charcoal body, clean blue-grey thin circular indicator ring near lower front, no text or logos. The silver ring rises above the tracker body and tilts slightly to the left. Three-quarter front product angle, body still almost frontal. Entire ring and tag visible, centered with generous breathing room, square composition. Exceptional high-resolution studio product photography, realistic soft-touch texture, crisp bevels, nuanced metal reflections, physically credible thickness, beautiful softbox light. Genuine transparent alpha background, no scenery, no white rectangular background, no extra keys, no hands, no watermark. Consistent premium product photography style with a clear black-cap water bottle and metallic NFC sticker.

@@ -1,0 +1,7 @@
+# FindBox illustrated companion
+
+Generated with the built-in image-generation tool. Original: `findbox-explorer.png`. Web assets: `public/media/avatars/findbox-explorer-640.webp` and `findbox-explorer-1280.webp`. Alpha transparency is preserved. Regenerate delivery assets with `node scripts/build-brand-assets.mjs`.
+
+## Final generation prompt
+
+Use case: illustration-story. Create a premium high-resolution avatar illustration for FindBox, a school belongings app. One friendly Black schoolgirl explorer around 12 years old, beautiful natural textured afro puff hair, round refined glasses, expressive warm brown eyes, confident joyful smile. Tasteful teal green overshirt, cream t-shirt, forest green trousers, clean white trainers, small sage backpack. Full body, standing in relaxed natural pose with one hand raised in a friendly greeting. Exceptional polished hand-painted digital editorial character illustration, dimensional light and rich tactile shading but NOT a 3D mesh/render or plastic doll. Anatomically coherent, beautifully drawn hands, refined facial detail. Welcoming and age appropriate, modern premium school brand. Centered isolated full-body character, generous clear space around silhouette, feet completely visible. Genuinely transparent background with alpha, no scenery, no text, no logos, no watermark, no borders. Portrait composition. Crisp high quality suitable for website hero cards and app companion avatar.
