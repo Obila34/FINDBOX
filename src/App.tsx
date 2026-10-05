@@ -9,6 +9,7 @@ import { Toaster, Celebration } from '@/components/ui/Toaster'
 import { usePauseWhenHidden } from '@/lib/hooks'
 import { Skeleton } from '@/components/ui/EmptyState'
 
+const Storefront = lazy(() => import('@/commerce/Storefront').then(m => ({ default: m.Storefront })))
 const Landing = lazy(() => import('@/pages/landing/Landing').then(m => ({ default: m.Landing })))
 const TagLanding = lazy(() => import('@/pages/landing/TagLanding').then(m => ({ default: m.TagLanding })))
 const Welcome = lazy(() => import('@/pages/auth/Welcome').then(m => ({ default: m.Welcome })))
@@ -53,6 +54,8 @@ function RootEntry() {
 
 export function App() {
   usePauseWhenHidden()
+  const platformLocation = useLocation()
+  if (/^\/shop(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the store…</div>}><Storefront /></Suspense></LoadBoundary>
 
   return (
     <>

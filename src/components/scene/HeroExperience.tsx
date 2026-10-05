@@ -42,7 +42,7 @@ export function HeroExperience() {
       <p className="fb-kicker"><span /> SMALL TAGS. BIG PEACE OF MIND.</p>
       <h1><Balancer>A little less lost.<br /><em>A lot more found.</em></Balancer></h1>
       <p className="fb-hero-intro">For the things that go everywhere with you.<br />One connected school. A thousand little reunions.</p>
-      <div className="fb-orbit-actions"><Button to="/app/welcome" size="lg" arrow>Find your way home</Button><Button to="/app/sign-in" variant="ghost" size="lg" iconRight={<ArrowUpRight size={17} />}>Open FindBox</Button></div>
+      <div className="fb-orbit-actions"><Button to="/shop" size="lg" arrow>Find your tags</Button><Button to="/app/sign-in" variant="ghost" size="lg" iconRight={<ArrowUpRight size={17} />}>Open FindBox</Button></div>
     </motion.div>
     <motion.div className="fb-orbit-stage" style={reduced || paused ? {} : { y, rotate }}>
       <div className="fb-orbit-ring" /><div className="fb-orbit-ring fb-orbit-ring-inner" /><span className="fb-stage-note">DESIGNED TO COME BACK.</span>

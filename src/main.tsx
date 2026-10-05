@@ -8,6 +8,7 @@ import './styles/production.css'
 import './styles/mobile-app.css'
 import './styles/brand-refresh.css'
 import './styles/product-photos.css'
+import './commerce/storefront.css'
 import { App } from './App'
 
 createRoot(document.getElementById('root')!).render(
