@@ -14,6 +14,7 @@ This GitHub release runs entirely in the browser. The VPS backend remains local 
 | Orders and supplied tags | `/shop/account` |
 | App sign in / sign up | `/app/sign-in`, `/app/sign-up` |
 | Original family app | `/app/home` |
+| Shop inside the app | `/app/shop` |
 | School workspace | `/manage` |
 
 ## Sign in
@@ -50,3 +51,11 @@ Deploy the static `dist` directory. The existing GitHub connection deploys main 
 `npm run test:commerce` runs the full browser journey against localhost:5173 using installed Microsoft Edge. Set `BASE` to test another deployment. The PWA opens at sign-in and supports installing from a supported browser over HTTPS. The store and app retain separate navigation.
 
 Before accepting real customers, connect and deploy the VPS API, database, server authentication, payment provider, email, backups and physical tag fulfilment. The static preview is not a live commerce service.
+
+## Connected mode
+
+The default release preserves sample accounts and browser-only checkout. Shop is available after signing in from the app navigation; student checkout directs purchases to a parent.
+
+A separate server-connected frontend is selected with `VITE_SERVER_MODE=true`. It uses email/Google authentication, account security, school memberships and real API order verification. It requires the private VPS backend and configured providers. Google is visibly unavailable in the public sample rather than simulated. Backend files and credentials are not published in this frontend repository.
+
+`node scripts/app-shop-check.mjs` checks the mobile app-to-shop journey. No real payments are enabled in the public preview.

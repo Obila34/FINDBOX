@@ -44,7 +44,7 @@ export function WorkspaceShell({ links, primary, family = false, hideBottomNav =
     <footer className="fb-workspace-footer fb-container"><span>A little less lost. A lot more found.</span><Logo height={18} /></footer>
     {!hideBottomNav && <nav aria-label="Mobile primary" className="fb-bottom-nav fb-safe-b">
       {links.slice(0, 2).map(l => navLink(l, true))}
-      {primary && navLink(primary, true)}
+      {primary && !family && navLink(primary, true)}
       {links.slice(2).map(l => navLink(l, true))}
     </nav>}
     <Sheet open={menu} onClose={closeMenu} title="Your workspace" description={school.name}>

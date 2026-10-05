@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { Home, Boxes, Search, Flame, Inbox, Plus, HandHelping } from 'lucide-react'
+import { Home, Boxes, Search, Flame, Inbox, Plus, HandHelping, ShoppingBag } from 'lucide-react'
 import { usePerson, useStore, useUnread } from '@/store/useStore'
 import { capabilities } from '@/domain/permissions'
 import { WorkspaceShell, type WorkspaceLink } from './WorkspaceShell'
@@ -18,6 +18,7 @@ export function AppShell() {
     isStudent && caps.has('report_found') ? { to: '/app/found', label: 'Found', icon: HandHelping } : { to: '/app/gallery', label: 'Gallery', icon: Search },
     ...(isStudent ? [{ to: '/app/streaks', label: 'Streaks', icon: Flame }] : []),
     { to: '/app/inbox', label: 'Inbox', icon: Inbox, badge: unread },
+    { to: '/app/shop', label: 'Shop', icon: ShoppingBag },
   ]
   const primary = caps.has('register_item') ? { to: '/app/register', label: 'Register item', icon: Plus } : caps.has('report_found') ? { to: '/app/found', label: 'Found something', icon: HandHelping } : null
   const hideBottomNav = /\/app\/(register|report|found|gallery\/.+\/claim)/.test(location.pathname)

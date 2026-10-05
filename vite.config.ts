@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import path from 'node:path'
 
 export default defineConfig({
-  server: { proxy: { '/api': 'http://127.0.0.1:3001' } },
+  server: { proxy: { '/api': process.env.FINDBOX_API_TARGET || 'http://127.0.0.1:3001' } },
   plugins: [
     react(),
     VitePWA({

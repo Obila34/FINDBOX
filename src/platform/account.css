@@ -1,0 +1,97 @@
+.fs-form {
+  display: grid;
+  gap: 18px;
+  margin: 25px 0;
+}
+.fs-form label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: #35503c;
+}
+.fs-form input {
+  padding: 14px 16px;
+  border: 1px solid #dbe2d3;
+  border-radius: 16px;
+  width: 100%;
+  background: #fff;
+  color: #183d2d;
+}
+.fs-form button,
+.fs-primary {
+  padding: 15px 24px;
+  border-radius: 24px;
+  background: #173d30;
+  color: #fff;
+  font-size: 13px;
+}
+.fs-form p,
+.fs-hint {
+  font-size: 12px;
+  color: #697763;
+  line-height: 1.6;
+}
+.fs-google {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #d4ddcc;
+  border-radius: 24px;
+  background: white;
+  color: #254030;
+  margin: 14px 0;
+}
+.fs-google:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.fs-divider {
+  text-align: center;
+  font-size: 12px;
+  color: #7b8674;
+  margin: 20px 0;
+}
+.fs-security section {
+  border-top: 1px solid #dce4d4;
+  padding: 25px 0;
+  display: grid;
+  gap: 14px;
+}
+.fs-security h2 {
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+.fs-security p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #68755f;
+}
+.fs-security button,
+.fs-security a {
+  font-size: 13px;
+  padding: 12px 18px;
+  border-radius: 16px;
+  background: #e8eee0;
+  color: #24432f;
+  text-align: center;
+}
+.fs-security button:disabled {
+  opacity: 0.55;
+}
+.fs-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 13px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #edf0e5;
+}
+.fs-form :focus-visible,
+.fs-security :focus-visible {
+  outline: 2px solid #6f895e;
+  outline-offset: 3px;
+}

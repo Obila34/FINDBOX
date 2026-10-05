@@ -9,6 +9,10 @@ import { Toaster, Celebration } from '@/components/ui/Toaster'
 import { usePauseWhenHidden } from '@/lib/hooks'
 import { Skeleton } from '@/components/ui/EmptyState'
 
+const ServerStorefront=lazy(()=>import('@/commerce/ServerStorefront').then(m=>({default:m.ServerStorefront})))
+const ServerAuth=lazy(()=>import('@/platform/ServerAuth').then(m=>({default:m.ServerAuth})))
+const ServerSecurity=lazy(()=>import('@/platform/ServerSecurity').then(m=>({default:m.ServerSecurity})))
+const Platform=lazy(()=>import('@/platform/Platform').then(m=>({default:m.Platform})))
 const Storefront = lazy(() => import('@/commerce/Storefront').then(m => ({ default: m.Storefront })))
 const Landing = lazy(() => import('@/pages/landing/Landing').then(m => ({ default: m.Landing })))
 const TagLanding = lazy(() => import('@/pages/landing/TagLanding').then(m => ({ default: m.TagLanding })))
@@ -55,7 +59,12 @@ function RootEntry() {
 export function App() {
   usePauseWhenHidden()
   const platformLocation = useLocation()
-  if (/^\/shop(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the store…</div>}><Storefront /></Suspense></LoadBoundary>
+  if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
+    const p=platformLocation.pathname;
+    const content=/^\/app\/(sign-in|sign-up|forgot|reset|verify)$/.test(p)?<ServerAuth/>:p==='/app/security'?<ServerSecurity/>:<Platform/>;
+    return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening FindBox…</div>}>{content}</Suspense></LoadBoundary>
+  }
+  if (/^\/(shop|app\/shop)(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the store…</div>}>{import.meta.env.VITE_SERVER_MODE==='true'?<ServerStorefront/>:<Storefront />}</Suspense></LoadBoundary>
 
   return (
     <>
