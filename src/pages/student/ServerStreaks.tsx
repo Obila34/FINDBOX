@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { api } from "@/platform/api";
 import { StreakView } from "./Streaks";
 type Data = { days: string[]; today: string };
-export function ServerStreaks({ personId }: { personId: string }) {
+export function ServerStreaks({
+  personId,
+  embedded = false,
+}: {
+  personId: string;
+  embedded?: boolean;
+}) {
   const [data, setData] = useState<Data | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
@@ -52,6 +58,7 @@ export function ServerStreaks({ personId }: { personId: string }) {
     );
   return (
     <StreakView
+      embedded={embedded}
       personId={personId}
       days={data.days}
       today={data.today}

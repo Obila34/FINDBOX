@@ -5,7 +5,6 @@ import { usePerson, useStore } from '@/store/useStore'
 import { capabilities } from '@/domain/permissions'
 import { itemsFor, casesFor } from '@/domain/transitions'
 import { CASE_STATUS } from '@/domain/labels'
-import { StreakSummary } from '@/components/ui/StreakSummary'
 import { ItemTile } from '@/components/ui/ItemTile'
 import { StatusSeal } from '@/components/ui/StatusSeal'
 import { Button } from '@/components/ui/Button'
@@ -17,7 +16,6 @@ import { DiscoveryRing } from '@/components/brand/Logo'
 import { Icon3D } from '@/components/ui/Icon3D'
 import { ItemArt } from '@/components/ui/ItemArt'
 import { fmtRelative, cx } from '@/lib/util'
-import { ExplorerExperience } from '@/components/scene/ExplorerExperience'
 import { DayOverview } from '@/components/ui/DayOverview'
 
 export function Home() {
@@ -43,7 +41,7 @@ function StudentHome() {
         {caps.has('register_item') && <Button to="/app/register" icon={<Plus className="h-4 w-4" />} className="hidden md:inline-flex">Add belonging</Button>}
       </header>
       {restricted && <Note tone="info" className="mb-4">You can review your belongings and build a daily streak. A grown-up or teacher helps with reports and claims.</Note>}
-      <ExplorerExperience key={person.id} personId={person.id} compact />
+
 
       <section aria-labelledby="shelf">
         <h2 id="shelf" className="sr-only">My belongings</h2>
@@ -77,7 +75,7 @@ function StudentHome() {
         )}
       </div>
 
-      <StreakSummary />
+
 
       {!!unread.length && (
         <section className="mt-6" aria-labelledby="inbox-preview">

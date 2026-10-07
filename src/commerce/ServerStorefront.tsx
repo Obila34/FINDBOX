@@ -188,7 +188,7 @@ export function ServerStorefront() {
           </div>
         )}
         {!loaded && <p role="status">Opening the store…</p>}
-        {path === "/shop" && (
+        {path === "/shop" && !inApp && (
           <>
             <section className="fp-shop-hero">
               <div>
@@ -240,11 +240,11 @@ export function ServerStorefront() {
             </section>
           </>
         )}
-        {path === "/shop/catalog" && (
+        {(path === "/shop/catalog" || inApp && path === "/shop") && (
           <>
             <div className="fc-page-heading">
               <span className="fp-kicker">SMALL THINGS, SORTED</span>
-              <h1>A place for every tag.</h1>
+              <h1>{inApp ? "Shop tags" : "A place for every tag."}</h1>
             </div>
             {cards}
           </>
@@ -658,8 +658,8 @@ export function ServerStorefront() {
           </div>
         )}
       </main>
-      <FooterBlock onInstall={() => nav("/app/sign-in")} />
-      {inApp && <AppShopNav />}
+      {!inApp && <FooterBlock onInstall={() => nav("/app/sign-in")} />}
+      {inApp && <AppShopNav unread={workspace?.notifications.filter(n=>!n.read_at).length}/>}
     </div>
   );
 }

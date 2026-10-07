@@ -1,3 +1,5 @@
+import { ProfileMenu } from '@/components/layout/ProfileMenu'
+import { AppDock } from '@/components/layout/AppDock'
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -8,12 +10,10 @@ import {
   ScanLine,
   Package,
   Bell,
-  LogOut,
   MapPin,
   ShieldCheck,
   Clock3,
   Check,
-  Flame,
   ArrowLeft,
   Plus,
   Minus,
@@ -330,32 +330,7 @@ export function Platform() {
         <Link to="/" className="fb-wordmark">
           FINDBOX
         </Link>
-        <nav>
-          <Link to="/app/shop">Shop tags</Link><Link to="/app/security">Security & schools</Link>
-          {user ? (
-            <>
-              <Link to={staff ? "/manage" : "/app/home"}>My FindBox</Link>
-              <button
-                aria-label="Sign out"
-                onClick={() =>
-                  run(async () => {
-                    await api("/auth/logout", {});
-                    setUser(null);
-                    setWorkspace(null);
-                    setCart({});
-                    navigate("/app/sign-in");
-                  })
-                }
-              >
-                <LogOut size={18} />
-              </button>
-            </>
-          ) : (
-            <Link to="/app/sign-in">
-              Sign in <ArrowUpRight size={16} />
-            </Link>
-          )}
-        </nav>
+        {user ? <ProfileMenu name={user.name}/> : <Link to="/app/sign-in">Sign in</Link>}
       </header>
       <main className="fp-main">
         {error && (
@@ -843,10 +818,7 @@ export function Platform() {
                     <ScanLine />
                     Found something?
                   </Link>
-                  <Link to="/app/streaks">
-                    <Flame />
-                    Your daily streak
-                  </Link>
+
                   <Link to="/app/orders">
                     <ShoppingBag />
                     Your orders & tags
@@ -1262,7 +1234,7 @@ export function Platform() {
             {path === "/app/streaks" && <ServerStreaks personId={user.id}/>}
             {path === "/app/account" && (
               <section className="fp-panel">
-                <h2>{user.name}</h2><p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
+                <h2>{user.name}</h2><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
                 <p>{user.email}</p>
                 <p>
                   {label(user.role)} · {workspace.school?.name}
@@ -1455,7 +1427,8 @@ export function Platform() {
           </>
         )}
       </main>
-      {user && !auth && !publicScan && (
+      {user && !staff && !auth && !publicScan && <AppDock unread={workspace?.notifications.filter(n=>!n.read_at).length}/>}
+      {user && staff && !auth && !publicScan && (
         <nav className="fp-dock" aria-label="App navigation">
           {tabs.map(([url, title, Icon]) => (
             <Link

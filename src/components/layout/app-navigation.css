@@ -1,0 +1,204 @@
+.fb-simple-dock {
+  position: fixed;
+  z-index: 35;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(370px, calc(100% - 36px));
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 9px 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #e0e5dc;
+  border-radius: 25px;
+  box-shadow: 0 8px 30px #15362812;
+  backdrop-filter: blur(16px);
+}
+.fb-simple-dock a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 49px;
+  border-radius: 17px;
+  color: #7b877d;
+  text-decoration: none;
+}
+.fb-simple-dock a.is-active {
+  background: #edf2e8;
+  color: #244734;
+}
+.fb-simple-dock a > span {
+  position: relative;
+}
+.fb-simple-dock small {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+.fb-simple-dock i {
+  position: absolute;
+  right: -8px;
+  top: -5px;
+  background: #256051;
+  color: white;
+  border: 2px solid white;
+  font-size: 8px;
+  font-style: normal;
+  min-width: 15px;
+  border-radius: 10px;
+  text-align: center;
+}
+.fb-profile-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 52px;
+  min-height: 44px;
+  border-radius: 24px;
+  background: #edf2e8;
+  color: #284934;
+  border: 1px solid #dce5d5;
+  flex-shrink: 0;
+}
+.fb-profile-menu {
+  display: grid;
+  gap: 8px;
+}
+.fb-profile-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 4px;
+  border-bottom: 1px solid #dde5d7;
+  gap: 18px;
+  color: #203c2d;
+}
+.fb-profile-menu strong {
+  font-size: 16px;
+  font-weight: 500;
+}
+.fb-profile-menu small {
+  display: block;
+  color: #73806d;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.fb-profile-streak {
+  margin-top: 24px;
+}
+.fb-profile-streak > .fb-page-header,
+.fb-profile-streak .fb-streak-companion {
+  display: none;
+}
+.fb-profile-streak .fb-streak-layout {
+  display: block;
+}
+.fb-profile-streak .fb-streak-card {
+  max-width: none;
+  padding: 25px;
+}
+.fb-profile-streak .fb-streak-flame {
+  height: 75px;
+  margin: 5px auto;
+}
+.fb-profile-streak .fb-streak-flame svg {
+  height: 75px;
+  width: 75px;
+}
+.fb-profile-streak .fb-streak-number {
+  font-size: 54px;
+}
+.fb-profile-streak .fb-streak-stats {
+  margin: 16px 0;
+}
+.fb-profile-streak .fb-streak-week {
+  margin-top: 18px;
+}
+.fb-profile-streak .fb-streak-milestone {
+  display: none;
+}
+.fb-shop-app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1200px;
+  margin: auto;
+  padding: 22px 24px;
+}
+.fb-shop-app-header > div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.fb-shop-app-header a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.fc-in-app .fc-main {
+  padding-top: 20px;
+  padding-bottom: 120px;
+}
+.fc-in-app .fc-page-heading {
+  margin-bottom: 25px;
+}
+.fc-in-app .fc-page-heading h1 {
+  font-size: 40px;
+}
+.fc-in-app .fc-page-heading p {
+  font-size: 14px;
+  max-width: 400px;
+}
+.fc-in-app .fc-products {
+  gap: 16px;
+}
+.fc-in-app .fc-product-caption h3 {
+  font-size: 19px;
+}
+.fc-in-app .fc-product-caption p {
+  display: none;
+}
+.fc-in-app .fc-product-image {
+  border-radius: 20px;
+}
+.fb-simple-dock a:focus-visible,
+.fb-profile-toggle:focus-visible {
+  outline: 3px solid #819870;
+  outline-offset: 3px;
+}
+@media (min-width: 1024px) {
+  .fb-workspace .fb-simple-dock {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .fc-in-app .fc-main {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  .fc-in-app .fc-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fc-in-app .fc-product-caption h3 {
+    font-size: 16px;
+  }
+  .fc-in-app .fc-product-caption .fp-kicker {
+    font-size: 8px;
+  }
+  .fc-in-app .fc-product-image {
+    min-height: 0;
+    aspect-ratio: 1;
+  }
+  .fb-profile-streak .fb-streak-card {
+    padding: 22px;
+  }
+  .fb-profile-streak .fb-streak-stats {
+    font-size: 12px;
+  }
+}
+
+.fc-in-app .fc-product{min-width:0}.fc-in-app .fc-product-image{width:100%;height:auto;aspect-ratio:1}.fc-in-app .fc-product-image>span:first-child{left:10px;top:10px;font-size:8px;padding:5px 7px}.fc-in-app .fc-product-image.is-object>img{padding:15px}.fb-profile-streak .fb-streak-flame{display:none}.fb-profile-streak .fb-streak-number{margin-top:18px}.fb-profile-streak .fb-streak-stats{gap:12px}
