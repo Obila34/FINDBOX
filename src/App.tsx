@@ -1,6 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { PwaStatus } from '@/components/layout/PwaStatus'
 import { LoadBoundary } from '@/components/ui/LoadBoundary'
 import { AppShell } from '@/components/layout/AppShell'
 import { ManageShell } from '@/components/layout/ManageShell'
@@ -118,7 +117,6 @@ export function App() {
 
         <Route path="*" element={<NotFound />} />
       </Routes></Suspense></LoadBoundary>
-      <PwaStatus />
       <Toaster />
       <Celebration />
     </>

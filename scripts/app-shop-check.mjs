@@ -16,7 +16,7 @@ await p.getByRole("button", { name: /Amina Wekesa/ }).click();
 const dock = p.getByRole("navigation", { name: "Mobile primary", exact: true });
 await dock.getByRole("link", { name: "Shop", exact: true }).click();
 await p.waitForURL("**/app/shop");
-await p.getByRole("heading", { name: "Shop tags", exact: true }).waitFor();
+await p.getByRole("heading", { name: "Shop labels", exact: true }).waitFor();
 await p.locator('a[href="/app/shop/products/everyday"]').first().click();
 await p.getByRole("button", { name: /Add to bag/ }).click();
 await p.getByRole("link", { name: /View bag/ }).click();

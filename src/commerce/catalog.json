@@ -1,0 +1,135 @@
+[
+  {
+    "id": "everyday",
+    "serverId": "everyday-12",
+    "name": "Everyday labels",
+    "subtitle": "Small stickers. A big way back.",
+    "price": 499,
+    "count": 12,
+    "format": "QR stickers",
+    "category": "Everyday",
+    "image": "/media/catalog/everyday-qr-960.webp",
+    "description": "Peel-and-stick QR labels for bottles, lunch boxes, notebooks and smooth everyday surfaces. Each label connects to one private item record.",
+    "uses": [
+      "Bottles & lunch boxes",
+      "Books & stationery",
+      "Clean, smooth surfaces"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "sticker"
+  },
+  {
+    "id": "uniform",
+    "serverId": "uniform-12",
+    "name": "Fabric Labels",
+    "subtitle": "Their uniform. Clearly theirs.",
+    "price": 599,
+    "count": 12,
+    "format": "Heat-transfer QR",
+    "category": "Clothing",
+    "image": "/media/catalog/fabric-qr-960.webp",
+    "description": "Heat-transfer QR fabric labels for uniforms, sweaters and PE kits. Apply only to compatible fabrics using the supplied care and temperature instructions.",
+    "uses": [
+      "School uniforms",
+      "PE kits & jackets",
+      "Compatible fabrics"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "fabric"
+  },
+  {
+    "id": "cables",
+    "serverId": "cables-6",
+    "name": "Cable wraps",
+    "subtitle": "Your cable, even in a crowd.",
+    "price": 299,
+    "count": 6,
+    "format": "Wrap-around QR",
+    "category": "Tech",
+    "image": "/media/catalog/tech-qr-960.webp",
+    "description": "Six wrap-around QR labels for charging cables and leads. The QR sits on a flat flag so it can be scanned without bending the code around a thin cable.",
+    "uses": [
+      "Charging cables",
+      "USB leads",
+      "Headphone cables"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "wrap"
+  },
+  {
+    "id": "chargers",
+    "serverId": "chargers-6",
+    "name": "Charger labels",
+    "subtitle": "Never mix up your power.",
+    "price": 349,
+    "count": 6,
+    "format": "Compact QR stickers",
+    "category": "Tech",
+    "image": "/media/catalog/tech-qr-960.webp",
+    "description": "Six compact QR stickers for charger bodies, adapters and power banks. Attach to a flat surface, keeping vents, safety markings and electrical contacts clear.",
+    "uses": [
+      "Charger bodies",
+      "Adapters",
+      "Power banks"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "compact"
+  },
+  {
+    "id": "adventure",
+    "serverId": "bag-2",
+    "name": "Engraved tags",
+    "subtitle": "Made to stay with you.",
+    "price": 699,
+    "count": 2,
+    "format": "Laser-engraved QR",
+    "category": "Bags & keys",
+    "image": "/media/catalog/engraved-qr-960.webp",
+    "description": "Two engraved QR metal tags with attachment loops for keys, bags and sports kits. The code is marked into a separate tag; we do not engrave powered electronics.",
+    "uses": [
+      "Bags & keys",
+      "Sports kits",
+      "Attachable metal tags"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "engraved"
+  },
+  {
+    "id": "tap",
+    "serverId": "tap-3",
+    "name": "Tap & find",
+    "subtitle": "Tap once. Find a way home.",
+    "price": 999,
+    "count": 3,
+    "format": "NFC + QR",
+    "category": "NFC",
+    "image": "/media/catalog/nfc-qr-960.webp",
+    "description": "Three premium NFC tags with a QR fallback. A compatible phone can open the recovery page with a tap, without framing a code in the camera. No battery or charging required.",
+    "uses": [
+      "Compatible NFC phones",
+      "QR fallback included",
+      "No battery required"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "nfc"
+  },
+  {
+    "id": "complete",
+    "serverId": "complete-41",
+    "name": "The complete kit",
+    "subtitle": "One pack. Every kind of day.",
+    "price": 2999,
+    "count": 41,
+    "format": "All-in-one pack",
+    "category": "Bundles",
+    "image": "/media/catalog/complete-qr-960.webp",
+    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers, 2 engraved tags and 3 NFC + QR tags. 41 unique item identities in one account.",
+    "uses": [
+      "Clothes & everyday essentials",
+      "Cables, chargers, bags & keys",
+      "3 premium NFC tags included"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "mixed"
+  }
+]

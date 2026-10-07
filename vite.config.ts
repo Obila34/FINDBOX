@@ -34,6 +34,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        clientsClaim: true,
+        skipWaiting: false,
         globPatterns: ['**/*.{js,css,html,svg,woff2}', 'icons/*.png', 'media/catalog/*.webp', 'media/products/*.webp', 'media/avatars/*.webp', 'media/objects/*.webp'],
         globIgnores: ['**/three-engine-*.js', '**/scene-*.js', '**/Landing-*.js', '**/charts-*.js', '**/scan-*.js', '**/Dashboard-*.js', '**/StudioShader-*.js'],
         navigateFallback: '/index.html',
@@ -41,7 +43,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           { urlPattern: ({ request, sameOrigin }) => sameOrigin && ['script', 'style'].includes(request.destination), handler: 'CacheFirst', options: { cacheName: 'findbox-code-v2', expiration: { maxEntries: 70, maxAgeSeconds: 30 * 24 * 60 * 60 }, cacheableResponse: { statuses: [200] } } },
-          { urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === 'image', handler: 'CacheFirst', options: { cacheName: 'findbox-images-v2', expiration: { maxEntries: 70, maxAgeSeconds: 30 * 24 * 60 * 60 }, cacheableResponse: { statuses: [200] } } },
+          { urlPattern: ({ request, sameOrigin }) => sameOrigin && request.destination === 'image', handler: 'StaleWhileRevalidate', options: { cacheName: 'findbox-images-v3', expiration: { maxEntries: 70, maxAgeSeconds: 30 * 24 * 60 * 60 }, cacheableResponse: { statuses: [200] } } },
         ],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },

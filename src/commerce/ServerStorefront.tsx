@@ -1,3 +1,5 @@
+import catalog from './catalog.json';
+import { LabelJourney, LabelDetails } from './LabelJourney';
 import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -126,6 +128,7 @@ export function ServerStorefront() {
       setCode("");
       setNotice("Your belonging is connected. Open Items in the app.");
       await reload();
+      nav("/app/items");
     });
   }
   const signIn = (
@@ -135,7 +138,7 @@ export function ServerStorefront() {
         <br />
         All connected.
       </h1>
-      <p>Sign in to access your orders and tags.</p>
+      <p>One FindBox account keeps your orders, labels and belongings together. Your bag stays saved.</p><Link className="fp-primary" to="/app/sign-up" state={{from:location.pathname}}>Create your FindBox account</Link>
       <button
         className="fp-primary"
         onClick={() =>
@@ -158,12 +161,12 @@ export function ServerStorefront() {
             }}
           >
             <span>{p.tag_count} individual tags</span>
-            <img src={p.image} alt={p.name} loading="lazy" />
+            <img src={p.image} srcSet={p.image.replace("-960.webp","-480.webp")+" 480w, "+p.image+" 960w"} sizes="(max-width:600px) 45vw, 300px" alt={p.name} loading="lazy" />
           </Link>
           <div className="fc-product-caption">
-            <span className="fp-kicker">{p.format}</span>
+            <span className="fp-kicker">{catalog.find(c=>c.serverId===p.id)?.format||p.format}</span>
             <h3>{p.name}</h3>
-            <p>{p.description}</p>
+            <p>{catalog.find(c=>c.serverId===p.id)?.subtitle||p.description}</p>
             <strong>{money(p.price_minor)}</strong>
           </div>
         </article>
@@ -215,7 +218,7 @@ export function ServerStorefront() {
                 <img src="/media/objects/nfc-640.webp" alt="NFC tag" />
               </div>
             </section>
-            {cards}
+            <LabelJourney />
             <section className="fc-app-story">
               <div>
                 <span className="fp-kicker">A TAG IS JUST THE BEGINNING</span>
@@ -244,7 +247,7 @@ export function ServerStorefront() {
           <>
             <div className="fc-page-heading">
               <span className="fp-kicker">SMALL THINGS, SORTED</span>
-              <h1>{inApp ? "Shop tags" : "A place for every tag."}</h1>
+              <h1>{inApp ? "Shop labels" : "A place for every tag."}</h1>
             </div>
             {cards}
           </>
@@ -264,7 +267,7 @@ export function ServerStorefront() {
                   {product.tag_count} INDIVIDUAL TAGS
                 </span>
                 <h1>{product.name}</h1>
-                <p>{product.description}</p>
+                <p>{product.description}</p><LabelDetails id={product.id}/>
                 <h2>{money(product.price_minor)}</h2>
                 <button className="fp-primary" onClick={() => add(product)}>
                   Add to bag <Plus size={18} />
@@ -559,8 +562,8 @@ export function ServerStorefront() {
                   {order.payment_method === "mpesa" ? "M-Pesa" : "Card"} ·{" "}
                   {order.status}
                 </p>
-                <Link className="fp-primary" to={base + "/account"}>
-                  Your orders & tags <ArrowUpRight size={16} />
+                <Link className="fp-primary" to="/app/shop/account#tags">
+                  Connect your labels in the app <ArrowUpRight size={16} />
                 </Link>
               </aside>
             </div>

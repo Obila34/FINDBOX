@@ -33,7 +33,7 @@ export function MarketHeader() {
       <div className="fb-pill-nav">
         <StudioBrand />
         <nav aria-label="Site" className="hidden items-center gap-7 md:flex">
-          <Link to={shop + "/catalog"}>Shop tags</Link>
+          <Link to={shop + "/catalog"}>Shop labels</Link>
           <a href="/#how">How it works</a>
           <a href="/#your-app">The app</a>
           <Link to={shop + "/account"}>My tags & orders</Link>

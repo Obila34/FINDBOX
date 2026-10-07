@@ -1,3 +1,4 @@
+import { LabelJourney } from '@/commerce/LabelJourney'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, ShieldCheck, Smartphone, Users } from 'lucide-react'
@@ -18,7 +19,7 @@ export function Landing() {
  const { canPrompt, install, installed, isIOS } = useInstallPrompt(); const [installInfo, setInstallInfo] = useState('')
  async function handleInstall() { if (canPrompt) { const result = await install(); setInstallInfo(result === 'accepted' ? 'FindBox is being added to your home screen.' : 'You can install FindBox whenever you are ready.') } else setInstallInfo(installed ? 'FindBox is already installed on this device.' : isIOS ? 'In Safari, tap Share, then Add to Home Screen.' : 'Open your browser menu and choose Install app or Add to Home Screen, when available.') }
  return <div className="fb-landing fb-production-landing" id="top"><a href="#main" className="fb-skip">Skip to content</a><section className="fb-studio-hero fb-new-hero"><MarketHeader /><HeroExperience /></section>
- <main id="main"><div className="fb-community-strip"><span><ShieldCheck size={16} /> School-verified returns</span><span><Users size={16} /> One connected community</span><span><Smartphone size={16} /> Made for your everyday</span></div><UltraQualityShowcaseGrid />
+ <main id="main"><div className="fb-community-strip"><span><ShieldCheck size={16} /> School-verified returns</span><span><Users size={16} /> One connected community</span><span><Smartphone size={16} /> Made for your everyday</span></div><LabelJourney /><UltraQualityShowcaseGrid />
  <section id="workspaces" className="fb-community-section fb-container"><div className="fb-section-heading"><div><p className="fb-kicker">02 / ONE APP. EVERYONE INCLUDED.</p><h2>A place for<br /><em>your people.</em></h2></div><p>One familiar experience.<br />The right tools for your part of the school day.</p></div><div className="fb-community-cards">{[
  { role: 'Students', title: 'Your world. A little more yours.', image: '/media/avatars/findbox-explorer-1280.webp', text: 'Your belongings, daily streaks, and small acts that make a difference.', cls: 'student' },
  { role: 'Parents', title: 'Less worry. More peace of mind.', image: '/media/objects/bottle-1280.webp', text: 'See your children’s belongings, follow updates, and arrange collection.', cls: 'parent' },

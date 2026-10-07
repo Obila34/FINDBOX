@@ -6,7 +6,7 @@ import { ProductViewer } from '@/components/scene/ProductViewer'
 export function UltraQualityShowcaseGrid() {
   const reduced = useReducedMotion(); const [step, setStep] = useState(0)
   const steps = [
-    { title: 'Give it a way home.', body: 'Add a photo, name your belonging, and connect a unique QR or NFC tag. Your personal details stay off the label.', cta: 'Tag a belonging', to: '/app/register' },
+    { title: 'Give it a way home.', body: 'Choose your labels, then activate the supplied codes in the app. Name each belonging; photos are optional. Personal details stay off the label.', cta: 'Choose your labels', to: '/shop/catalog' },
     { title: 'A small scan. A big relief.', body: 'Found something? Scan the tag or tell the school office where you found it. The right people take it from there.', cta: 'Report a find', to: '/app/found' },
     { title: 'Follow every little update.', body: 'See when staff identify a match, verify ownership, and prepare your belonging for collection.', cta: 'Open your inbox', to: '/app/inbox' },
     { title: 'Back where it belongs.', body: 'Collect at the school office. Staff record the handover, so every return has a clear, complete history.', cta: 'Open FindBox', to: '/app/sign-in' },

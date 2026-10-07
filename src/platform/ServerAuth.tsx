@@ -233,6 +233,7 @@ export function ServerAuth() {
           </Link>
         </>
       )}
+      {!reset && !verify && !forgot && <Link className="fb-link" to={signup?"/app/sign-in":"/app/sign-up"} state={location.state}>{signup?"Already a member? Sign in":"Join FindBox · Create an account"}</Link>}
       {(reset || verify || forgot) && (
         <Link to="/app/sign-in" className="fb-link">
           Back to sign in

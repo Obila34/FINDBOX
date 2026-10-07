@@ -10,11 +10,13 @@ import './styles/brand-refresh.css'
 import './styles/product-photos.css'
 import './commerce/storefront.css'
 import { App } from './App'
+import { PwaStatus } from '@/components/layout/PwaStatus'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <App />
+      <PwaStatus />
     </BrowserRouter>
   </StrictMode>,
 )

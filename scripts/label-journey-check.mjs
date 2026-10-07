@@ -1,0 +1,16 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+const base=process.env.BASE||'http://localhost:5173';await mkdir('shots/labels',{recursive:true});
+const browser=await chromium.launch({channel:'msedge',headless:true});
+try{
+const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.goto(base+'/');await page.getByRole('group',{name:'What are you labelling?'}).getByRole('button',{name:'Clothes',exact:true}).click();await page.locator('.fl-picks').getByRole('heading',{name:'Fabric Labels'}).waitFor();
+assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.locator('.fl-journey').screenshot({path:'shots/labels/landing-mobile.png'});
+await page.getByRole('button',{name:'Everything',exact:true}).click();await page.locator('.fl-picks .fl-button').click();await page.getByRole('heading',{name:'The complete kit',exact:true}).waitFor();
+await page.getByRole('button',{name:/Add to bag/}).click();await page.getByRole('link',{name:/View bag/}).click();await page.getByRole('link',{name:/Continue to checkout/}).click();await page.getByRole('button',{name:/Sign in to continue/}).click();await page.getByRole('button',{name:/Amina Wekesa/}).click();await page.waitForURL('**/shop/checkout');
+await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Place sample order'}).click();await page.waitForURL('**/shop/orders/*');await page.getByRole('link',{name:/Connect your labels in the app/}).click();await page.waitForURL('**/app/shop/account#tags');
+await page.locator('.fc-tag-grid article').first().waitFor();assert.equal(await page.locator('.fc-tag-grid article').count(),41);await page.getByRole('button',{name:/Connect a belonging/}).first().click();await page.getByLabel('Belonging name',{exact:true}).fill('My labelled bottle');await page.getByRole('button',{name:'Connect to the app',exact:true}).click();await page.waitForURL('**/app/items/*');await page.getByRole('heading',{name:'My labelled bottle',exact:true}).waitFor();
+await page.goto(base+'/app/shop');await page.locator('.fc-product').first().waitFor();assert.equal(await page.locator('.fc-product').count(),7);assert.equal(await page.locator('.fp-shop-hero').count(),0);assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+await page.screenshot({path:'shots/labels/shop-mobile.png',fullPage:true});await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/');await page.locator('.fl-journey').screenshot({path:'shots/labels/landing-desktop.png'});assert.deepEqual(errors,[]);console.log('Label chooser, saved cart through login, complete kit, 41 tags, app registration and responsive layouts passed.');
+}finally{await browser.close()}
