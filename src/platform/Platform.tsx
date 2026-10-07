@@ -1,3 +1,4 @@
+import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -1258,60 +1259,10 @@ export function Platform() {
                 )}
               </>
             )}
-            {path === "/app/streaks" && (
-              <section className="fp-streak">
-                <Flame size={70} />
-                <span className="fp-kicker">SMALL HABITS. EVERY DAY.</span>
-                <h2>Keep your good thing going.</h2>
-                <p>
-                  Check your belongings. Make sure your tags are readable. Help
-                  a lost item reach its box.
-                </p>
-                <div className="fp-days">
-                  {Array.from({ length: 7 }, (_, i) => {
-                    const d = new Date(Date.now() - (6 - i) * 86400000);
-                    const day = new Intl.DateTimeFormat("en-CA", {
-                      timeZone: "Africa/Nairobi",
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                    }).format(d);
-                    return (
-                      <span
-                        key={day}
-                        className={
-                          workspace.checkins.some((c) => c.day === day)
-                            ? "checked"
-                            : ""
-                        }
-                      >
-                        {d.toLocaleDateString("en", {
-                          weekday: "short",
-                          timeZone: "Africa/Nairobi",
-                        })}
-                        <Check size={20} />
-                      </span>
-                    );
-                  })}
-                </div>
-                <button
-                  disabled={busy}
-                  className="fp-primary"
-                  onClick={() =>
-                    run(async () => {
-                      await api("/streaks/check-in", {});
-                      await reload();
-                      setNotice("Today’s check-in is saved.");
-                    })
-                  }
-                >
-                  I checked my belongings <Check size={18} />
-                </button>
-              </section>
-            )}
+            {path === "/app/streaks" && <ServerStreaks personId={user.id}/>}
             {path === "/app/account" && (
               <section className="fp-panel">
-                <h2>{user.name}</h2>
+                <h2>{user.name}</h2><p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
                 <p>{user.email}</p>
                 <p>
                   {label(user.role)} · {workspace.school?.name}

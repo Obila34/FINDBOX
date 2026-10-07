@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { MapPin, XCircle } from 'lucide-react'
 import { usePerson, useStore, tryAction } from '@/store/useStore'
 import { casesFor } from '@/domain/transitions'
@@ -62,7 +62,7 @@ export function CaseView() {
               <div className="mt-4 flex items-start gap-3 rounded-md border border-teal-200 bg-teal-50 p-3"><MapPin className="mt-0.5 h-5 w-5 shrink-0 text-teal-700" /><div><p className="font-semibold text-teal-900">{c.pickupLocation}</p>{c.pickupWindow && <p className="text-[0.85rem] text-teal-900">{c.pickupWindow}</p>}<p className="mt-1 text-[0.8rem] text-teal-800">Bring case code <span className="font-mono font-semibold">{c.ref}</span>. Staff will ask about a detail only the owner knows.</p></div></div>
             )}
           </Tile>
-          <Tile><Eyebrow>History</Eyebrow><Timeline className="mt-3" events={c.events} people={state.people} highlightLast={!['returned', 'closed'].includes(c.status)} /></Tile>
+          <>{c.status === 'returned' && <Tile><p>Your belonging is back. How was the experience?</p><Link className="mt-2 inline-block underline" to="/app/feedback">Share feedback</Link></Tile>}</><Tile><Eyebrow>History</Eyebrow><Timeline className="mt-3" events={c.events} people={state.people} highlightLast={!['returned', 'closed'].includes(c.status)} /></Tile>
         </div>
         <div className="flex flex-col gap-4">
           {(item || r) && (

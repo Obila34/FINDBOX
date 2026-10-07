@@ -46,6 +46,7 @@ export function ServerStorefront() {
   }
   useEffect(() => {
     let live = true;
+    if (cart.method !== "mpesa") cart.choose("mpesa");
     Promise.all([
       api<{ products: Product[]; checkoutEnabled: boolean }>("/products"),
       api<{ user: User; security?: { requiresMfa: boolean } }>(
@@ -352,7 +353,7 @@ export function ServerStorefront() {
                   <section>
                     <h3>Your way to pay.</h3>
                     <div className="fc-payment-options">
-                      {(["mpesa", "card"] as const).map((m) => (
+                      {(["mpesa"] as const).map((m) => (
                         <label
                           key={m}
                           className={cart.method === m ? "active" : ""}
@@ -369,7 +370,7 @@ export function ServerStorefront() {
                       ))}
                     </div>
                     <p>
-                      Continue to the payment provider’s secure checkout.
+                      M-Pesa is available for launch. Card payments will follow later. Continue to secure checkout.
                       FindBox never asks for your M-Pesa PIN or stores card
                       details.
                     </p>

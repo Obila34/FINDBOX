@@ -1120,3 +1120,5 @@
     animation: none !important;
   }
 }
+
+@media(max-width:650px){.fp-header{flex-wrap:wrap;gap:18px}.fp-header nav{width:100%;justify-content:space-between;gap:12px}.fp-header nav a{font-size:12px;white-space:nowrap}}

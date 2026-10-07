@@ -9,6 +9,7 @@ import { Toaster, Celebration } from '@/components/ui/Toaster'
 import { usePauseWhenHidden } from '@/lib/hooks'
 import { Skeleton } from '@/components/ui/EmptyState'
 
+const Support=lazy(()=>import('@/pages/support/Support').then(m=>({default:m.Support})))
 const ServerStorefront=lazy(()=>import('@/commerce/ServerStorefront').then(m=>({default:m.ServerStorefront})))
 const ServerAuth=lazy(()=>import('@/platform/ServerAuth').then(m=>({default:m.ServerAuth})))
 const ServerSecurity=lazy(()=>import('@/platform/ServerSecurity').then(m=>({default:m.ServerSecurity})))
@@ -59,6 +60,7 @@ function RootEntry() {
 export function App() {
   usePauseWhenHidden()
   const platformLocation = useLocation()
+  if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
   if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
     const p=platformLocation.pathname;
     const content=/^\/app\/(sign-in|sign-up|forgot|reset|verify)$/.test(p)?<ServerAuth/>:p==='/app/security'?<ServerSecurity/>:<Platform/>;

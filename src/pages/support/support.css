@@ -1,0 +1,272 @@
+.fb-support {
+  background: #f5f7f0;
+  color: #203c2d;
+  min-height: 100vh;
+}
+.fb-support header,
+.fb-support footer {
+  max-width: 1200px;
+  margin: auto;
+  padding: 28px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+}
+.fb-support header > a,
+.fb-support aside a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fb-support main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 40px 28px 65px;
+}
+.fb-support h1 {
+  font-size: clamp(38px, 6vw, 70px);
+  letter-spacing: -0.055em;
+  line-height: 1.07;
+  white-space: pre-line;
+  margin: 20px 0;
+}
+.support-lede {
+  max-width: 610px;
+  color: #596c5e;
+  line-height: 1.7;
+}
+.support-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 30px 0;
+}
+.support-tabs a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cad4c4;
+  border-radius: 30px;
+  padding: 12px 18px;
+  background: white;
+}
+.support-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 28px;
+}
+.fb-support form,
+.support-share,
+.support-detail {
+  background: white;
+  border-radius: 26px;
+  padding: 28px;
+}
+.fb-support h2 {
+  font-size: 24px;
+  letter-spacing: -0.035em;
+  margin-bottom: 18px;
+}
+.fb-support label {
+  display: block;
+  font-size: 13px;
+  margin: 15px 0;
+}
+.fb-support input,
+.fb-support select,
+.fb-support textarea {
+  display: block;
+  width: 100%;
+  border: 1px solid #becbb6;
+  border-radius: 12px;
+  background: #fafbf7;
+  padding: 12px;
+  color: #203c2d;
+  margin-top: 7px;
+  font: inherit;
+}
+.fb-support textarea {
+  resize: vertical;
+}
+.fb-support input:focus-visible,
+.fb-support textarea:focus-visible,
+.fb-support select:focus-visible,
+.fb-support button:focus-visible,
+.fb-support a:focus-visible {
+  outline: 3px solid #879f71;
+  outline-offset: 3px;
+}
+.fb-support button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 30px;
+  padding: 13px 23px;
+  background: #203c2d;
+  color: white;
+}
+.fb-support button:disabled {
+  opacity: 0.5;
+}
+.support-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+.support-small {
+  font-size: 12px;
+  color: #60715e;
+  line-height: 1.6;
+  margin: 14px 0;
+}
+.support-consent {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px;
+}
+.support-consent input {
+  width: 18px;
+  flex-shrink: 0;
+  margin: 2px;
+}
+.support-grid aside {
+  background: #e4ebdc;
+  border-radius: 26px;
+  padding: 30px;
+}
+.support-grid aside img {
+  height: 230px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: auto;
+}
+.support-grid aside p {
+  line-height: 1.7;
+  margin: 14px 0 30px;
+}
+.support-grid aside a {
+  margin: 20px 0;
+}
+.support-notice,
+.support-error {
+  padding: 16px;
+  border-radius: 12px;
+  background: #e0edcf;
+  margin-bottom: 20px;
+  overflow-wrap: anywhere;
+}
+.support-error {
+  background: #f6e5e1;
+}
+.support-honey {
+  position: absolute;
+  left: -10000px;
+}
+.support-share {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 30px;
+}
+.support-share img {
+  max-height: 430px;
+  margin: auto;
+  object-fit: contain;
+}
+.support-share p {
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.support-whatsapp {
+  display: inline-block;
+  margin: 15px;
+}
+.support-history {
+  margin-top: 35px;
+}
+.fb-support .support-ticket {
+  width: 100%;
+  border-radius: 14px;
+  background: white;
+  color: #203c2d;
+  justify-content: space-between;
+  text-align: left;
+  margin: 10px 0;
+  gap: 18px;
+}
+.support-ticket small {
+  display: block;
+  font-size: 10px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+.support-ticket > span:last-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.support-detail {
+  margin-top: 25px;
+}
+.support-message {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.support-detail blockquote {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f1f5eb;
+  border-radius: 15px;
+}
+.fb-support .support-close {
+  float: right;
+  font-size: 12px;
+  padding: 8px 14px;
+}
+.fb-support footer {
+  border-top: 1px solid #d5dfce;
+  font-size: 12px;
+}
+@media (max-width: 650px) {
+  .support-grid,
+  .support-share,
+  .support-fields {
+    grid-template-columns: 1fr;
+  }
+  .fb-support header,
+  .fb-support footer {
+    padding: 22px;
+    flex-wrap: wrap;
+  }
+  .fb-support main {
+    padding: 20px 18px 40px;
+  }
+  .fb-support form,
+  .support-share,
+  .support-detail {
+    padding: 22px;
+  }
+  .support-grid aside img {
+    height: 160px;
+  }
+  .support-share img {
+    max-height: 270px;
+  }
+  .support-tabs {
+    gap: 7px;
+  }
+  .support-tabs a {
+    padding: 10px;
+    font-size: 12px;
+  }
+  .fb-support .support-ticket {
+    font-size: 12px;
+    padding: 15px;
+  }
+  .fb-support header .fb-studio-brand {
+    max-width: 150px;
+  }
+}
