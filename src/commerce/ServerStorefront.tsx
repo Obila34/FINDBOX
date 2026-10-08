@@ -160,7 +160,7 @@ export function ServerStorefront() {
               background: p.format === "fabric" ? "#f0ddc9" : "#dce4d2",
             }}
           >
-            <span>{p.tag_count} individual tags</span>
+            <span>{p.available===false?'Premium · Coming soon':p.tag_count+' individual tags'}</span>
             <img src={p.image} srcSet={p.image.replace("-960.webp","-480.webp")+" 480w, "+p.image+" 960w"} sizes="(max-width:600px) 45vw, 300px" alt={p.name} loading="lazy" />
           </Link>
           <div className="fc-product-caption">
@@ -269,8 +269,8 @@ export function ServerStorefront() {
                 <h1>{product.name}</h1>
                 <p>{product.description}</p><LabelDetails id={product.id}/>
                 <h2>{money(product.price_minor)}</h2>
-                <button className="fp-primary" onClick={() => add(product)}>
-                  Add to bag <Plus size={18} />
+                <button className="fp-primary" disabled={product.available===false} onClick={() => add(product)}>
+                  {product.available===false?'Coming soon':'Add to bag'} <Plus size={18} />
                 </button>
                 <p>
                   QR and NFC identify belongings when scanned. They do not

@@ -42,6 +42,7 @@ export type User = {
   school_id: string;
 };
 export type Product = {
+  available?: boolean;
   id: string;
   name: string;
   description: string;

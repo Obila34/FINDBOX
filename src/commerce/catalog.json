@@ -16,7 +16,8 @@
       "Clean, smooth surfaces"
     ],
     "color": "#e4eadc",
-    "stockFormat": "sticker"
+    "stockFormat": "sticker",
+    "available": true
   },
   {
     "id": "uniform",
@@ -35,7 +36,8 @@
       "Compatible fabrics"
     ],
     "color": "#e4eadc",
-    "stockFormat": "fabric"
+    "stockFormat": "fabric",
+    "available": true
   },
   {
     "id": "cables",
@@ -54,7 +56,8 @@
       "Headphone cables"
     ],
     "color": "#e4eadc",
-    "stockFormat": "wrap"
+    "stockFormat": "wrap",
+    "available": true
   },
   {
     "id": "chargers",
@@ -73,7 +76,8 @@
       "Power banks"
     ],
     "color": "#e4eadc",
-    "stockFormat": "compact"
+    "stockFormat": "compact",
+    "available": true
   },
   {
     "id": "adventure",
@@ -92,7 +96,8 @@
       "Attachable metal tags"
     ],
     "color": "#e4eadc",
-    "stockFormat": "engraved"
+    "stockFormat": "engraved",
+    "available": true
   },
   {
     "id": "tap",
@@ -111,7 +116,8 @@
       "No battery required"
     ],
     "color": "#e4eadc",
-    "stockFormat": "nfc"
+    "stockFormat": "nfc",
+    "available": true
   },
   {
     "id": "complete",
@@ -123,13 +129,34 @@
     "format": "All-in-one pack",
     "category": "Bundles",
     "image": "/media/catalog/complete-qr-960.webp",
-    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers, 2 engraved tags and 3 NFC + QR tags. 41 unique item identities in one account.",
+    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers, 2 engraved tags and 3 NFC + QR tags. 41 unique item identities in one account. The Findable Key Card is sold separately.",
     "uses": [
       "Clothes & everyday essentials",
       "Cables, chargers, bags & keys",
       "3 premium NFC tags included"
     ],
     "color": "#e4eadc",
-    "stockFormat": "mixed"
+    "stockFormat": "mixed",
+    "available": true
+  },
+  {
+    "id": "finder",
+    "serverId": "finder-1",
+    "name": "Findable Key Card",
+    "subtitle": "Our most premium way to find.",
+    "price": 3499,
+    "count": 1,
+    "format": "Premium item finder",
+    "category": "Finders",
+    "image": "/media/catalog/finder-960.webp",
+    "description": "Our planned premium finder for wallets, bags and keys, with a FindBox recovery identity. Target price: KSh 3,499. The hardware model, supported phone network, battery and locating features are being confirmed before orders open. Location finding will use the supported companion app; FindBox will manage the belonging and its return record.",
+    "uses": [
+      "Wallets, bags & keys",
+      "Companion-app pairing",
+      "Hardware compatibility to be confirmed"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "finder",
+    "available": false
   }
 ]

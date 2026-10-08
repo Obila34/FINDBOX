@@ -1,56 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { motion, useAnimationFrame, useInView, useReducedMotion, useScroll, useTransform, type MotionValue } from 'motion/react'
-import Balancer from 'react-wrap-balancer'
-import { Pause, Play, ArrowUpRight } from 'lucide-react'
-import { ProductImage, type ProductKind } from '@/components/ui/ProductImage'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-
-const products: { kind: ProductKind; name: string; eyebrow: string; body: string }[] = [
-  { kind: 'bottle', name: 'Everyday. Never ordinary.', eyebrow: '01 / THE CLEAR BOTTLE', body: 'A favourite bottle. A tiny QR label. A simpler way back through your school.' },
-  { kind: 'nfc', name: 'A little tap goes a long way.', eyebrow: '02 / THE NFC TAG', body: 'A tactile tag for the things you take everywhere. Register your NFC tag in FindBox.' },
-  { kind: 'airtag', name: 'Keep your essentials close.', eyebrow: '03 / THE BAG TAG', body: 'A labelled keyring for the essentials you carry. A scan opens the recovery record; it does not track live location.' },
+import './service-hero.css'
+const server=import.meta.env.VITE_SERVER_MODE==='true'
+const options=[
+ {title:'Clothes',finish:'Heat-transfer fabric labels',image:'fabric-qr',id:'uniform',serverId:'uniform-12'},
+ {title:'Bottles & books',finish:'Peel-and-stick QR labels',image:'everyday-qr',id:'everyday',serverId:'everyday-12'},
+ {title:'Cables & chargers',finish:'Cable wraps & compact stickers',image:'tech-qr',id:'cables',serverId:'cables-6'},
+ {title:'Bags & keys',finish:'Laser-engraved QR tags',image:'engraved-qr',id:'adventure',serverId:'bag-2'},
 ]
-function Orbit({ progress, paused, selected, onSelect }: { progress: MotionValue<number>; paused: boolean; selected: number; onSelect: (i: number) => void }) {
- const host = useRef<HTMLDivElement>(null)
- const objects = useRef<(HTMLButtonElement | null)[]>([])
- const phase = useRef(0); const radius = useRef(200)
- const visible = useInView(host)
- useEffect(() => {
-  const observer = new ResizeObserver(([entry]) => { radius.current = entry.contentRect.width * .29 })
-  if (host.current) observer.observe(host.current)
-  return () => observer.disconnect()
- }, [])
- useAnimationFrame((_time, delta) => {
-  if (!visible || document.hidden) return
-  if (!paused) phase.current += Math.min(delta, 40) * .00016
-  objects.current.forEach((el, i) => {
-   if (!el) return
-   const a = phase.current + i * Math.PI * 2 / 3 + Math.PI / 2 + (paused ? 0 : progress.get() * 1.4)
-   const x = Math.cos(a) * radius.current, y = Math.sin(a) * 55
-   const scale = (selected === i ? 1 : .85) + Math.sin(a) * .06
-   el.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px)) scale(${scale}) rotate(${Math.cos(a) * 7}deg)`
-   el.style.zIndex = String(Math.round((Math.sin(a) + 1) * 10))
-  })
- })
- return <div ref={host} className="fb-photo-orbit">{products.map((p, i) => <button key={p.kind} ref={el => { objects.current[i] = el }} className={`fb-orbit-object is-${p.kind}`} onClick={() => onSelect(i)} aria-label={`Explore ${p.kind === 'airtag' ? 'bag tag' : p.kind}`} aria-pressed={selected === i}><ProductImage kind={p.kind} eager /></button>)}</div>
-}
-export function HeroExperience() {
-  const ref = useRef<HTMLDivElement>(null); const reduced = useReducedMotion(); const [paused, setPaused] = useState(false); const [selected, setSelected] = useState(0)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] }); const y = useTransform(scrollYProgress, [0, 1], [0, 130]); const rotate = useTransform(scrollYProgress, [0, 1], [0, -5])
-  return <div ref={ref} className="fb-orbit-hero">
-    <motion.div className="fb-orbit-heading" initial={reduced ? false : { opacity: 0, y: 25 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-      <p className="fb-kicker"><span /> SMALL TAGS. BIG PEACE OF MIND.</p>
-      <h1><Balancer>A little less lost.<br /><em>A lot more found.</em></Balancer></h1>
-      <p className="fb-hero-intro">Shop labels for clothes, cables and everyday essentials.<br />Connect them in FindBox. Give every belonging a way home.</p>
-      <div className="fb-orbit-actions"><Button to="/shop" size="lg" arrow>Shop labelling options</Button><Button to="/app/sign-in" variant="ghost" size="lg" iconRight={<ArrowUpRight size={17} />}>Open FindBox</Button></div>
-    </motion.div>
-    <motion.div className="fb-orbit-stage" style={reduced || paused ? {} : { y, rotate }}>
-      <div className="fb-orbit-ring" /><div className="fb-orbit-ring fb-orbit-ring-inner" /><span className="fb-stage-note">DESIGNED TO COME BACK.</span>
-      <Orbit progress={scrollYProgress} paused={paused || !!reduced} selected={selected} onSelect={setSelected} />
-      <button className="fb-motion-control" onClick={() => setPaused(!paused)} aria-label={paused ? 'Resume object motion' : 'Pause object motion'}>{paused ? <Play size={15} /> : <Pause size={15} />} {paused || reduced ? 'Motion off' : 'Motion on'}</button>
-    </motion.div>
-    <div className="fb-product-selector" role="group" aria-label="Explore connected objects">{products.map((p, i) => <button key={p.kind} onClick={() => setSelected(i)} aria-pressed={selected === i}>{p.kind === 'bottle' ? 'QR bottle' : p.kind === 'nfc' ? 'NFC tag' : 'Bag tag'}<span>0{i + 1}</span></button>)}</div>
-    <div className="fb-product-story" aria-live="polite"><span>{products[selected].eyebrow}</span><h2>{products[selected].name}</h2><p>{products[selected].body}</p></div>
-    <a className="fb-scroll-cue" href="#labels">SCROLL TO DISCOVER ↓</a>
-  </div>
-}
+export function HeroExperience(){return <div className="fs-service-hero">
+ <div className="fs-service-intro"><p className="fb-kicker">LABEL IT. CONNECT IT. HELP IT HOME.</p><h1>Your things.<br/><em>A way back.</em></h1><p>We supply the right labels for your everyday belongings.<br/>Connect them in FindBox, so a finder can help get them back.</p><div className="fs-service-actions"><Button to="/shop/catalog" size="lg" arrow>Choose your labels</Button><Link to="/app/sign-in">Already labelled? Open the app <ArrowUpRight size={16}/></Link></div></div>
+ <div className="fs-service-examples" aria-label="How we label your belongings">{options.map(p=><Link key={p.id} to={'/shop/products/'+(server?p.serverId:p.id)}><img src={'/media/catalog/'+p.image+'-960.webp'} srcSet={'/media/catalog/'+p.image+'-480.webp 480w, /media/catalog/'+p.image+'-960.webp 960w'} sizes="(max-width:700px) 45vw, 300px" alt={p.title+' with '+p.finish.toLowerCase()}/><div><h2>{p.title}</h2><p>{p.finish}</p><ArrowUpRight size={18}/></div></Link>)}</div>
+ <div className="fs-service-bottom"><p><span>01 Choose labels</span><span>02 Connect in the app</span><span>03 Scan to help return</span></p><Link to={'/shop/products/'+(server?'tap-3':'tap')}>Prefer a tap? Explore NFC <ArrowUpRight size={15}/></Link></div>
+ </div>}
+export function PremiumFinder(){return <section className="fs-premium-finder" id="premium-finder"><img src="/media/catalog/finder-960.webp" alt="Findable Key Card concept shown with a wallet and keys" loading="lazy"/><div><p className="fb-kicker">THE PREMIUM COLLECTION · COMING SOON</p><h2>For the things<br/><em>you can’t leave behind.</em></h2><h3>Findable Key Card</h3><p>A dedicated item finder for your wallet, bag or keys. Our premium addition to a life with a little less lost.</p><Link className="fs-finder-link" to={'/shop/products/'+(server?'finder-1':'finder')}>Discover the Key Card <ArrowUpRight size={18}/></Link><small>Target price KSh 3,499. Hardware and phone compatibility will be confirmed before orders open. Sold separately from label kits.</small></div></section>}
