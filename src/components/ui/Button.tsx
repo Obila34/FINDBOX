@@ -22,7 +22,7 @@ const sizes: Record<Size, string> = {
   sm: 'min-h-[38px] px-4 text-[13px]', md: 'min-h-[44px] px-5 text-[14px]', lg: 'min-h-[50px] px-6 text-[14px]',
 }
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, icon, iconRight, arrow, className, children, to, full, disabled, magnetic: _magnetic, type = 'button', ...rest }, ref,
+  { variant = 'primary', size = 'md', loading, icon, iconRight, arrow, className, children, to, full, disabled, magnetic, type = 'button', ...rest }, ref,
 ) {
   const cls = cx('fb-btn group relative inline-flex items-center justify-center gap-3 rounded-full border font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50', variants[variant], sizes[size], full && 'w-full', arrow && '!pr-2', className)
   const content = <>
@@ -31,6 +31,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     {iconRight}
     {arrow && <span className={cx('fb-btn-arrow-circle', variant === 'primary' ? 'text-[#0D6166]' : 'text-ink')}><ArrowRight size={16} aria-hidden="true" /></span>}
   </>
-  if (to) return <Link to={to} className={cls} aria-disabled={disabled || loading || undefined} tabIndex={disabled || loading ? -1 : undefined} onClick={e => { if (disabled || loading) e.preventDefault() }}>{content}</Link>
-  return <button ref={ref} type={type} className={cls} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>{content}</button>
+  if (to) return <Link to={to} className={cls} data-magnetic={magnetic ? '' : undefined} aria-disabled={disabled || loading || undefined} tabIndex={disabled || loading ? -1 : undefined} onClick={e => { if (disabled || loading) e.preventDefault() }}>{content}</Link>
+  return <button ref={ref} type={type} className={cls} data-magnetic={magnetic ? '' : undefined} disabled={disabled || loading} aria-busy={loading || undefined} {...rest}>{content}</button>
 })

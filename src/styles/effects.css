@@ -271,3 +271,18 @@
   .fb-roll > span, .fb-btn-arrow-circle svg, .fb-expand-link, .fb-expand-link > span, .fb-expand-link svg, .fb-return-card, .fb-school-art > img { transition: none; }
   .fb-family-art:hover .fb-return-card, .fb-school-art:hover > img { transform: none; }
 }
+
+/* Landing page motion system: scroll progress, restrained reveals and a fine-pointer cursor. */
+.fb-motion-page{position:relative;overflow:clip}
+.fb-scroll-progress{position:fixed;z-index:120;top:0;left:0;right:0;height:3px;transform-origin:0 50%;background:linear-gradient(90deg,#173d30,#7ea266,#c5dcae);box-shadow:0 1px 10px #6d986a55;pointer-events:none}
+.fb-scroll-reveal{position:relative}
+.fb-magnetic-cursor{position:fixed;inset:0;z-index:180;pointer-events:none;opacity:0;transition:opacity .2s ease;mix-blend-mode:multiply}
+.fb-magnetic-cursor[data-visible=true]{opacity:1}
+.fb-cursor-ring,.fb-cursor-dot{position:absolute;left:0;top:0;display:block;border-radius:50%;will-change:transform}
+.fb-cursor-ring{width:38px;height:38px;border:1px solid #173d3099;background:#c9dfb518;transition:width .2s ease,height .2s ease,margin .2s ease,background .2s ease,border-color .2s ease}
+.fb-cursor-dot{width:6px;height:6px;background:#173d30;box-shadow:0 0 0 3px #f2f6ed99}
+.fb-magnetic-cursor[data-active=true] .fb-cursor-ring{width:54px;height:54px;margin:-8px;background:#aeca9533;border-color:#173d30}
+.fb-motion-page a,.fb-motion-page button,.fb-motion-page [data-magnetic]{translate:var(--fb-magnetic-x,0) var(--fb-magnetic-y,0);transition:translate .24s cubic-bezier(.2,.75,.2,1)}
+@media(pointer:fine) and (hover:hover){.fb-motion-page,.fb-motion-page a,.fb-motion-page button,.fb-halo-stage{cursor:none!important}}
+@media(pointer:coarse),(hover:none){.fb-magnetic-cursor{display:none}.fb-motion-page a,.fb-motion-page button,.fb-motion-page [data-magnetic]{translate:none}}
+@media(prefers-reduced-motion:reduce){.fb-scroll-progress,.fb-magnetic-cursor{display:none}.fb-scroll-reveal{transform:none!important;filter:none!important;opacity:1!important}.fb-motion-page a,.fb-motion-page button,.fb-motion-page [data-magnetic]{translate:none;transition:none}}
