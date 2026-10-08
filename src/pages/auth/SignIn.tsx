@@ -15,7 +15,7 @@ export function SignIn() {
  const { accounts, people, signIn } = useStore(); const nav = useNavigate(); const location = useLocation()
  const [busy, setBusy] = useState(false)
  const [role, setRole] = useState<Role>((/^\/(app\/)?shop/.test(location.state?.from||'')) ? 'parent' : 'student'); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState('')
- function enter(id: string) { const p = people.find(p => p.id === id)!; signIn(id, { presenter: false }); const from = location.state?.from; nav(typeof from === 'string' && (from.startsWith('/shop') || (from.startsWith('/app/') && !['staff', 'manager'].includes(p.role))) ? from : homeFor(p.role)) }
+ function enter(id: string) { const p = people.find(p => p.id === id)!; signIn(id, { presenter: false }); const from = location.state?.from; nav(typeof from === 'string' && (from.startsWith('/shop') || from.startsWith('/refer') || (from.startsWith('/app/') && !['staff', 'manager'].includes(p.role))) ? from : homeFor(p.role)) }
  async function submit(e: FormEvent) {
  e.preventDefault(); setError(''); setBusy(true)
  try {

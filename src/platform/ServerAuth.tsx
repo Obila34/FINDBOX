@@ -34,7 +34,7 @@ export function ServerAuth() {
     }
     const from = location.state?.from;
     nav(
-      typeof from === "string" && /^\/(app|shop)(\/|$)/.test(from)
+      typeof from === "string" && /^\/(app|shop|refer)(\/|$)/.test(from)
         ? from
         : ["staff", "manager"].includes(r.user.role)
           ? "/manage"

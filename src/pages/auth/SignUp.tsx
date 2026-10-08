@@ -13,7 +13,7 @@ const STEPS = ['Who you are', 'Your details', 'Your school', 'Done']
 
 /** Short multi-step sign-up with a step indicator and reversible back navigation. Local demo identity only. */
 export function SignUp() {
-  const nav = useNavigate(); const location=useLocation(); const returnTo=location.state?.from; const shopReturn=typeof returnTo==='string'&&/^\/(app\/)?shop(\/|$)/.test(returnTo)?returnTo:null
+  const nav = useNavigate(); const location=useLocation(); const returnTo=location.state?.from; const safeReturn=typeof returnTo==='string'&&(/^\/(app\/)?shop(\/|$)/.test(returnTo)||/^\/refer(\/|$)/.test(returnTo))?returnTo:null
   const school = useStore((s) => s.school)
   const createLocalAccount = useStore((s) => s.createLocalAccount)
   const accounts = useStore((s) => s.accounts)
@@ -111,8 +111,8 @@ export function SignUp() {
             <div className="flex flex-col items-center gap-3 py-4 text-center">
               <span className="fb-settle flex h-16 w-16 items-center justify-center rounded-full bg-[#e8f3ec] text-status-done"><Check className="h-8 w-8" /></span>
               <h2 className="fb-display text-2xl text-ink">Account created</h2>
-              <p className="max-w-xs text-[0.9rem] text-ink-3">{shopReturn?'Your account is ready. Continue shopping with your saved bag.':'A quick onboarding sets up your first belonging.'}</p>
-              <Button size="lg" full onClick={() => nav(shopReturn||'/app/onboarding')} iconRight={<ArrowRight className="h-4 w-4" />}>Continue</Button>
+              <p className="max-w-xs text-[0.9rem] text-ink-3">{safeReturn?'Your account is ready. Continue where you left off.':'A quick onboarding sets up your first belonging.'}</p>
+              <Button size="lg" full onClick={() => nav(safeReturn||'/app/onboarding')} iconRight={<ArrowRight className="h-4 w-4" />}>Continue</Button>
             </div>
           )}
         </div>

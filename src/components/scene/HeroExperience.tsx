@@ -26,9 +26,9 @@ export function HeroExperience(){
  <span className="fs-hero-aurora fs-hero-aurora-one" aria-hidden="true"/><span className="fs-hero-aurora fs-hero-aurora-two" aria-hidden="true"/>
  <ImageStreamHero images={streamImages} speed={38} cards={10} axis={56} className="fs-findbox-stream">
   <div className="fs-stream-content">
-   <motion.div className="fs-stream-heading" initial={reduced?false:{opacity:0,y:-24,filter:'blur(8px)'}} animate={{opacity:1,y:0,filter:'blur(0px)'}} transition={{duration:.9,delay:.12,ease:[.2,.75,.2,1]}}><p className="fb-kicker">LABEL IT. CONNECT IT. HELP IT HOME.</p><h1>Your things.<br/><em>A way back.</em></h1></motion.div>
+   <motion.div className="fs-stream-heading" initial={reduced?false:{opacity:0,y:-24,filter:'blur(8px)'}} animate={{opacity:1,y:0,filter:'blur(0px)'}} transition={{duration:.9,delay:.12,ease:[.2,.75,.2,1]}}><h1>Every belonging.<br/><em>A way home.</em></h1></motion.div>
    <motion.div className="fs-stream-shop" initial={reduced?false:{opacity:0,scale:.88}} animate={{opacity:1,scale:1}} transition={{duration:.7,delay:.45,ease:[.2,.75,.2,1]}}><Button to="/shop/catalog" size="lg" arrow magnetic>Shop FindBox labels</Button></motion.div>
-   <div className="fs-stream-caption"><p>Choose the right label for clothes, books, bottles, cables, bags and the things you carry every day.</p><Link to="/app/sign-in" data-magnetic>Already labelled? Open the app <ArrowUpRight size={16}/></Link></div>
+   <div className="fs-stream-caption"><p>QR, NFC, fabric and finder tags connected to one private return system.</p></div>
   </div>
  </ImageStreamHero>
  </motion.div>}

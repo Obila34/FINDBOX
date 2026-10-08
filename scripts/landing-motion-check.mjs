@@ -12,7 +12,7 @@ try {
   const supportsFinePointer = await desktop.evaluate(() => matchMedia('(pointer: fine) and (hover: hover)').matches)
   if (supportsFinePointer) {
     await desktop.mouse.move(520, 280)
-    await desktop.waitForTimeout(250)
+    await desktop.waitForTimeout(600)
     const cursorOpacity = Number(await desktop.locator('.fb-magnetic-cursor').evaluate(el => getComputedStyle(el).opacity))
     if (cursorOpacity < .9) throw new Error('Magnetic cursor did not become visible for a fine pointer')
   }

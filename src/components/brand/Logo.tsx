@@ -10,9 +10,9 @@ interface LogoProps {
   title?: string
 }
 
-/** The shared typographic FINDBOX wordmark. */
+/** The shared FINDBOX wordmark with its concentric discovery mark. */
 export function Logo({ height = 24, variant = 'brand', className, title = 'FindBox' }: LogoProps) {
- return <span role="img" aria-label={title} className={cx('fb-wordmark', className)} style={{ fontSize: height, color: variant === 'inverted' ? '#fff' : undefined }}>FINDBOX</span>
+ return <span role="img" aria-label={title} className={cx('fb-wordmark', variant === 'inverted' && 'is-inverted', className)} style={{ fontSize: height, color: variant === 'inverted' ? '#fff' : undefined }}><span>FINDBOX</span><img src="/brand/findbox-ring-mark.png" width={height} height={height} alt="" aria-hidden="true" decoding="async" /></span>
 }
 
 interface MarkProps { size?: number; variant?: 'brand' | 'inverted' | 'mono' | 'outline'; className?: string; pulse?: boolean; strokeWidth?: number }

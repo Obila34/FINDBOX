@@ -6,8 +6,10 @@ import { Menu, ShoppingBag, ArrowUpRight } from "lucide-react";
 import { StudioBrand } from "@/components/brand/StudioBrand";
 import { Sheet } from "@/components/ui/Sheet";
 import { useCommerce } from "@/commerce/store";
+import { useSession } from "@/store/useStore";
 export function MarketHeader() {
   const [open, setOpen] = useState(false);
+  const session = useSession();
   const inApp = useLocation().pathname.startsWith("/app/shop");
   const shop = inApp ? "/app/shop" : "/shop";
   const previewCart = useCommerce((s) => s.cart);
@@ -43,8 +45,9 @@ export function MarketHeader() {
             <ShoppingBag size={19} />
             {count > 0 && <span>{count}</span>}
           </Link>
-          <Link className="fc-header-signin" to="/app/home">
-            {inApp ? "Back to app" : "Open app"} <ArrowUpRight size={16} />
+          <Link className="fc-header-refer hidden lg:flex" to="/refer">Refer your school</Link>
+          <Link className="fc-header-signin" to={session ? "/app/home" : "/app/sign-in"} data-auth-bypass={!session ? "" : undefined}>
+            {session ? (inApp ? "Back to app" : "Open app") : "Log in"} <ArrowUpRight size={16} />
           </Link>
           <button
             className="fb-menu-toggle md:hidden"
@@ -63,7 +66,7 @@ export function MarketHeader() {
             ["/shop/catalog", "All tag packs"],
             ["/shop/account", "My tags & orders"],
             ["/shop/help", "Help & delivery"],
-            ["/app/sign-in", "Open the app"],
+            ["/refer", "Refer your school"],
           ].map(([url, title]) => (
             <Link
               to={inApp && url.startsWith("/shop") ? "/app" + url : url}
@@ -74,6 +77,7 @@ export function MarketHeader() {
               <ArrowUpRight size={18} />
             </Link>
           ))}
+          <Link data-auth-bypass={!session ? "" : undefined} to={session ? "/app/home" : "/app/sign-in"} onClick={() => setOpen(false)}>{session ? "Open the app" : "Log in"}<ArrowUpRight size={18} /></Link>
         </nav>
       </Sheet>
     </header>

@@ -1,6 +1,7 @@
 :root{--fb-font:Arial,Helvetica,system-ui,sans-serif}
 body,button,input,select,textarea,nav,.fb-display{font-family:var(--fb-font)}
-.fb-wordmark{display:inline-block;flex-shrink:0;font-family:var(--fb-font);font-weight:600;letter-spacing:-.085em;line-height:1;color:#657b56;white-space:nowrap}
+.fb-wordmark{display:inline-flex;align-items:center;gap:.34em;flex-shrink:0;font-family:var(--fb-font);font-weight:600;letter-spacing:-.085em;line-height:1;color:#657b56;white-space:nowrap}
+.fb-wordmark>span{display:block}.fb-wordmark>img{width:.9em;height:.9em;object-fit:contain;flex-shrink:0}.fb-wordmark.is-inverted>img{filter:brightness(0) invert(1)}
 .fb-studio-brand{padding-inline:5px;gap:0}.fb-studio-brand .fb-wordmark{font-size:30px}
 .fb-footer-wordmark{font-family:var(--fb-font)}
 .fb-site-header nav,.fb-workspace-desktop-nav,.fb-menu-toggle,.fb-workspace-link{font-family:var(--fb-font);font-weight:400;letter-spacing:-.025em;font-size:14px}
