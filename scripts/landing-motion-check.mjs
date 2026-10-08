@@ -4,10 +4,10 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true })
 try {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 })
   await desktop.goto('http://127.0.0.1:5173/', { waitUntil: 'networkidle' })
-  await desktop.waitForSelector('.fs-halo-card')
-  const carousel = await desktop.locator('.fs-service-carousel').boundingBox()
-  const intro = await desktop.locator('.fs-service-intro').boundingBox()
-  if (!carousel || !intro || carousel.x >= intro.x) throw new Error('Hero carousel is not positioned to the left of the copy')
+  await desktop.waitForSelector('.fb-stream-card')
+  const stream = await desktop.locator('.fs-findbox-stream').boundingBox()
+  const shop = await desktop.getByRole('link', { name: /Shop FindBox labels/i }).boundingBox()
+  if (!stream || !shop || Math.abs(shop.x + shop.width / 2 - (stream.x + stream.width / 2)) > 8) throw new Error('Shop action is not centred between the product streams')
 
   const supportsFinePointer = await desktop.evaluate(() => matchMedia('(pointer: fine) and (hover: hover)').matches)
   if (supportsFinePointer) {
@@ -39,7 +39,7 @@ try {
   const reducedOpacity = Number(await reduced.locator('.fb-scroll-reveal').first().evaluate(el => getComputedStyle(el).opacity))
   if (reducedOpacity !== 1) throw new Error('Reduced-motion content should be immediately visible')
 
-  console.log('Landing motion passed: desktop composition, cursor, scroll progress, reveals, mobile layout and reduced-motion behavior.')
+  console.log('Landing motion passed: image-stream composition, cursor, scroll progress, reveals, mobile layout and reduced-motion behavior.')
 } finally {
   await browser.close()
 }

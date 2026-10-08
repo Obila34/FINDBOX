@@ -1,8 +1,47 @@
-import {chromium} from 'playwright';
-import assert from 'node:assert/strict';
-import {mkdir} from 'node:fs/promises';
-await mkdir('shots/carousel',{recursive:true});const browser=await chromium.launch({channel:'msedge',headless:true});
-try{const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto((process.env.BASE||'http://localhost:5173')+'/');const carousel=page.getByRole('region',{name:'Labelling options'});await carousel.waitFor();await page.getByRole('button',{name:'Pause carousel',exact:true}).click();const left=await carousel.boundingBox(),right=await page.locator('.fs-service-intro').boundingBox();assert(left.x+left.width<right.x);assert.equal(await carousel.locator('.fs-halo-product').count(),7);
-await page.getByRole('button',{name:'Next product',exact:true}).click();await page.getByRole('button',{name:'Show Bottles & books'}).getAttribute('aria-pressed').then(async()=>{await page.waitForFunction(()=>document.querySelector('[aria-label="Show Bottles & books"]').getAttribute('aria-pressed')==='true')});
-await page.getByRole('button',{name:'Show Findable Key Card'}).click();await page.waitForFunction(()=>document.querySelector('[aria-label="Show Findable Key Card"]').getAttribute('aria-pressed')==='true');await page.getByRole('button',{name:'Next product',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[aria-label="Show Clothes"]').getAttribute('aria-pressed')==='true');await page.waitForTimeout(850);await page.locator('.fs-service-hero').screenshot({path:'shots/carousel/desktop.png'});
-await page.locator('.fs-halo-stage').focus();await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>document.querySelector('[aria-label="Show Bottles & books"]').getAttribute('aria-pressed')==='true');await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Show Tap & find',exact:true}).click();await page.waitForFunction(()=>document.querySelector('[aria-label="Show Tap & find"]').getAttribute('aria-pressed')==='true');assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.waitForTimeout(850);await page.locator('.fs-service-hero').screenshot({path:'shots/carousel/mobile.png'});await carousel.getByRole('link',{name:/Tap & find/}).click();await page.waitForURL('**/shop/products/tap');await page.goto((process.env.BASE||'http://localhost:5173')+'/');await page.locator('.fs-halo-stage').scrollIntoViewIfNeeded();await page.mouse.move(0,0);await page.waitForFunction(()=>document.querySelector('[aria-label="Show Clothes"]').getAttribute('aria-pressed')==='false',{},{timeout:10000});await page.getByRole('button',{name:'Pause carousel',exact:true}).click();await page.getByRole('button',{name:'Show Clothes',exact:true}).click();await page.waitForTimeout(850);const stage=await page.locator('.fs-halo-stage').boundingBox();await page.mouse.move(stage.x+stage.width*.7,stage.y+stage.height*.5);await page.mouse.down();await page.mouse.move(stage.x+stage.width*.45,stage.y+stage.height*.5,{steps:12});await page.mouse.up();await page.waitForTimeout(850);assert.equal(new URL(page.url()).pathname,'/');assert.equal(await page.getByRole('button',{name:'Show Clothes',exact:true}).getAttribute('aria-pressed'),'false');await page.emulateMedia({reducedMotion:'reduce'});await page.reload();assert(await page.getByRole('button',{name:'Play carousel',exact:true}).isDisabled());assert.deepEqual(errors,[]);console.log('Desktop carousel left/text right, seven slides, arrows, wrapping, dots, keyboard, mobile layout and product link passed.');}finally{await browser.close()}
+import { chromium } from 'playwright'
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+
+await mkdir('shots/carousel', { recursive: true })
+const browser = await chromium.launch({ channel: 'msedge', headless: true })
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.goto((process.env.BASE || 'http://localhost:5173') + '/', { waitUntil: 'networkidle' })
+  await page.locator('.fs-findbox-stream').waitFor()
+
+  assert(await page.locator('.fb-site-header').isVisible(), 'Existing site navigation should remain visible')
+  assert.equal(await page.locator('.fb-stream-card').count(), 20, 'Two rails should each contain ten cards')
+  assert.equal(await page.getByRole('button', { name: /pause|play/i }).count(), 0, 'Hero should not expose pause or play controls')
+  const duration = await page.locator('.fb-stream-card').first().evaluate(element => getComputedStyle(element).animationDuration)
+  assert.equal(duration, '38s', 'The image stream should use the requested slow automatic motion')
+
+  const firstCard = page.locator('.fb-stream-card').first()
+  const before = await firstCard.evaluate(element => getComputedStyle(element).transform)
+  await page.waitForTimeout(1100)
+  const after = await firstCard.evaluate(element => getComputedStyle(element).transform)
+  assert.notEqual(before, after, 'The image stream should move automatically')
+
+  const streamBox = await page.locator('.fs-findbox-stream').boundingBox()
+  const shopBox = await page.getByRole('link', { name: /Shop FindBox labels/i }).boundingBox()
+  assert(streamBox && shopBox)
+  const shopCentre = shopBox.x + shopBox.width / 2
+  const streamCentre = streamBox.x + streamBox.width / 2
+  assert(Math.abs(shopCentre - streamCentre) < 8, 'Shop action should sit between the two image rails')
+  await page.locator('.fs-findbox-stream').screenshot({ path: 'shots/carousel/desktop.png' })
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Hero should not overflow on mobile')
+  assert(await page.getByRole('link', { name: /Shop FindBox labels/i }).isVisible())
+  await page.locator('.fs-findbox-stream').screenshot({ path: 'shots/carousel/mobile.png' })
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.reload({ waitUntil: 'networkidle' })
+  const playState = await page.locator('.fb-stream-card').first().evaluate(element => getComputedStyle(element).animationPlayState)
+  assert.equal(playState, 'paused')
+  assert.deepEqual(errors, [])
+  console.log('Image-stream hero passed: navigation preserved, two slow automatic rails, centred shop action, no playback controls, mobile layout and reduced motion.')
+} finally {
+  await browser.close()
+}
