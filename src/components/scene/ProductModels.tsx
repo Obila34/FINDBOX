@@ -25,12 +25,7 @@ export function ProductModel({ kind }: { kind: ProductKind }) {
    <mesh position={[0,-.36,.495]}><planeGeometry args={[.42,.44]} /><meshStandardMaterial map={textures.qrMap} roughness={.65} /></mesh>
    <mesh position={[0,-1.2,0]} rotation={[Math.PI/2,0,0]}><torusGeometry args={[.4,.036,16,96]} /><meshPhysicalMaterial color="#bad1d2" metalness={.55} roughness={.14} /></mesh>
  </group>
- if (kind === 'nfc') return <group rotation={[.12,-.3,.16]}>
-   <mesh rotation={[Math.PI/2,0,0]}><cylinderGeometry args={[.82,.82,.026,128]} /><meshPhysicalMaterial color="#f4f6f1" roughness={.32} metalness={.05} clearcoat={.7} /></mesh>
-   {Array.from({ length: 22 },(_,i) => <mesh key={i} position={[0,0,.019]}><torusGeometry args={[.38+i*.017,.0055,8,120]} /><meshStandardMaterial color="#9b9e9a" metalness={.9} roughness={.44} /></mesh>)}
-   <mesh position={[0,0,.03]}><circleGeometry args={[.37,96]} /><meshStandardMaterial map={textures.nfcMap} roughness={.55} /></mesh>
-   {[.49,-.49].map(y => <mesh key={y} position={[0,y,.028]}><circleGeometry args={[.067,32]} /><meshStandardMaterial color="#8f9894" metalness={.8} roughness={.4} /></mesh>)}
- </group>
+ if(kind==='nfc')return <group rotation={[.12,-.3,.16]}><mesh scale={[.8,1,.14]}><sphereGeometry args={[.8,64,48]}/><meshPhysicalMaterial color="#214f40" roughness={.3} clearcoat={.65}/></mesh><mesh position={[0,0,.13]}><circleGeometry args={[.38,64]}/><meshStandardMaterial map={textures.qrMap}/></mesh><mesh position={[0,.74,0]}><torusGeometry args={[.16,.035,16,48]}/><meshStandardMaterial color="#c5d2c2" metalness={.8} roughness={.2}/></mesh></group>
  return <group rotation={[.1,-.2,-.16]}>
    <mesh scale={[1,1,.16]}><sphereGeometry args={[.75,96,64]} /><meshPhysicalMaterial color="#303633" roughness={.56} clearcoat={.23} /></mesh>
    <mesh position={[0,-.39,.108]}><torusGeometry args={[.16,.018,16,64]} /><meshStandardMaterial color="#acbecd" metalness={.45} roughness={.3} /></mesh>

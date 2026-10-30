@@ -1,0 +1,48 @@
+Create TWO finished, premium motion-graphics films for FINDBOX.africa using the attached editable SVG artwork and the reference video I attach. Match the reference's visual craftsmanship, pacing, lighting, camera feel and transition quality; do not copy its brand, footage, music or exact composition.
+
+BRAND AND ART DIRECTION
+FindBox helps school belongings find their way home. Use the supplied official logo, not a recreated or invented logo. Palette: forest #214f40, sage #dce7d2, warm cream #fcfcf5, restrained blue #4b8da6. Clean consistent sans-serif typography, generous space, beautiful materials, soft contact shadows, smooth curves and purposeful kinetic typography. The supplied SVGs are editable source artwork, not screenshots to pan across. Animate their named groups independently, add convincing depth and art direction, and improve detail where helpful. Keep all objects inside safe framing. Never show exposed NFC antenna coils: use smart-tag.svg, a finished enclosed label. QR graphics in the artwork are illustrative; do not present them as activation codes to scan.
+
+VOICE AND SOUND
+Use a warm, confident FEMALE voice, speaking clear natural English; an authentic Kenyan English voice is preferred if available. Friendly, calm, human pacing, no impersonation and no exaggerated sales tone. The narration explains the value for clients and schools, rather than describing every on-screen movement. Produce clean, intelligible audio with original or properly licensed subtle music and restrained sound design. Duck music under the narration. No clipping. Female voice must replace the previous male narration, not be layered over it.
+
+FILM 1 — MAIN EXPLAINER, EXACTLY 30 SECONDS
+Use explainer-key-art.svg as a style and object starting point, plus the separate phone.svg, bottle.svg and smart-tag.svg. Build a real narrative with at least six designed scenes, not a still-image slideshow.
+0–4s: Elegant FindBox logo introduction; everyday school belongings float into a composed scene. On-screen: “Every belonging. A way home.”
+4–9s: Finished labels connect to bottles, uniforms, books and bags. Show private account activation as a simple illustrative interface.
+9–14s: A family checks a clear return update; less searching and more reassurance. Keep actual names and personal details hidden.
+14–20s: A school workspace, collection station and staff handover connect in one coherent flow.
+20–26s: A lost belonging is reported; a finder scans the label and submits a report. The school confirms receipt, then the owner receives the found-item notification. Use elegant data-path animation, not magical instant GPS tracking.
+26–30s: Satisfying reunion and official logo finish, “Less lost. More found.” and “findbox.africa”. Hold the final identity long enough to read.
+
+Female voice-over script (adjust only punctuation/pacing or a few words to achieve a natural exact 30-second film):
+“Meet FindBox. A little label gives everyday belongings a way home. For families, private accounts and clear updates mean less searching and more peace of mind. For schools, one organised workspace connects students, collection points and verified handovers. When a label is scanned and a found item is received, your school confirms it, and the owner gets an update. FindBox dot Africa. Less lost. More found.”
+
+FILM 2 — SCHOOL COLLECTION POINTS, 15 SECONDS
+Use school-campus.svg. The groups include classrooms, library, school-office, sports-field, walking-routes, route-trace, landscape, reception-pin, library-pin and sports-pin. Replace the flat schematic feel with polished dimensional, isometric motion. Do not rasterize the entire campus and simply zoom it.
+0–3s: Campus assembles elegantly, buildings and trees settle into place.
+3–7s: Main reception, library desk and sports office light up in sequence. Trace the paths with subtle travelling dots and smooth camera parallax.
+7–12s: A found bag reaches a staffed collection point; show receipt confirmation followed by a private owner notification.
+12–15s: Return to a composed campus view with “A familiar place. A safe return.” and a subtle FindBox logo.
+Female voice-over:
+“Every school has its own way home. FindBox connects familiar collection points, helps staff record safe handovers, and gives families clear updates when their belongings are ready to collect.”
+
+PRODUCT ACCURACY
+- Families sign in before shopping actions or managing belongings.
+- Only the developer provisions a school and grants its administrator access. Do NOT show a public Developer tab or public self-service school-admin registration. The developer is not a marketing persona in either film.
+- School administrators manage their school's student roster, collection points and support inquiries.
+- A scan opens a return page; the finder submits a report. School confirmation comes before the owner collection notification. Do not claim an unattended scan automatically proves an item is safely received.
+- No public child names, parent contacts, private reports or login codes. No real personal data.
+- Do not claim GPS tracking, universal device compatibility, guaranteed recovery, live payments or unverified partner schools.
+- The campus is a conceptual scene, not a real published school's map.
+
+WEB PRESENTATION
+Do not bake play/pause buttons, “Watch the 30-second film”, “Hear the 30-second story”, transcript UI, autoplay-status labels, “male narration”, AI-production notes or technical disclaimers into the films. Keep the design clean. Export captions as separate WebVTT files. Autoplay on the website must start muted; sound can use the native player control. Respect reduced-motion preferences. Do not replace functional navigation or school collection-point controls with decorative controls.
+
+DELIVERABLES
+1. findbox-explainer-female.mp4: exactly 30.000 seconds, 1920×1080 minimum, 30fps, H.264 high-quality yuv420p BT.709, AAC stereo, fast-start.
+2. findbox-campus-female.mp4: exactly 15.000 seconds, same technical quality.
+3. Optional WebM versions, separate English WebVTT captions, high-quality WebP poster frames and separate voice-over audio.
+4. Editable animation project/source, all linked assets and fonts/licenses, instructions to render again, and scene-by-scene timing.
+5. Check spelling of FINDBOX and findbox.africa, mobile-safe framing, no stretched artwork, no illegible tiny interface text, smooth motion, exact durations and clean audio.
+If your environment cannot generate the female voice or render video, state that clearly and deliver the complete editable animation source and exact audio production instructions. Do not claim a video or voice has been rendered when it has not.

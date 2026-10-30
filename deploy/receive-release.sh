@@ -24,6 +24,8 @@ rollback() {
 trap 'rollback; rm -f "$archive"' HUP INT TERM
 # Do not delete the environment file or persistent volumes.
 tar -xzf "$archive" -C /opt/findbox
+# Retire the exposed antenna artwork from previous releases.
+rm -f -- public/media/objects/nfc-640.webp public/media/objects/nfc-1280.webp
 if ! (docker compose build web api migrate && docker compose run --rm migrate && docker compose up -d --no-deps --no-build api web); then rollback; exit 1; fi
 healthy=false
 for attempt in $(seq 1 40); do

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { animate, motion, useInView, useMotionValue, useMotionValueEvent, useReducedMotion, useTransform, type MotionValue } from 'motion/react'
-import { ArrowLeft, ArrowRight, Pause, Play } from 'lucide-react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 const TAU=Math.PI*2
 export function HaloReel({titles,renderItem}:{titles:string[];renderItem:(index:number,active:boolean)=>ReactNode}) {
  const stage=useRef<HTMLDivElement>(null),rotation=useMotionValue(0),reduced=useReducedMotion(),visible=useInView(stage)
@@ -25,7 +25,7 @@ export function HaloReel({titles,renderItem}:{titles:string[];renderItem:(index:
  {titles.map((title,i)=><ReelCard key={title} index={i} rotation={rotation} angle={i*step} width={cardW} height={cardH} stageWidth={width} stageHeight={height} active={active===i} onSelect={()=>go(i)} title={title}>{renderItem(i,active===i)}</ReelCard>)}
  </div>
  <div className="fs-carousel-controls"><button type="button" onClick={()=>go(active-1)} aria-label="Previous product"><ArrowLeft size={18}/></button><div role="group" aria-label="Choose a product slide">{titles.map((title,i)=><button type="button" key={title} aria-label={'Show '+title} aria-pressed={i===active} onClick={()=>go(i)}><span/></button>)}</div><button type="button" onClick={()=>go(active+1)} aria-label="Next product"><ArrowRight size={18}/></button></div>
- <div className="fs-halo-footer"><span>Drag to explore</span><button onClick={()=>setPaused(!paused)} disabled={!!reduced} aria-label={paused||reduced?'Play carousel':'Pause carousel'}>{paused||reduced?<Play size={13}/>:<Pause size={13}/>} {reduced?'Motion reduced':paused?'Play':'Pause'}</button></div>
+ <div className="fs-halo-footer"><span>Drag to explore</span></div>
  <span className="fs-carousel-status" aria-live={paused?'polite':'off'} aria-atomic="true">{titles[active]}, slide {active+1} of {titles.length}</span>
  </motion.section>
 }

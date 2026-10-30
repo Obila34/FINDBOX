@@ -501,7 +501,7 @@ export function Platform() {
                   alt="Clear water bottle"
                 />
                 <img
-                  src="/media/objects/nfc-640.webp"
+                  src="/media/vector/smart-tag.svg"
                   alt="NFC identification tag"
                 />
                 <span className="fp-float-label">
@@ -894,7 +894,7 @@ export function Platform() {
                     FindBox pack. Choose a category, add a name, and you’re
                     done.
                   </p>
-                  <img src="/media/objects/nfc-640.webp" alt="NFC tag" />
+                  <img src="/media/vector/smart-tag.svg" alt="NFC tag" />
                 </div>
                 <form
                   className="fp-panel"

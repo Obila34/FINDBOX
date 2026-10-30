@@ -241,7 +241,7 @@ export function ServerStorefront() {
                   src="/media/objects/bottle-1280.webp"
                   alt="A bottle with a FindBox label"
                 />
-                <img src="/media/objects/nfc-640.webp" alt="NFC tag" />
+                <img src="/media/vector/smart-tag.svg" alt="NFC tag" />
               </div>
             </section>
             <LabelJourney />
@@ -262,7 +262,7 @@ export function ServerStorefront() {
                 </Link>
               </div>
               <img
-                src="/media/avatars/findbox-explorer-640.webp"
+                src="/media/vector/phone.svg"
                 alt="FindBox explorer"
                 loading="lazy"
               />

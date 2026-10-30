@@ -1,0 +1,72 @@
+[
+  {
+    "name": "reunion",
+    "prompt": "Photorealistic editorial photograph for FindBox school lost-property website. Warm Kenyan school reception, smiling Black schoolgirl receiving her teal water bottle from a female staff member across a tidy wood reception desk, small white identification label on bottle, natural afternoon light, candid believable interaction, premium magazine photography, landscape 3:2, no text, no logos, no watermark. Emotion: a happy verified reunion. No exposed electronics.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "admin",
+    "prompt": "Photorealistic premium editorial photograph for FindBox schools website, Kenyan female school administrator at a bright organized school office using a laptop, elegant sage storage shelves with neatly sorted school bags behind her, natural window light, authentic modern African school setting, landscape 3:2, crisp realistic hands, no readable text, no logos, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "staff",
+    "prompt": "Photorealistic premium editorial photograph, Kenyan male school staff member organizing a found navy school backpack and maroon sweater at a staffed collection cabinet, bright library reception, warm oak and sage colors, candid attention to care, horizontal 3:2, sharp natural detail, no readable text, no logos, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "guardian",
+    "prompt": "Photorealistic premium editorial photograph, Kenyan mother beside her primary-school age son at home looking at a smartphone return notification, small school bag on table, relaxed happy expressions, airy cream home with soft green plants, tasteful wardrobe, landscape 3:2, no readable text or branding, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "journey-hero",
+    "prompt": "Premium editorial product photograph for FindBox: school backpack in warm ochre canvas with a finished enclosed sage identification key tag attached, folded forest green sweater and stainless lunch box on a pale oak school bench, sunlit cream architectural background, sculptural composed still life, horizontal 3:2, photorealistic material detail, no exposed circuit coils, no readable words, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "school-hero",
+    "prompt": "Premium architectural editorial photograph of a modern Kenyan school reception lost-property station, elegant oak cubby compartments, tidy numbered-style small blank labels, school bags and one pair of trainers neatly stored, warm sunlight through windows, cream and sage palette, no people, landscape 3:2, no readable text, no branding, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "home-teaser",
+    "prompt": "Photorealistic editorial close scene of adult hands fixing a finished soft green identification label to a child's violet school lunch box on a warm timber table, school notebook and pencil softly out of focus, bright morning home light, premium photographic detail, horizontal 3:2, no exposed electronics, no readable text, no logos, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "collection",
+    "prompt": "Photorealistic premium editorial photograph at a Kenyan school library collection desk, neatly arranged recovered pencil case, striped sports bag and folded jumper, adult staff hand holding a small blank pickup slip, book shelves gently blurred behind, natural light, sage and warm cream palette, horizontal 3:2, no readable text, no logos, no watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "connect",
+    "prompt": "Close-up adult hands applying a finished small sage identification sticker to a yellow school water bottle, sunny kitchen table with green backpack in background. Premium realistic editorial photograph, landscape 3:2, crisp tactile materials, no readable text, no logos, no exposed electronics.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "home-parent",
+    "prompt": "Kenyan father preparing a school bag with his young daughter at the kitchen table, caring everyday morning moment, premium editorial photography, warm natural window light, cream and sage colors, landscape 3:2, no text, logos or watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "home-teacher",
+    "prompt": "Kenyan female teacher standing beside a bright school classroom doorway holding a returned pencil case, students softly out of focus behind, premium editorial photography, natural daylight, landscape 3:2, no text or watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "auth-signin",
+    "prompt": "Premium photorealistic editorial still life of an olive green school backpack and neatly folded cream sweater on oak bench beside a school window, small enclosed green identity key tag attached to bag, soft morning light, portrait 4:5, no text, no logos, no exposed electronics.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "auth-signup",
+    "prompt": "Premium photorealistic editorial still life of a coral school lunchbox, lavender pencil case and tidy notebooks beside a pale green school uniform on a cream desk, small white identification stickers, soft morning light, portrait 4:5, no text, no logos or watermark.",
+    "method": "built-in image generation"
+  },
+  {
+    "name": "choose",
+    "prompt": "Premium photorealistic overhead product photograph of a carefully arranged school label starter kit: white rounded QR-style adhesive stickers, two enclosed dark green bag tags, cream backing sheets beside a forest green folded uniform, pale warm stone background, landscape 3:2, elegant studio lighting, no readable words, no exposed electronics or watermark.",
+    "method": "built-in image generation"
+  }
+]
