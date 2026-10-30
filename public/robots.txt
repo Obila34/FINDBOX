@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app/
+Disallow: /manage/
+Disallow: /company
+Disallow: /t/
+Sitemap: https://findbox.africa/sitemap.xml

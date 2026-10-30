@@ -1,3 +1,4 @@
+import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import { ProfileMenu } from '@/components/layout/ProfileMenu'
 import { AppDock } from '@/components/layout/AppDock'
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
@@ -27,7 +28,6 @@ import {
   type Workspace,
   type Recovery,
 } from "./api";
-import { PwaStatus } from "@/components/layout/PwaStatus";
 import "./platform.css";
 const categories = [
   "bottle",
@@ -118,6 +118,7 @@ export function Platform() {
     } | null>(null);
   const [selectedCase, setSelectedCase] = useState(""),
     [action, setAction] = useState("receive");
+
   const staff = !!user && ["staff", "manager"].includes(user.role);
   const auth = [
     "/app/sign-in",
@@ -128,6 +129,7 @@ export function Platform() {
   ].includes(path);
   const shop = path === "/shop";
   const publicScan = path.startsWith("/t/");
+  const markRefreshed=useBackgroundRefresh(async()=>{const d=await api<Workspace>('/workspace');const changed=JSON.stringify(d)!==JSON.stringify(workspace);setWorkspace(d);setUser(d.user);return changed},!!user&&!auth&&!publicScan&&!busy,path,()=>setNotice('Your workspace updated in the background.'));
   const tabs = staff
     ? ([
         ["/manage", "Queue", House],
@@ -163,6 +165,7 @@ export function Platform() {
     const d = await api<Workspace>("/workspace");
     setWorkspace(d);
     setUser(d.user);
+    markRefreshed();
   }
   useEffect(() => {
     let live = true;
@@ -330,7 +333,7 @@ export function Platform() {
         <Link to="/" className="fb-wordmark">
           FINDBOX
         </Link>
-        {user ? <ProfileMenu name={user.name}/> : <Link to="/app/sign-in">Sign in</Link>}
+        {user&&['parent','staff','manager'].includes(user.role)&&<Link to='/app/transfers'>Ownership transfers</Link>}{user&&['parent','staff','manager'].includes(user.role)&&<Link to='/app/children'>School children</Link>}{user?.role==='manager'&&<Link to='/app/school-admin'>Students & school setup</Link>}{user ? <ProfileMenu name={user.name}/> : <Link to="/app/sign-in">Sign in</Link>}
       </header>
       <main className="fp-main">
         {error && (
@@ -1449,7 +1452,7 @@ export function Platform() {
         <Link to="/app/boxes">Collection boxes</Link>
         <Link to="/shop">Find your tags</Link>
       </footer>
-      <PwaStatus />
+
     </div>
   );
 }

@@ -1,0 +1,16 @@
+import { useEffect,useRef,useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import { Bell,Check,X } from 'lucide-react'
+import { api,ApiError } from '@/platform/api'
+import './notifications.css'
+type Notice={id:string;title?:string;message:string;created_at:string;read:boolean;kind:'announcement'|'personal'}
+export function NotificationCenter(){
+ const path=useLocation().pathname,[authenticated,setAuthenticated]=useState(false),[items,setItems]=useState<Notice[]>([]),[open,setOpen]=useState(false),[toast,setToast]=useState(''),[error,setError]=useState('');const seen=useRef<Set<string>|null>(null)
+ async function load(){try{const d=await api<{announcements:Omit<Notice,'kind'>[];personal:Omit<Notice,'kind'>[]}>('/updates');const next=[...d.announcements.map(n=>({...n,kind:'announcement' as const})),...d.personal.map(n=>({...n,kind:'personal' as const}))].sort((a,b)=>b.created_at.localeCompare(a.created_at));if(seen.current&&next.some(n=>!n.read&&!seen.current!.has(n.id)))setToast('You have new FindBox notifications.');seen.current=new Set(next.map(n=>n.id));setAuthenticated(true);setItems(next);setError('')}catch(e){if(e instanceof ApiError&&[401,403].includes(e.status)){setAuthenticated(false);setItems([]);seen.current=null;setOpen(false)}else if(open)setError('Notifications could not refresh. Try again.')}}
+ useEffect(()=>{void load();const t=setInterval(()=>{if(!document.hidden)void load()},30000);const focus=()=>void load();window.addEventListener('focus',focus);const auth=()=>{setItems([]);seen.current=null;void load()};window.addEventListener('findbox-auth-changed',auth);return()=>{clearInterval(t);window.removeEventListener('focus',focus);window.removeEventListener('findbox-auth-changed',auth)}},[path])
+ useEffect(()=>{const update=(e:Event)=>setToast(String((e as CustomEvent).detail));window.addEventListener('findbox-refresh-status',update);return()=>window.removeEventListener('findbox-refresh-status',update)},[])
+ useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),6000);return()=>clearTimeout(t)},[toast])
+ async function read(n:Notice){try{await api('/updates/read',{id:n.id,kind:n.kind});setItems(s=>s.map(x=>x.id===n.id?{...x,read:true}:x))}catch(e){setError((e as Error).message)}}
+ if(!authenticated)return null
+ return <div className="fb-notification-center">{toast&&<div className="fb-update-toast" role="status">{toast}<button onClick={()=>{setOpen(true);setToast('')}}>View</button></div>}<button className="fb-notification-bell" aria-label={`Notifications, ${items.filter(n=>!n.read).length} unread`} aria-expanded={open} onClick={()=>{setOpen(!open);void load()}}><Bell size={20}/>{items.some(n=>!n.read)&&<span>{items.filter(n=>!n.read).length}</span>}</button>{open&&<section className="fb-notification-panel" aria-label="Notifications"><header><h2>Notifications</h2><button aria-label="Close notifications" onClick={()=>setOpen(false)}><X size={18}/></button></header>{error&&<p role="alert">{error}</p>}{items.map(n=><article key={n.id} className={n.read?'is-read':''}><strong>{n.title||'FindBox update'}</strong><p>{n.message}</p><small>{new Date(n.created_at).toLocaleString('en-KE')}</small>{!n.read&&<button onClick={()=>void read(n)}><Check size={14}/> Mark read</button>}</article>)}{!items.length&&<p>You’re all caught up.</p>}</section>}</div>
+}

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, PackageCheck, ScanLine, ShieldCheck, Smartphone, Tag, Users } from 'lucide-react'
+import { ArrowUpRight, ShieldCheck, Smartphone, Users } from 'lucide-react'
 import { MarketHeader } from '@/components/layout/MarketHeader'
 import { HeroExperience, PremiumFinder } from '@/components/scene/HeroExperience'
 import { AppShowcase } from '@/components/scene/AppShowcase'
-import { UltraQualityShowcaseGrid } from '@/components/ui/ultra-quality-showcase-grid'
+import './journey.css'
 import FooterBlock from '@/components/ui/footer-3'
 import { LandingMotion, ScrollReveal } from '@/components/ui/landing-motion'
 import { LandingAuthGate } from '@/components/ui/landing-auth-gate'
@@ -21,8 +21,8 @@ export function Landing() {
  async function handleInstall() { if (canPrompt) { const result = await install(); setInstallInfo(result === 'accepted' ? 'FindBox is being added to your home screen.' : 'You can install FindBox whenever you are ready.') } else setInstallInfo(installed ? 'FindBox is already installed on this device.' : isIOS ? 'In Safari, tap Share, then Add to Home Screen.' : 'Open your browser menu and choose Install app or Add to Home Screen, when available.') }
  return <LandingAuthGate><LandingMotion><div className="fb-landing fb-production-landing" id="top"><a href="#main" className="fb-skip">Skip to content</a><section className="fb-studio-hero fb-new-hero"><MarketHeader /><HeroExperience /></section>
  <main id="main"><ScrollReveal direction="none"><div className="fb-community-strip"><span><ShieldCheck size={16} /> School-verified returns</span><span><Users size={16} /> One connected community</span><span><Smartphone size={16} /> Made for your everyday</span></div></ScrollReveal>
- <ScrollReveal><section className="fb-findbox-story fb-container" id="how"><div className="fb-findbox-story-lead"><p className="fb-kicker">WHAT FINDBOX IS</p><h2>A connected return system for the things school life leaves behind.</h2><p>FindBox brings physical labels, a shared app and school collection points into one clear process. Families connect belongings privately. Finders scan a tag or hand an item to the school. Authorised staff verify the match and help it return safely.</p><div><Link className="fb-black-link" to="/shop/catalog">Choose your labels <ArrowUpRight size={17}/></Link><Link className="fb-story-refer" to="/refer">Refer your school <ArrowUpRight size={16}/></Link></div></div><div className="fb-findbox-story-flow"><article><span><Tag size={20}/></span><small>01</small><h3>Label</h3><p>Choose QR, NFC, fabric or finder tags made for the belonging.</p></article><article><span><ScanLine size={20}/></span><small>02</small><h3>Connect</h3><p>Activate the supplied tag in your private FindBox account.</p></article><article><span><PackageCheck size={20}/></span><small>03</small><h3>Return</h3><p>A finder or school helps the item reach its verified owner.</p></article></div></section></ScrollReveal>
- <ScrollReveal><PremiumFinder /></ScrollReveal><ScrollReveal><UltraQualityShowcaseGrid /></ScrollReveal>
+ <ScrollReveal><section className="jy-home-teaser"><img src="/media/journey/collection-concept.webp" alt="Illustrative school collection point" loading="lazy"/><div><p className="fb-kicker">THERE’S A WAY BACK.</p><h2>A small label.<br/>A whole journey home.</h2><p>From choosing a pack to a school-verified reunion. See the story, one little step at a time.</p><Link to="/how-it-works">Watch how FindBox works <ArrowUpRight size={17}/></Link><br/><Link to="/schools">Explore the school side <ArrowUpRight size={17}/></Link></div></section></ScrollReveal>
+ <ScrollReveal><PremiumFinder /></ScrollReveal>
  <ScrollReveal><section id="workspaces" className="fb-community-section fb-container"><div className="fb-section-heading"><div><p className="fb-kicker">02 / ONE APP. EVERYONE INCLUDED.</p><h2>A place for<br /><em>your people.</em></h2></div><p>One familiar experience.<br />The right tools for your part of the school day.</p></div><div className="fb-community-cards">{[
  { role: 'Students', title: 'Your world. A little more yours.', image: '/media/avatars/findbox-explorer-1280.webp', text: 'Your belongings, daily streaks, and small acts that make a difference.', cls: 'student' },
  { role: 'Parents', title: 'Less worry. More peace of mind.', image: '/media/objects/bottle-1280.webp', text: 'See your children’s belongings, follow updates, and arrange collection.', cls: 'parent' },

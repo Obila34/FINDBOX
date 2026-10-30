@@ -1,0 +1,58 @@
+name: FindBox platform checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: findbox
+          POSTGRES_PASSWORD: local-ci-only
+          POSTGRES_DB: findbox_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U findbox -d findbox_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm ci --prefix server
+      - run: npm test --prefix server
+        env:
+          TEST_DATABASE_URL: postgres://findbox:local-ci-only@localhost:5432/findbox_test
+      - run: npm run build
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: findbox-production
+      cancel-in-progress: false
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy checked frontend and backend to Contabo
+        env:
+          DEPLOY_KEY: ${{ secrets.CONTABO_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.CONTABO_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/findbox_deploy
+          chmod 600 ~/.ssh/findbox_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          tar --exclude=node_modules --exclude=tmp --exclude=.env -czf /tmp/findbox-release.tgz src public server deploy package.json package-lock.json index.html vite.config.ts tsconfig*.json tailwind.config.* postcss.config.* Dockerfile compose.yml .dockerignore
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i ~/.ssh/findbox_deploy root@212.47.70.252 < /tmp/findbox-release.tgz

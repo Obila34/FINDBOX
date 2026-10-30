@@ -11,12 +11,14 @@ import './styles/product-photos.css'
 import './commerce/storefront.css'
 import { App } from './App'
 import { PwaStatus } from '@/components/layout/PwaStatus'
+import { NotificationCenter } from '@/components/layout/NotificationCenter'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <App />
       <PwaStatus />
+      {import.meta.env.VITE_SERVER_MODE==='true'&&<NotificationCenter/>}
     </BrowserRouter>
   </StrictMode>,
 )

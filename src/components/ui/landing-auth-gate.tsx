@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, LockKeyhole, UserPlus } from 'lucide-react'
 import { Sheet } from '@/components/ui/Sheet'
 import { useSession } from '@/store/useStore'
+import { isShopBrowsePath } from '@/commerce/access'
 
 function needsAccount(path: string) {
+  if (/^\/(shop|app\/shop)(\/|$)/.test(path)) return !isShopBrowsePath(path)
   return path.startsWith('/shop') || path.startsWith('/app/') || path === '/app' || path.startsWith('/refer')
 }
 

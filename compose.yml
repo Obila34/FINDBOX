@@ -1,0 +1,109 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  db:
+    logging: *default-logging
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: findbox
+      POSTGRES_DB: findbox
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U findbox -d findbox"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  migrate:
+    logging: *default-logging
+    build:
+      context: .
+      target: api
+    environment:
+      DATABASE_URL: postgres://findbox:${POSTGRES_PASSWORD}@db:5432/findbox
+    command: [node, server/cli.mjs, migrate]
+    depends_on:
+      db:
+        condition: service_healthy
+  api:
+    logging: *default-logging
+    volumes:
+      - print_exports:/app/private-exports
+    build:
+      context: .
+      target: api
+    environment:
+      TRUSTED_PROXY: 172.30.77.10
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      DATABASE_URL: postgres://findbox:${POSTGRES_PASSWORD}@db:5432/findbox
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to your HTTPS domain}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
+      SUPPORT_ADMIN_IDS: ${SUPPORT_ADMIN_IDS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      COMPANY_EMAIL_CODES: ${COMPANY_EMAIL_CODES:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_PASSWORD_B64: ${SMTP_PASSWORD_B64:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set a base64 32-byte encryption key}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DARAJA_SANDBOX_CONSUMER_KEY: ${DARAJA_SANDBOX_CONSUMER_KEY:-}
+      DARAJA_SANDBOX_CONSUMER_SECRET: ${DARAJA_SANDBOX_CONSUMER_SECRET:-}
+      DARAJA_SANDBOX_SHORTCODE: ${DARAJA_SANDBOX_SHORTCODE:-}
+      DARAJA_SANDBOX_PASSKEY: ${DARAJA_SANDBOX_PASSKEY:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          CMD,
+          node,
+          -e,
+          "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web:
+    logging: *default-logging
+    build:
+      context: .
+      target: web
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS to your domain}
+    networks:
+      default:
+        ipv4_address: 172.30.77.10
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  print_exports:
+  postgres:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.77.0/24

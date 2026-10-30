@@ -17,3 +17,6 @@ body,button,input,select,textarea,nav,.fb-display{font-family:var(--fb-font)}
 @media(min-width:1024px){.fb-unified-app .fb-bottom-nav{display:none}}
 @media(max-width:767px){.fb-studio-brand .fb-wordmark{font-size:28px}.fb-image-companion .fb-avatar-stage{min-height:280px}.fb-image-companion.is-compact .fb-avatar-stage{min-height:250px}}
 @media(prefers-reduced-motion:reduce){.fb-companion-image{transition:none}.fb-avatar-stage.is-greeting .fb-companion-image{transform:none}}
+
+/* Keep all routes on the same brand typography, including late-loaded dashboards. */
+body h1,body h2,body h3,body h4,body button,body input,body select,body textarea,body table,body nav{font-family:var(--fb-font)}

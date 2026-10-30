@@ -10,3 +10,9 @@ private-exports/
 backups/
 
 tmp/pg-*/
+
+tmp/
+output/
+server/tmp/
+server/package.local-backup.json
+*.tsbuildinfo

@@ -5,6 +5,7 @@ import { AuthFrame } from "@/pages/auth/AuthFrame";
 import { api, ApiError } from "./api";
 import "./account.css";
 type Security = {
+  companyAccess?: boolean;
   mfaEnabled: boolean;
   mfaRequired: boolean;
   mfaVerified: boolean;
@@ -89,6 +90,7 @@ export function ServerSecurity() {
         )}
         <section>
           <ShieldCheck />
+          {data?.companyAccess && <p><Link to="/company">Return to company workspace</Link></p>}
           <h2>Two-factor authentication</h2>
           <p>
             {data?.mfaEnabled

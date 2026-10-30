@@ -1,4 +1,6 @@
+import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import catalog from './catalog.json';
+import { isShopBrowsePath } from './access';
 import { LabelJourney, LabelDetails } from './LabelJourney';
 import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -43,12 +45,12 @@ export function ServerStorefront() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [code, setCode] = useState("");
+  const markRefreshed=useBackgroundRefresh(async()=>{const p=await api<{products:Product[];checkoutEnabled:boolean}>('/products');let changed=JSON.stringify(p.products)!==JSON.stringify(products);setProducts(p.products);setCheckoutEnabled(p.checkoutEnabled);if(user){try{const w=await api<Workspace>('/workspace');changed=changed||JSON.stringify(w)!==JSON.stringify(workspace);setWorkspace(w)}catch(e){if(e instanceof ApiError&&[401,403].includes(e.status)){setUser(null);setWorkspace(null)}throw e}}return changed},loaded&&!busy,path,()=>setNotice('Shop records updated in the background.'))
   async function reload() {
     setWorkspace(await api<Workspace>("/workspace"));
   }
   useEffect(() => {
     let live = true;
-    if (cart.method !== "mpesa") cart.choose("mpesa");
     Promise.all([
       api<{ products: Product[]; checkoutEnabled: boolean }>("/products"),
       api<{ user: User; security?: { requiresMfa: boolean } }>(
@@ -63,11 +65,13 @@ export function ServerStorefront() {
         setProducts(p.products);
         setCheckoutEnabled(p.checkoutEnabled);
         if (u?.security?.requiresMfa) {
-          nav("/app/sign-in");
+          setUser(null);
+          if(!isShopBrowsePath(path)) nav('/app/sign-in',{state:{from:location.pathname}});
           return;
         }
         setUser(u?.user || null);
         if (u) {
+          if (cart.method !== 'mpesa') cart.choose('mpesa');
           const w = await api<Workspace>("/workspace");
           if (live) setWorkspace(w);
         }
@@ -93,15 +97,36 @@ export function ServerStorefront() {
     setError("");
     try {
       await fn();
+      markRefreshed();
     } catch (e) {
+      if(e instanceof ApiError && e.status===401){setUser(null);setWorkspace(null);nav('/app/sign-in',{state:{from:location.pathname}});return;}
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
   function add(p: Product) {
-    cart.change(p.id, (cart.lines[p.id] || 0) + 1);
-    setNotice(p.name + " added to your bag.");
+    if (!user) { nav('/app/sign-in', { state: { from: location.pathname } }); return; }
+    void run(async () => {
+      // Recheck the server session before changing a persisted bag.
+      try {
+        const result = await api<{user:User;security?:{requiresMfa:boolean}}>('/auth/me');
+        if (result.security?.requiresMfa) { nav('/app/sign-in',{state:{from:location.pathname}}); return; }
+        setUser(result.user);
+      } catch (e) {
+        if(e instanceof ApiError && [401,403].includes(e.status)) {setUser(null);nav('/app/sign-in',{state:{from:location.pathname}});return;}
+        throw e;
+      }
+      cart.change(p.id, (cart.lines[p.id] || 0) + 1);
+      setNotice(p.name + ' added to your bag.');
+    });
+  }
+  function changeQuantity(p:Product, quantity:number) {
+    void run(async()=>{
+      const result=await api<{user:User;security?:{requiresMfa:boolean}}>('/auth/me');
+      if(result.security?.requiresMfa){setUser(null);setWorkspace(null);nav('/app/sign-in',{state:{from:location.pathname}});return;}
+      setUser(result.user);cart.change(p.id,quantity);
+    });
   }
   function checkout(e: FormEvent) {
     e.preventDefault();
@@ -138,7 +163,7 @@ export function ServerStorefront() {
         <br />
         All connected.
       </h1>
-      <p>One FindBox account keeps your orders, labels and belongings together. Your bag stays saved.</p><Link className="fp-primary" to="/app/sign-up" state={{from:location.pathname}}>Create your FindBox account</Link>
+      <p>Browse every product freely. Sign in or create an account to use your bag, place orders and connect labels.</p><Link className="fp-primary" to="/app/sign-up" state={{from:location.pathname}}>Create your FindBox account</Link>
       <button
         className="fp-primary"
         onClick={() =>
@@ -149,6 +174,7 @@ export function ServerStorefront() {
       </button>
     </div>
   );
+  if ((!loaded || !user) && !isShopBrowsePath(path)) return <div className="fc-root fb-landing"><MarketHeader/><main className="fc-main">{error&&<p role="alert" className="fp-alert">{error}</p>}{loaded?signIn:<p role="status">Checking your account…</p>}</main><FooterBlock onInstall={()=>nav('/app/sign-in')}/></div>;
   const cards = (
     <div className="fc-products">
       {products.map((p) => (
@@ -185,9 +211,9 @@ export function ServerStorefront() {
         {notice && (
           <div role="status" className="fp-notice">
             {notice}
-            <Link to={base + "/cart"}>
+            {notice.includes("added to your bag")&&<Link to={base + "/cart"}>
               View bag <ArrowUpRight size={16} />
-            </Link>
+            </Link>}
           </div>
         )}
         {!loaded && <p role="status">Opening the store…</p>}
@@ -269,7 +295,7 @@ export function ServerStorefront() {
                 <h1>{product.name}</h1>
                 <p>{product.description}</p><LabelDetails id={product.id}/>
                 <h2>{money(product.price_minor)}</h2>
-                <button className="fp-primary" disabled={product.available===false} onClick={() => add(product)}>
+                <button className="fp-primary" disabled={!loaded||busy||product.available===false} onClick={() => add(product)}>
                   {product.available===false?'Coming soon':'Add to bag'} <Plus size={18} />
                 </button>
                 <p>
@@ -297,7 +323,7 @@ export function ServerStorefront() {
                           <button
                             aria-label={"Remove one " + p.name}
                             onClick={() =>
-                              cart.change(p.id, cart.lines[p.id] - 1)
+                              changeQuantity(p, cart.lines[p.id] - 1)
                             }
                           >
                             <Minus size={16} />
@@ -306,7 +332,7 @@ export function ServerStorefront() {
                           <button
                             aria-label={"Add one " + p.name}
                             onClick={() =>
-                              cart.change(p.id, cart.lines[p.id] + 1)
+                              changeQuantity(p, cart.lines[p.id] + 1)
                             }
                           >
                             <Plus size={16} />

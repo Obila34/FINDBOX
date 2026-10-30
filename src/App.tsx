@@ -1,3 +1,6 @@
+import {PrivacyNotice} from './platform/PrivacyNotice'
+import {useSearchMetadata} from './lib/useSearchMetadata'
+import {SchoolWorkspace,SchoolInvitation,GuardianRoster,OwnershipTransfers} from './platform/SchoolWorkspace'
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoadBoundary } from '@/components/ui/LoadBoundary'
@@ -9,11 +12,13 @@ import { usePauseWhenHidden } from '@/lib/hooks'
 import { Skeleton } from '@/components/ui/EmptyState'
 
 const Support=lazy(()=>import('@/pages/support/Support').then(m=>({default:m.Support})))
+const Company=lazy(()=>import('@/platform/Company').then(m=>({default:m.Company})))
 const ServerStorefront=lazy(()=>import('@/commerce/ServerStorefront').then(m=>({default:m.ServerStorefront})))
 const ServerAuth=lazy(()=>import('@/platform/ServerAuth').then(m=>({default:m.ServerAuth})))
 const ServerSecurity=lazy(()=>import('@/platform/ServerSecurity').then(m=>({default:m.ServerSecurity})))
 const Platform=lazy(()=>import('@/platform/Platform').then(m=>({default:m.Platform})))
 const Storefront = lazy(() => import('@/commerce/Storefront').then(m => ({ default: m.Storefront })))
+const Journey=lazy(()=>import('@/pages/landing/Journey').then(m=>({default:m.Journey})))
 const Landing = lazy(() => import('@/pages/landing/Landing').then(m => ({ default: m.Landing })))
 const TagLanding = lazy(() => import('@/pages/landing/TagLanding').then(m => ({ default: m.TagLanding })))
 const Welcome = lazy(() => import('@/pages/auth/Welcome').then(m => ({ default: m.Welcome })))
@@ -58,7 +63,14 @@ function RootEntry() {
 
 export function App() {
   usePauseWhenHidden()
+  useSearchMetadata()
   const platformLocation = useLocation()
+  if(['/privacy','/privacy/children'].includes(platformLocation.pathname)) return <PrivacyNotice/>
+  if(['/app/school-invitation','/app/guardian-invitation'].includes(platformLocation.pathname)) return <SchoolInvitation/>
+  if(platformLocation.pathname==='/app/transfers') return <OwnershipTransfers/>
+  if(platformLocation.pathname==='/app/children') return <GuardianRoster/>
+  if(platformLocation.pathname==='/app/school-admin') return <SchoolWorkspace/>
+  if(/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
   if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
   if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
     const p=platformLocation.pathname;
@@ -72,6 +84,8 @@ export function App() {
       <ScrollToTop />
       <LoadBoundary><Suspense fallback={<div className="fb-scene-load" role="status">Opening FindBox…</div>}><Routes>
         <Route path="/" element={<RootEntry />} />
+        <Route path="/how-it-works" element={<Journey/>} />
+        <Route path="/schools" element={<Journey/>} />
         <Route path="/t/:code" element={<TagLanding />} />
         <Route path="/demo" element={<Navigate to="/app/sign-in" replace />} />
 

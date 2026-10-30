@@ -31,6 +31,7 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
     .catch(() => ({ error: "FindBox server is not connected yet." }));
   if (!response.ok)
     throw new ApiError(response.status, data.error || "Please try again.");
+  if(['/auth/login','/auth/logout','/company/auth/verify','/account/mfa/challenge','/account/mfa/confirm'].includes(path))window.dispatchEvent(new Event('findbox-auth-changed'));
   return data as T;
 }
 export type User = {

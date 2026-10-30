@@ -212,7 +212,7 @@ export function ServerAuth() {
                       : "Sign in"}
         </button>
       </form>
-      {!challenge && !forgot && !reset && !verify && (
+      {!challenge && !forgot && !reset && !verify && google && (
         <>
           <div className="fs-divider">or</div>
           <button
@@ -228,11 +228,10 @@ export function ServerAuth() {
               configured.
             </p>
           )}
-          <Link className="fb-link" to="/app/forgot">
-            Forgot password?
-          </Link>
+
         </>
       )}
+      {!challenge && !forgot && !reset && !verify && !signup && <Link className="fb-link" to="/app/forgot">Forgot password?</Link>}
       {!reset && !verify && !forgot && <Link className="fb-link" to={signup?"/app/sign-in":"/app/sign-up"} state={location.state}>{signup?"Already a member? Sign in":"Join FindBox · Create an account"}</Link>}
       {(reset || verify || forgot) && (
         <Link to="/app/sign-in" className="fb-link">
