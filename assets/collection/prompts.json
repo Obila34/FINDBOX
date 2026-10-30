@@ -1,0 +1,20 @@
+[
+  {
+    "name": "reception",
+    "prompt": "Premium photorealistic editorial photograph of a welcoming contemporary Kenyan school main reception, staffed oak counter and elegant sage lost-property cubbies storing two neatly arranged backpacks, pencils and folded sweater; friendly Black female school administrator behind desk, warm natural window light, realistic architectural detail, landscape 3:2 with deep spatial composition, no logos, no readable text, no watermark. A school collection point, not a shop.",
+    "method": "built-in image generation",
+    "svg": "Embedded photographic WebP with editable SVG clipping and frame"
+  },
+  {
+    "name": "library",
+    "prompt": "Premium photorealistic editorial photograph of a bright contemporary Kenyan school library desk used as a supervised collection point for found books and pencil cases. Black male librarian in neat professional clothing beside low oak counter with stacked books and one maroon pencil case; tall bookshelves and sunlit reading tables in background, warm cream and sage accents, beautiful realistic detail and lighting, landscape 3:2, no readable text, no logos, no watermark.",
+    "method": "built-in image generation",
+    "svg": "Embedded photographic WebP with editable SVG clipping and frame"
+  },
+  {
+    "name": "sports",
+    "prompt": "Premium photorealistic editorial photograph of a Kenyan school's sports office and equipment collection station beside an open door onto green playing fields. A Black female sports teacher in a tasteful navy athletic polo organising one sports bag, folded green sports kit and football on an oak shelf; sunlight, airy clean interior, landscape 3:2, editorial architectural photography, no readable text, no logos or watermark.",
+    "method": "built-in image generation",
+    "svg": "Embedded photographic WebP with editable SVG clipping and frame"
+  }
+]
