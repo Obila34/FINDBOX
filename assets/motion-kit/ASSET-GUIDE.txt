@@ -1,0 +1,9 @@
+START: Paste PROMPT-FOR-CLAUDE.txt into Claude and attach BOTH reference videos, clearly named Reference A and Reference B. Attach the individual SVGs if ZIP attachments are not supported.
+
+Main film: exactly 30 seconds. Campus film: exactly 15 seconds. Female narration for both. Full timing and scripts are in the prompt.
+
+findbox-logo-motion.svg: outlined wordmark plus smooth concentric ring mark, separate named groups. No linked fonts or embedded raster image. White variant supplied. Ring-only SVG supplied. These are clean motion adaptations of the existing brand; original brand SVGs are included too.
+explainer-key-art.svg: 1920x1080, independent product, headline, notification and background groups.
+school-campus.svg: 1920x1080; named buildings, route, pins and landscape groups. Concept campus, not a published real school map.
+phone.svg, bottle.svg, smart-tag.svg: separate editable objects. Do not flatten the artwork into a slideshow.
+The female-voiced videos have NOT been rendered in this kit: Claude is to produce them using the references.
