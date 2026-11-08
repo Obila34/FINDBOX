@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/platform/api";
-import { StreakView } from "./Streaks";
+import { StreakQuest } from "./StreakQuest";
 type Data = { days: string[]; today: string };
 export function ServerStreaks({
   personId,
@@ -57,7 +57,7 @@ export function ServerStreaks({
       </section>
     );
   return (
-    <StreakView
+    <StreakQuest
       embedded={embedded}
       personId={personId}
       days={data.days}
@@ -65,7 +65,6 @@ export function ServerStreaks({
       onCheckIn={checkIn}
       busy={busy}
       error={error}
-      connected
     />
   );
 }

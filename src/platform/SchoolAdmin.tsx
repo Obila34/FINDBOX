@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import QRCode from 'qrcode'
+import { QRCode } from '@/components/ui/qr-code'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ClipboardList, Clock, Download, FileUp, GraduationCap, HelpCircle,
@@ -446,10 +446,9 @@ export function SchoolAdmin() {
 
 /** Parent join link, QR code and a printable poster, so families never type a code. */
 function ParentInvite({ schoolName, live }: { schoolName: string; live: boolean }) {
-  const [code, setCode] = useState<string | null | undefined>(undefined), [qr, setQr] = useState(''), [confirm, setConfirm] = useState(false)
+  const [code, setCode] = useState<string | null | undefined>(undefined), [confirm, setConfirm] = useState(false)
   const link = code ? `${location.origin}/app/sign-up?school=${encodeURIComponent(code)}` : ''
   useEffect(() => { api<Row>('/school/join-link').then(r => setCode(r.code)).catch(() => setCode(null)) }, [])
-  useEffect(() => { if (link) void QRCode.toDataURL(link, { margin: 1, width: 520, color: { dark: '#123a2e', light: '#ffffff' } }).then(setQr) }, [link])
   async function create() { try { setCode((await api<Row>('/school/join-link', {})).code); setConfirm(false); notify('New parent link ready. The previous link no longer works.') } catch { /* toast already shown */ } }
   async function copy() { try { await navigator.clipboard.writeText(link); notify('Link copied. Paste it into WhatsApp, SMS or your newsletter.') } catch { notify('Copy did not work. Select the link and copy it manually.', 'error') } }
   const message = `Join ${schoolName} on FindBox to help your child's lost belongings find their way home: ${link}`
@@ -458,7 +457,7 @@ function ParentInvite({ schoolName, live }: { schoolName: string; live: boolean 
     <div className="sa-form">
       {!live && <div className="sa-banner"><Clock size={20} /><div><strong>Not live yet</strong><p>Your link starts working as soon as setup is complete.</p></div></div>}
       {code ? <>
-        <div className="sa-qr">{qr ? <img src={qr} alt={`QR code that opens the ${schoolName} sign-up page`} /> : <span />}<p>Parents scan this with their phone camera to join {schoolName}.</p></div>
+        <div className="sa-qr"><QRCode value={link} size={220} variant="dots" errorCorrection="Q" color="#123a2e" reveal="in-view" aria-label={`QR code that opens the ${schoolName} parent sign-up page`} /><p>Parents scan this with their phone camera to join {schoolName}.</p></div>
         <label className="sa-field"><span>Parent link</span><div className="sa-copy"><input readOnly value={link} onFocus={e => e.currentTarget.select()} /><button type="button" className="sa-btn" onClick={() => void copy()}><Copy size={15} />Copy</button></div></label>
         <div className="sa-share">
           <a className="sa-btn is-ghost" href={'https://wa.me/?text=' + encodeURIComponent(message)} target="_blank" rel="noreferrer"><Share2 size={16} />Share on WhatsApp</a>
@@ -471,7 +470,7 @@ function ParentInvite({ schoolName, live }: { schoolName: string; live: boolean 
           <p className="sa-poster-kicker">FINDBOX</p>
           <h1>Lost something at {schoolName}?</h1>
           <h2>Tag your child's things. Get them back.</h2>
-          {qr && <img src={qr} alt="" />}
+          <QRCode value={link} size={360} variant="dots" errorCorrection="Q" color="#123a2e" aria-hidden="true" />
           <ol><li>Scan this code with your phone camera</li><li>Create your free parent account</li><li>Add your child and protect their belongings</li></ol>
           <p className="sa-poster-link">{link}</p>
         </div>

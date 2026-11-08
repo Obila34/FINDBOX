@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { UserRound, ChevronDown, ArrowUpRight } from "lucide-react";
+import { ChevronDown, ArrowUpRight } from "lucide-react";
+import { ProfileAvatar, useProfile } from "@/platform/profile";
 import { Sheet } from "@/components/ui/Sheet";
 import "./app-navigation.css";
 export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?: string; role?: string }) {
   const staff = role === "staff" || role === "manager";
   const [open, setOpen] = useState(false);
+  const profile = useProfile();
   const close = useCallback(() => setOpen(false), []);
   return (
     <>
@@ -16,7 +18,7 @@ export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?:
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >
-        <UserRound size={20} />
+        <ProfileAvatar profile={profile} name={name} size={30} ring={false} />
         <ChevronDown size={14} />
       </button>
       <Sheet
@@ -25,6 +27,7 @@ export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?:
         title={name}
         description="Your profile, preferences and a little help."
       >
+        <Link to="/app/account" onClick={close} className="fb-profile-hero"><ProfileAvatar profile={profile} name={name} size={56} /><span><strong>{profile?.name || name}</strong><small>{profile?.tagline || "Personalise your profile"}</small></span><ArrowUpRight size={18} /></Link>
         <nav className="fb-profile-menu" aria-label="Profile menu">
           {[
             ...(role === "manager" ? [["/app/school-admin", "School workspace", "Students, teachers, setup and parent links"]] : []),

@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
+import FooterBlock from '@/components/ui/footer-3'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -27,6 +28,8 @@ export interface SignIn1Props {
   children: ReactNode
   /** Help links shown under the card. */
   footer?: ReactNode
+  /** The site footer under the sign-in screen (off for the company workspace). */
+  siteFooter?: boolean
 }
 
 /**
@@ -34,7 +37,7 @@ export interface SignIn1Props {
  * sign in and sign up slides the form sideways and resizes the card smoothly.
  * Used by the family and school sign-in, account security and the company workspace.
  */
-export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', label: 'Back to FindBox' }, image = '/media/editorial/auth-signin.webp', wide, children, footer }: SignIn1Props) {
+export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', label: 'Back to FindBox' }, image = '/media/editorial/auth-signin.webp', wide, children, footer, siteFooter = true }: SignIn1Props) {
   const still = useReducedMotion()
   const direction = tabs?.mode === 'sign-up' ? 1 : -1
   const slide = {
@@ -104,6 +107,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
         </motion.div>
       </main>
     </div>
+    {siteFooter && <div className="mt-3 sm:mt-4 md:mt-6"><FooterBlock onInstall={() => window.location.assign('/app/sign-in')} /></div>}
   </div>
 }
 

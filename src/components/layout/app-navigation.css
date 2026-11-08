@@ -8,8 +8,8 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   padding: 9px 8px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #e0e5dc;
+  background: rgba(255,255,255,0.096);
+  border: 1px solid rgba(255,255,255,0.09);
   border-radius: 25px;
   box-shadow: 0 8px 30px #15362812;
   backdrop-filter: blur(16px);
@@ -22,12 +22,12 @@
   gap: 5px;
   min-height: 49px;
   border-radius: 17px;
-  color: #7b877d;
+  color: #9da59a;
   text-decoration: none;
 }
 .fb-simple-dock a.is-active {
-  background: #edf2e8;
-  color: #244734;
+  background: #131b16;
+  color: #d6eae0;
 }
 .fb-simple-dock a > span {
   position: relative;
@@ -41,9 +41,9 @@
   position: absolute;
   right: -8px;
   top: -5px;
-  background: #256051;
-  color: white;
-  border: 2px solid white;
+  background: #e7ecde;
+  color: #050806;
+  border: 2px solid rgba(255,255,255,0.09);
   font-size: 8px;
   font-style: normal;
   min-width: 15px;
@@ -58,9 +58,9 @@
   min-width: 52px;
   min-height: 44px;
   border-radius: 24px;
-  background: #edf2e8;
-  color: #284934;
-  border: 1px solid #dce5d5;
+  background: #131b16;
+  color: #d7e9de;
+  border: 1px solid rgba(163,187,145,0.28);
   flex-shrink: 0;
 }
 .fb-profile-menu {
@@ -72,9 +72,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 4px;
-  border-bottom: 1px solid #dde5d7;
+  border-bottom: 1px solid rgba(163,185,147,0.28);
   gap: 18px;
-  color: #203c2d;
+  color: #d7eae0;
 }
 .fb-profile-menu strong {
   font-size: 16px;
@@ -82,7 +82,7 @@
 }
 .fb-profile-menu small {
   display: block;
-  color: #73806d;
+  color: #d3d9cc;
   font-size: 12px;
   margin-top: 5px;
 }

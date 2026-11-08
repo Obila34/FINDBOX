@@ -4,6 +4,9 @@ import { HomeDashboard } from './HomeDashboard'
 import './dashboard.css'
 import './school-admin.css'
 import { AppDock } from '@/components/layout/AppDock'
+import { ProfileStudio } from "./ProfileStudio";
+import { MyAvatar } from "./profile";
+import { Logo } from "@/components/brand/Logo";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -293,12 +296,10 @@ export function Platform() {
   return (
     <div className="fp-root">
       <header className="fp-header">
-        <Link to="/" className="fb-wordmark">
-          FINDBOX
-        </Link>
+        <Link to="/" aria-label="FindBox home"><Logo height={24} /></Link>
         {user ? <ProfileMenu name={user.name} role={user.role}/> : <Link to="/app/sign-in">Sign in</Link>}
       </header>
-      <main className="fp-main">
+      <main className="fp-main fb-route-enter" key={path}>
         {error && (
           <div role="alert" className="fp-alert">
             {error}
@@ -363,7 +364,7 @@ export function Platform() {
                 to="/app/account"
                 aria-label="Your account"
               >
-                {user.name.slice(0, 1)}
+                <MyAvatar name={user.name} size={40} />
               </Link>
             </div>}
             {!user.verified && (
@@ -833,7 +834,7 @@ export function Platform() {
             {path === "/app/streaks" && <ServerStreaks personId={user.id}/>}
             {path === "/app/account" && (
               <section className="fp-panel">
-                <h2>{user.name}</h2><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
+                <ProfileStudio role={user.role} school={workspace.school?.name}/><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
                 <p>{user.email}</p>
                 <p>
                   {label(user.role)} · {workspace.school?.name}

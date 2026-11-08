@@ -1,5 +1,6 @@
 import { usePerson,useUnread } from '@/store/useStore';
 import { NavLink } from "react-router-dom";
+import { motion } from "motion/react";
 import { House, Boxes, Inbox, ShoppingBag, ScanLine, Flame } from "lucide-react";
 import "./app-navigation.css";
 export function AppDock({ unread: supplied, role = "parent" }: { unread?: number; role?: string }) {
@@ -17,15 +18,20 @@ export function AppDock({ unread: supplied, role = "parent" }: { unread?: number
             to={String(to)}
             className={({ isActive }) => (isActive ? "is-active" : "")}
           >
-            <span>
-              <I size={21} strokeWidth={1.65} />
-              {label === "Inbox" && unread > 0 && (
-                <i aria-label={`${unread} unread messages`}>
-                  {unread > 9 ? "9+" : unread}
-                </i>
-              )}
-            </span>
-            <small>{String(label)}</small>
+            {({ isActive }) => (
+              <>
+                {isActive && <motion.b layoutId="fb-dock-pill" className="fb-dock-pill" transition={{ type: "spring", stiffness: 480, damping: 36 }} />}
+                <motion.span whileTap={{ scale: 0.82 }} animate={{ y: isActive ? -1 : 0 }}>
+                  <I size={21} strokeWidth={isActive ? 2 : 1.65} />
+                  {label === "Inbox" && unread > 0 && (
+                    <i aria-label={`${unread} unread messages`}>
+                      {unread > 9 ? "9+" : unread}
+                    </i>
+                  )}
+                </motion.span>
+                <small>{String(label)}</small>
+              </>
+            )}
           </NavLink>
         );
       })}

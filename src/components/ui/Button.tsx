@@ -10,13 +10,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   arrow?: boolean; to?: string; full?: boolean; magnetic?: boolean;
 }
 const variants: Record<Variant, string> = {
-  primary: 'fb-btn-primary bg-[#0D6166] text-white border-transparent hover:bg-[#04414C]',
-  secondary: 'bg-paper text-ink border-line-strong hover:bg-paper-2',
-  ghost: 'bg-transparent text-ink border-transparent hover:bg-paper-3',
-  danger: 'bg-paper text-status-danger border-[#efbdb8] hover:bg-[#fbe9e7]',
-  dark: 'bg-ink text-white border-ink hover:bg-ink-2',
-  inverted: 'bg-white text-ink border-white hover:bg-paper-3',
-  glass: 'bg-white text-ink border-line hover:bg-paper-2',
+  primary: 'fb-btn-primary bg-cream text-black border-transparent hover:bg-cream-soft',
+  secondary: 'bg-white/5 text-ink border-white/10 hover:bg-white/10',
+  ghost: 'bg-transparent text-ink border-transparent hover:bg-white/5',
+  danger: 'bg-transparent text-[#f4b4a6] border-[#f4b4a6]/30 hover:bg-[#f4b4a6]/10',
+  dark: 'bg-sage-deep text-cream-soft border-sage-deep hover:brightness-110',
+  inverted: 'bg-cream text-black border-cream hover:bg-cream-soft',
+  glass: 'bg-white/5 text-ink border-white/10 backdrop-blur-md hover:bg-white/10',
 }
 const sizes: Record<Size, string> = {
   sm: 'min-h-[38px] px-4 text-[13px]', md: 'min-h-[44px] px-5 text-[14px]', lg: 'min-h-[50px] px-6 text-[14px]',

@@ -1,0 +1,81 @@
+/* FindBox cinematic theme: the final layer that keeps every page, dashboard and the installed app consistent.
+   Loaded last. Colours: near-black #050806, cards #0e1410 / #1a231d, cream #e7ecde text and actions,
+   brand green #657b56 for the logo and accents, sage #aebe9e for highlights. */
+:root { color-scheme: dark; --fb-brand-green: #657b56; --fb-sage: #aebe9e; --fb-cream: #e7ecde; --fb-night: #050806; }
+html, body { background: #050806 !important; color: #f8f9f3; }
+body { scrollbar-color: #2a3b2f #050806; }
+::selection { background: #aebe9e; color: #050806; }
+:focus-visible { outline: 2px solid #aebe9e !important; outline-offset: 3px; }
+
+/* The logo is always the brand green. */
+.fb-wordmark, .fb-wordmark.is-inverted, .co-brand { color: #657b56 !important; }
+
+/* One primary action style everywhere: cream pill, near-black text, gentle lift. */
+html body .fp-primary, html body .fb-btn-primary, html body .sa-btn:not(.is-ghost), html body .co-button, html body .fs-primary, html body .fl-button, html body .fb-black-link, html body .cx-access button, html body .db-attention li > button, html body .sa-setup li > button {
+  background: #e7ecde !important; color: #050806 !important; border-color: transparent !important;
+  transition: background .25s ease, transform .2s ease, box-shadow .3s ease !important;
+}
+.fp-primary:hover, .fb-btn-primary:hover, .sa-btn:hover, .co-button:hover, .fs-primary:hover, .fl-button:hover, .fb-black-link:hover {
+  background: #f8f9f3 !important; box-shadow: 0 12px 30px -14px rgba(231, 236, 222, .55);
+}
+.fp-primary:active, .fb-btn-primary:active, .sa-btn:active, .co-button:active { transform: scale(.97); }
+.fp-primary:disabled, .fb-btn-primary:disabled, .sa-btn:disabled { opacity: .5; box-shadow: none; }
+html body .fp-primary svg, html body .fb-btn-primary svg, html body .sa-btn:not(.is-ghost) svg { color: #050806 !important; }
+
+/* Form fields inside the app: quiet glass. */
+.fb-unified-app input:not([type=checkbox]):not([type=radio]):not([type=range]),
+.fb-unified-app select, .fb-unified-app textarea,
+.sa-root input:not([type=checkbox]):not([type=radio]), .sa-root select, .sa-root textarea,
+.cx-layout input:not([type=checkbox]):not([type=radio]), .cx-layout select, .cx-layout textarea,
+.fb-input, .fc-root input, .fc-root select, .fc-root textarea, .fb-support input, .fb-support select, .fb-support textarea {
+  background: rgba(255, 255, 255, .06) !important; color: #f8f9f3 !important; border: 1px solid rgba(255, 255, 255, .1) !important;
+  transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.fb-unified-app input:focus, .fb-unified-app select:focus, .fb-unified-app textarea:focus,
+.sa-root input:focus, .sa-root select:focus, .sa-root textarea:focus, .cx-layout input:focus, .cx-layout select:focus, .cx-layout textarea:focus,
+.fb-input:focus, .fc-root input:focus, .fb-support input:focus, .fb-support textarea:focus {
+  outline: none !important; border-color: rgba(174, 190, 158, .7) !important; background: rgba(255, 255, 255, .09) !important; box-shadow: 0 0 0 4px rgba(174, 190, 158, .14) !important;
+}
+input::placeholder, textarea::placeholder { color: rgba(231, 236, 222, .38) !important; }
+select option { background: #0e1410; color: #f8f9f3; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: #8fa77c; }
+
+/* Cards lift a touch under the pointer so the app feels alive. */
+@media (hover: hover) {
+  .fp-card, .fp-item-card, .fb-tile, .db-kpi, .sa-card, .fc-card, .fp-kpi { transition: transform .35s cubic-bezier(.16, 1, .3, 1), border-color .35s ease, box-shadow .35s ease; }
+  .fp-card:hover, .fp-item-card:hover, .db-kpi:hover, .sa-card:hover, .fc-card:hover, .fp-kpi:hover { transform: translateY(-3px); border-color: rgba(174, 190, 158, .28); box-shadow: 0 24px 50px -30px rgba(0, 0, 0, .9); }
+}
+
+/* Page enter: every route fades up softly. */
+.fb-route-enter { animation: fb-route-in .55s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes fb-route-in { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { .fb-route-enter { animation: none; } }
+
+/* Profile menu */
+.fb-profile-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 99px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); color: #e7ecde; transition: background .25s ease; }
+.fb-profile-toggle:hover { background: rgba(255,255,255,.1); }
+.fb-profile-hero { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, rgba(174,190,158,.14), rgba(255,255,255,.03)); border: 1px solid rgba(255,255,255,.08); color: #f8f9f3; }
+.fb-profile-hero span { flex: 1; display: grid; gap: 3px; min-width: 0; }
+.fb-profile-hero small { font-size: 12px; color: #9da59a; }
+
+/* The phone dock: frosted glass with a sliding pill under the active tab. */
+.fb-simple-dock { background: rgba(14, 20, 16, .78) !important; backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,.08) !important; box-shadow: 0 24px 60px -20px rgba(0,0,0,.9) !important; }
+.fb-simple-dock a { position: relative; isolation: isolate; color: #9da59a !important; background: transparent !important; transition: color .25s ease; -webkit-tap-highlight-color: transparent; }
+.fb-simple-dock a.is-active { color: #050806 !important; }
+.fb-simple-dock a span, .fb-simple-dock a small { position: relative; z-index: 1; }
+.fb-dock-pill { position: absolute; inset: 4px 2px; z-index: 0; border-radius: 18px; background: #e7ecde; }
+.fb-simple-dock a span i { background: #f3b27a !important; color: #050806 !important; }
+
+/* Sticky app header: glass over content. */
+.fp-header, .fb-workspace-header { background: rgba(5, 8, 6, .72) !important; backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%); border-bottom: 1px solid rgba(255,255,255,.06) !important; }
+
+/* QR codes draw themselves from the centre outwards (see components/ui/qr-code). */
+@keyframes qr-code-reveal { from { transform: scale(0); } to { transform: scale(1); } }
+@media print { [data-slot=qr-code] mask circle { animation: none !important; transform: none !important; } }
+.fp-round-link { padding: 0 !important; background: transparent !important; border: 0 !important; transition: transform .25s ease; }
+.fp-round-link:hover { transform: scale(1.06); }
+
+/* Installed app: content sits under the translucent status bar, so the header clears the notch. */
+@media (display-mode: standalone) {
+  .fp-header, .fb-workspace-header { padding-top: calc(env(safe-area-inset-top) + 10px) !important; }
+}

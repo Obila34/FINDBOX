@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import QRCode from 'qrcode'
+import { QRCode } from '@/components/ui/qr-code'
 import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Printer, RefreshCw, School, UserPlus, X } from 'lucide-react'
 import { api } from './api'
 import { notify } from './feedback'
@@ -33,8 +33,7 @@ export function FamilyChildren() {
     setBusy(true)
     try {
       const r = await api<{ login: string }>('/family/roster/' + card.child.id + '/login', { password: card.password, approve: true })
-      const qr = await QRCode.toDataURL(`${location.origin}/app/sign-in?email=${encodeURIComponent(shortLogin(r.login))}`, { margin: 1, width: 360, color: { dark: '#123a2e', light: '#ffffff' } })
-      setCard({ ...card, login: r.login, qr }); notify(`${card.child.name} can now sign in.`); await load()
+      setCard({ ...card, login: r.login, qr: `${location.origin}/app/sign-in?email=${encodeURIComponent(shortLogin(r.login))}` }); notify(`${card.child.name} can now sign in.`); await load()
     } catch { /* toast already shown */ } finally { setBusy(false) }
   }
   return (
@@ -78,7 +77,7 @@ export function FamilyChildren() {
           </div> : <div className="sa-form">
             <div className="fm-card" id="fm-card">
               <p className="fm-card-brand">FINDBOX</p><h3>{card.child.name}</h3>
-              {card.qr && <img src={card.qr} alt="QR code that opens the FindBox sign-in page" />}
+              {card.qr && <QRCode value={card.qr} size={180} variant="rounded" errorCorrection="Q" color="#123a2e" reveal="load" aria-label="QR code that opens the FindBox sign-in page" />}
               <dl><dt>Sign in at</dt><dd>{location.host}/app/sign-in</dd><dt>Username</dt><dd>{shortLogin(card.login)}</dd><dt>Password</dt><dd>{card.password}</dd></dl>
               <p>Keep this card private.</p>
             </div>

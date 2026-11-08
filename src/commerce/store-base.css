@@ -1,7 +1,7 @@
 .fp-root {
-  --ink: #173d30;
-  --sage: #657b56;
-  --paper: #f4f5ed;
+  --ink: #d4ede4;
+  --sage: #c5d2bc;
+  --paper: #131b16;
   color: var(--ink);
   background: var(--paper);
   min-height: 100vh;
@@ -62,7 +62,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #173d3015;
+  border-bottom: 1px solid rgba(255,255,255,0.115);
 }
 .fp-header .fb-wordmark {
   font-size: 32px;
@@ -103,7 +103,8 @@
   margin-top: 22px;
 }
 .fp-primary:hover {
-  background: #2e5540;
+  background: #e7ecde;
+  color: #050806;
 }
 .fp-primary svg {
   flex-shrink: 0;
@@ -120,11 +121,11 @@
   font-size: 14px;
 }
 .fp-alert {
-  background: #f6e3df;
-  color: #852d27;
+  background: rgba(210,116,96,0.13);
+  color: #e6aca8;
 }
 .fp-notice {
-  background: #e0e9d7;
+  background: rgba(153,183,123,0.2);
 }
 .fp-alert button {
   font-size: 24px;
@@ -140,7 +141,7 @@
   align-items: center;
 }
 .fp-auth-art {
-  background: radial-gradient(at bottom, #8b9b6f, #183d30 75%);
+  background: radial-gradient(at bottom, #8b9b6f, #12261f 75%);
   color: var(--paper);
   border-radius: 28px;
   min-height: 720px;
@@ -173,7 +174,7 @@
   margin: 20px 0;
 }
 .fp-auth-form > p {
-  color: #6b766c;
+  color: #d3d9cc;
   margin-bottom: 20px;
   font-size: 15px;
 }
@@ -194,9 +195,9 @@
 .fp-field select {
   width: 100%;
   height: 48px;
-  border: 1px solid #d8ddcf;
+  border: 1px solid rgba(171,184,148,0.28);
   border-radius: 11px;
-  background: #fff;
+  background: #0e1410;
   padding: 10px 13px;
   color: var(--ink);
   font-size: 15px;
@@ -226,11 +227,11 @@
 }
 .fp-shop-hero h1 em {
   font-style: normal;
-  color: #7d8c6e;
+  color: #d3d9cc;
 }
 .fp-shop-hero p {
   max-width: 440px;
-  color: #677367;
+  color: #d3d9cc;
   margin-top: 24px;
   font-size: 16px;
 }
@@ -248,7 +249,7 @@
 .fp-shop-art {
   position: relative;
   height: 500px;
-  background: radial-gradient(ellipse at center, #d1dbc3 0, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(157,179,128,0.2) 0, transparent 70%);
 }
 .fp-shop-art > img:nth-of-type(1) {
   height: 100%;
@@ -272,7 +273,7 @@
   right: 0;
   bottom: 12%;
   border-radius: 15px;
-  background: #ffffffce;
+  background: rgba(255,255,255,0.081);
   padding: 19px;
   font-size: 14px;
   line-height: 1.3;
@@ -291,7 +292,7 @@
 .fp-steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-block: 1px solid #cfd6c6;
+  border-block: 1px solid rgba(168,184,148,0.28);
   padding: 26px 0;
   margin: 35px 0 80px;
   font-size: 13px;
@@ -303,7 +304,7 @@
   align-items: center;
 }
 .fp-steps span {
-  color: #8c9e7d;
+  color: #9da59a;
   font-size: 12px;
 }
 .fp-section-heading {
@@ -315,7 +316,7 @@
 }
 .fp-section-heading > p {
   font-size: 13px;
-  color: #75816c;
+  color: #d3d9cc;
 }
 .fp-section-heading a {
   display: flex;
@@ -330,20 +331,20 @@
 }
 .fp-products article {
   border-radius: 22px;
-  background: #fff;
+  background: #0e1410;
   overflow: hidden;
 }
 .fp-product-art {
   height: 230px;
   position: relative;
-  background: #e5eadc;
+  background: rgba(160,179,128,0.13);
   overflow: hidden;
 }
 .fp-product-art > span {
   position: absolute;
   top: 15px;
   left: 15px;
-  background: #fff9;
+  background: rgba(255,255,255,0.06);
   padding: 6px 10px;
   border-radius: 30px;
   font-size: 10px;
@@ -370,7 +371,7 @@
 }
 .fp-product-copy p {
   font-size: 12px;
-  color: #75816c;
+  color: #d3d9cc;
   min-height: 62px;
   margin-top: 12px;
 }
@@ -393,7 +394,7 @@
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 50px;
-  background: #e6ebdd;
+  background: rgba(161,179,127,0.13);
   border-radius: 25px;
   padding: 40px;
   margin-top: 55px;
@@ -416,7 +417,7 @@
   justify-content: space-between;
   gap: 15px;
   padding: 17px 0;
-  border-bottom: 1px solid #c7d1bf;
+  border-bottom: 1px solid rgba(164,184,148,0.28);
   font-size: 13px;
 }
 .fp-cart-line > div {
@@ -428,7 +429,7 @@
   padding: 5px;
 }
 .fp-footer {
-  border-top: 1px solid #d6ddce;
+  border-top: 1px solid rgba(167,184,148,0.28);
   padding: 40px 5% 110px;
   display: flex;
   align-items: center;
@@ -455,7 +456,7 @@
 .fp-round-link {
   width: 45px;
   height: 45px;
-  background: #dce5d4;
+  background: rgba(152,179,128,0.2);
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -466,7 +467,7 @@
   justify-content: space-between;
   align-items: center;
   min-height: 330px;
-  background: radial-gradient(ellipse at right, #92a781, #1a3c2f 80%);
+  background: radial-gradient(ellipse at right, #92a781, #12261e 80%);
   color: #f4f5ed;
   border-radius: 27px;
   padding: 40px;
@@ -487,7 +488,7 @@
   max-width: 320px;
 }
 .fp-home-hero .fp-primary {
-  background: #f4f5ed;
+  background: #131b16;
   color: var(--ink) !important;
 }
 .fp-home-hero img {
@@ -505,7 +506,7 @@
   margin: 22px 0;
 }
 .fp-metrics a {
-  background: white;
+  background: #0e1410;
   border-radius: 18px;
   padding: 24px;
   font-size: 13px;
@@ -525,7 +526,7 @@
   align-items: center;
   gap: 22px;
   padding: 19px;
-  background: white;
+  background: #0e1410;
   border-radius: 18px;
 }
 .fp-case > img {
@@ -545,7 +546,7 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  color: #6e7a66;
+  color: #d3d9cc;
   margin-top: 8px;
 }
 .fp-case .fp-kicker {
@@ -562,22 +563,22 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  background: #e5ecd9;
+  background: rgba(162,187,119,0.13);
   padding: 6px 10px;
   border-radius: 30px;
   margin-top: 10px;
 }
 .fp-overdue {
-  background: #f4e8d7;
-  color: #835c24;
+  background: rgba(211,163,95,0.13);
+  color: #e6cca8;
 }
 .fp-empty {
   padding: 55px 25px;
   text-align: center;
-  background: #e9eee3;
+  background: #131b16;
   border-radius: 18px;
   font-size: 14px;
-  color: #6f7d65;
+  color: #d3d9cc;
 }
 .fp-empty svg {
   margin: 0 auto 16px;
@@ -592,7 +593,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid #d2dccc;
+  border: 1px solid rgba(161,184,148,0.28);
   padding: 20px;
   border-radius: 16px;
   font-size: 13px;
@@ -603,7 +604,7 @@
   gap: 23px;
 }
 .fp-items article {
-  background: #fff;
+  background: #0e1410;
   border-radius: 22px;
   overflow: hidden;
 }
@@ -618,7 +619,7 @@
 .fp-items p,
 .fp-items small {
   font-size: 13px;
-  color: #6e7a66;
+  color: #d3d9cc;
 }
 .fp-items small {
   display: block;
@@ -645,7 +646,7 @@
 }
 .fp-split-panel p {
   margin-top: 25px;
-  color: #6f7d65;
+  color: #d3d9cc;
 }
 .fp-split-panel img {
   width: 240px;
@@ -653,7 +654,7 @@
   margin: 30px auto;
 }
 .fp-panel {
-  background: #fff;
+  background: #0e1410;
   border-radius: 22px;
   padding: 30px;
 }
@@ -663,7 +664,7 @@
 }
 .fp-panel p {
   font-size: 14px;
-  color: #687665;
+  color: #d3d9cc;
   margin-bottom: 24px;
 }
 .fp-panel > a {
@@ -690,7 +691,7 @@
   margin: 30px 0;
 }
 .fp-boxes article {
-  background: #e2e9d9;
+  background: rgba(156,180,126,0.13);
   padding: 30px;
   border-radius: 22px;
 }
@@ -705,7 +706,7 @@
   font-size: 11px;
 }
 .fp-order {
-  background: #fff;
+  background: #0e1410;
   border-radius: 15px;
   padding: 23px;
   margin: 14px 0;
@@ -732,7 +733,7 @@
   border-left: 4px solid #789568;
 }
 .fp-streak {
-  background: #183d30;
+  background: #12261f;
   color: #f4f5ed;
   border-radius: 28px;
   padding: 55px;
@@ -747,11 +748,11 @@
 .fp-streak p {
   margin: 24px auto;
   max-width: 500px;
-  color: #bdc8ae;
+  color: #bdc9ad;
 }
 .fp-streak .fp-primary {
-  background: #d8e5c6;
-  color: #173d30 !important;
+  background: rgba(159,191,115,0.2);
+  color: #d4ede4 !important;
 }
 .fp-days {
   display: grid;
@@ -761,7 +762,7 @@
 }
 .fp-days span {
   padding: 14px 6px;
-  background: #ffffff0b;
+  background: rgba(255,255,255,0.03);
   border-radius: 13px;
   font-size: 11px;
 }
@@ -782,7 +783,7 @@
 .fp-public > p {
   max-width: 650px;
   margin-top: 30px;
-  color: #6c7a62;
+  color: #d3d9cc;
 }
 .fp-dock {
   position: fixed;
@@ -793,9 +794,9 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
   width: min(440px, calc(100% - 30px));
-  background: #ffffffed;
+  background: rgba(255,255,255,0.093);
   backdrop-filter: blur(18px);
-  border: 1px solid #e9ece4;
+  border: 1px solid rgba(255,255,255,0.09);
   box-shadow: 0 12px 35px #183d3020;
   border-radius: 100px;
   padding: 10px 15px;
@@ -810,7 +811,7 @@
   justify-content: center;
   min-height: 47px;
   font-size: 9px;
-  color: #83907d;
+  color: #9da59a;
 }
 .fp-dock .active {
   color: var(--ink);
@@ -857,7 +858,7 @@
 .fp-actions button {
   padding: 10px 18px;
   border-radius: 30px;
-  background: #e5ecd9;
+  background: rgba(162,187,119,0.13);
 }
 .fp-modal .fp-panel > button:last-child {
   margin-top: 20px;
