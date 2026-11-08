@@ -57,8 +57,9 @@ function ScrollToTop() {
 }
 
 function RootEntry() {
+  const {hash}=useLocation()
   const standalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone
-  return standalone ? <Navigate to="/app/sign-in" replace /> : <Landing />
+  return standalone && !hash ? <Navigate to="/app/sign-in" replace /> : <Landing />
 }
 
 export function App() {
@@ -84,7 +85,7 @@ export function App() {
       <ScrollToTop />
       <LoadBoundary><Suspense fallback={<div className="fb-scene-load" role="status">Opening FindBox…</div>}><Routes>
         <Route path="/" element={<RootEntry />} />
-        <Route path="/how-it-works" element={<Journey/>} />
+        <Route path="/how-it-works" element={<Navigate to="/#how-it-works" replace/>} />
         <Route path="/schools" element={<Journey/>} />
         <Route path="/t/:code" element={<TagLanding />} />
         <Route path="/demo" element={<Navigate to="/app/sign-in" replace />} />

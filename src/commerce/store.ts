@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import products from './catalog.json'
-export const catalog=products
+export const catalog=products.filter(p=>p.id!=='finder')
 export type Product=typeof catalog[number]
 export type StoreOrder={id:string;personId:string;date:string;lines:{productId:string;quantity:number;unitPrice?:number}[];total:number;method:string;status:'confirmed'|'preparing'|'ready'|'collected';school:string}
 export type SuppliedTag={code:string;orderId:string;personId:string;productId:string;itemId?:string;format?:string}

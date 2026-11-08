@@ -1,6 +1,7 @@
 {$SITE_ADDRESS} {
   @www host www.findbox.africa
   redir @www https://findbox.africa{uri} permanent
+  redir /how-it-works "/#how-it-works" 308
   encode zstd gzip
   header {
     X-Content-Type-Options nosniff

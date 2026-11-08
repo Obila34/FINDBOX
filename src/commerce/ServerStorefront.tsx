@@ -223,9 +223,9 @@ export function ServerStorefront() {
               <div>
                 <span className="fp-kicker">THE FINDBOX COLLECTION</span>
                 <h1>
-                  Little labels.
+                  School labels.
                   <br />
-                  <em>Big peace of mind.</em>
+                  <em>Identify and manage school belongings.</em>
                 </h1>
                 <p>
                   For the things that go everywhere. Shop your tags, connect

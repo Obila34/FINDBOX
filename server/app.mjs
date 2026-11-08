@@ -275,7 +275,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
   app.get("/api/products", async () => ({
     products: (
       await pool.query(
-        "SELECT id,name,description,price_minor,tag_count,format,image,available FROM products WHERE active=true ORDER BY price_minor",
+        "SELECT id,name,description,price_minor,tag_count,format,image,available FROM products WHERE active=true AND id<>'finder-1' ORDER BY price_minor",
       )
     ).rows,
     checkoutEnabled: !!cfg.paystackKey,

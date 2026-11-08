@@ -944,9 +944,9 @@ test('complete kits reserve each label material and roll back incomplete assortm
 });
 
 
-test('premium finder is visible but cannot be ordered before hardware launch',async()=>{
+test('premium finder is hidden and cannot be ordered before hardware launch',async()=>{
  const products=(await call('GET','/api/products')).json().products;
- const finder=products.find(p=>p.id==='finder-1');assert.equal(finder.available,false);assert.equal(finder.price_minor,349900);
+ assert.equal(products.some(p=>p.id==='finder-1'),false);
  const owner=await login('support-parent@test.com','support-testing-123');
  const result=await call('POST','/api/orders',{requestKey:crypto.randomUUID(),paymentMethod:'mpesa',lines:[{productId:'finder-1',quantity:1}]},owner);
  assert.equal(result.statusCode,400,result.body);

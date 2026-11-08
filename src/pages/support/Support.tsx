@@ -221,13 +221,13 @@ export function Support() {
         </Link>
       </header>
       <main>
-        <span className="fb-kicker">YOUR PEOPLE. HERE TO HELP.</span>
+        <span className="fb-kicker">CONTACT & SUPPORT</span>
         <h1>
           {inbox
             ? "The support desk."
             : referral
               ? "Good things are\nbetter shared."
-              : "A little help.\nA real conversation."}
+              : "Contact FindBox"}
         </h1>
         <p className="support-lede">
           {referral
@@ -245,10 +245,10 @@ export function Support() {
             <MessageCircle size={17} />
             Feedback
           </Link>
-          <Link to={inApp ? "/app/refer" : "/refer"}>
+          {inApp && <Link to="/app/refer">
             <Share2 size={17} />
             Refer FindBox
-          </Link>
+          </Link>}
           {operator && <Link to="/manage/support">Support inbox</Link>}
         </nav>
         {error && (

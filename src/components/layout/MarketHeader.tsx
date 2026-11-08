@@ -38,7 +38,7 @@ export function MarketHeader() {
             <ShoppingBag size={19} />
             {count > 0 && <span>{count}</span>}
           </Link>
-          <Link className="fc-header-refer hidden lg:flex" to="/refer">Refer your school</Link>
+          
           <Link className="fc-header-signin" to={session ? "/app/home" : "/app/sign-in"} data-auth-bypass={!session ? "" : undefined}>
             {session ? (inApp ? "Back to app" : "Open app") : "Log in"} <ArrowUpRight size={16} />
           </Link>

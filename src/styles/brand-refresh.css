@@ -20,3 +20,7 @@ body,button,input,select,textarea,nav,.fb-display{font-family:var(--fb-font)}
 
 /* Keep all routes on the same brand typography, including late-loaded dashboards. */
 body h1,body h2,body h3,body h4,body button,body input,body select,body textarea,body table,body nav{font-family:var(--fb-font)}
+
+.fb-wordmark>.fb-brand-square{width:.95em;height:.95em;flex-shrink:0;overflow:visible}.fb-wordmark.is-inverted{color:#fff}
+
+.fb-footer-v3-top>div,.fb-footer-columns,.fb-footer-columns nav{min-width:0}.fb-footer-columns a{overflow-wrap:anywhere;max-width:100%}@media(max-width:540px){.fb-footer-columns{grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 20px}}
