@@ -36,9 +36,11 @@ export function ServerAuth() {
     nav(
       typeof from === "string" && /^\/(app|shop|refer)(\/|$)/.test(from)
         ? from
-        : ["staff", "manager"].includes(r.user.role)
-          ? "/manage"
-          : "/app/home",
+        : r.user.role === "manager"
+          ? "/app/school-admin"
+          : r.user.role === "staff"
+            ? "/manage"
+            : "/app/home",
       { replace: true },
     );
   }

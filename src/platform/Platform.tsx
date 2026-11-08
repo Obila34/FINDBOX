@@ -18,6 +18,7 @@ import {
   ArrowLeft,
   Plus,
   Minus,
+  School,
 } from "lucide-react";
 import {
   api,
@@ -136,6 +137,7 @@ export function Platform() {
         ["/manage/log", "Receive", ScanLine],
         ["/app/boxes", "Boxes", MapPin],
         ["/app/inbox", "Inbox", Bell],
+        ...(user?.role === "manager" ? [["/app/school-admin", "School", School]] as const : []),
       ] as const)
     : ([
         ["/app/home", "Home", House],
@@ -219,7 +221,7 @@ export function Platform() {
     if (loaded && !user && !auth && !shop && !publicScan)
       navigate("/app/sign-in", { replace: true });
     if (user && path === "/app")
-      navigate(staff ? "/manage" : "/app/home", { replace: true });
+      navigate(user.role === "manager" ? "/app/school-admin" : staff ? "/manage" : "/app/home", { replace: true });
   }, [loaded, user, path, auth, shop, publicScan, staff, navigate]);
   async function run(fn: () => Promise<void>) {
     if (busy) return;
@@ -269,7 +271,7 @@ export function Platform() {
       );
       setUser(r.user);
       navigate(
-        ["staff", "manager"].includes(r.user.role) ? "/manage" : "/app/home",
+        r.user.role === "manager" ? "/app/school-admin" : r.user.role === "staff" ? "/manage" : "/app/home",
       );
     });
   }
