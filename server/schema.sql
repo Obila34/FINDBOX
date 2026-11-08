@@ -155,3 +155,12 @@ CREATE INDEX IF NOT EXISTS trusted_devices_user ON trusted_devices(user_id);
 CREATE TABLE IF NOT EXISTS known_devices(user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,label text NOT NULL,first_seen_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,label));
 -- Lets school administrators share a parent join link without rotating the code.
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS join_code_sealed text;
+-- School administrators invite their own teachers through the same private invitation.
+ALTER TABLE school_admin_invites ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'manager' CHECK(role IN ('manager','staff'));
+-- Parents ask to add their child; the school approves before the child joins the roster.
+CREATE TABLE IF NOT EXISTS child_requests(id text PRIMARY KEY,school_id text NOT NULL REFERENCES schools(id),guardian_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,name text NOT NULL,class_name text NOT NULL,status text NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','declined')),student_id text REFERENCES students(id),decided_by text REFERENCES users(id),decided_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS child_requests_school ON child_requests(school_id,status);
+-- Passkeys and their short-lived sign-in challenges.
+CREATE TABLE IF NOT EXISTS passkeys(id text PRIMARY KEY,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,public_key text NOT NULL,counter bigint NOT NULL DEFAULT 0,transports text NOT NULL DEFAULT '',label text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),last_used_at timestamptz);
+CREATE INDEX IF NOT EXISTS passkeys_user ON passkeys(user_id);
+CREATE TABLE IF NOT EXISTS webauthn_challenges(token_hash text PRIMARY KEY,challenge text NOT NULL,user_id text REFERENCES users(id) ON DELETE CASCADE,purpose text NOT NULL CHECK(purpose IN ('register','login')),expires_at timestamptz NOT NULL);

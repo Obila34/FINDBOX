@@ -216,3 +216,17 @@ tr.is-flash td,.is-flash{animation:sa-flash 1.8s ease}
   .sa-poster-link{font-size:13px;color:#5f7468;word-break:break-all}
   .sa-panel-backdrop{background:none!important;backdrop-filter:none!important}
 }
+.sa-requests ul,.sa-people ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.sa-requests li,.sa-people li{display:flex;align-items:center;gap:12px;padding:10px;border-radius:14px;animation:db-slide .35s ease both}
+.sa-requests li{background:#fbfdfc;border:1px solid #e3ebe5}
+.sa-people li:hover{background:#f6faf7}
+.sa-requests li>div:not(.sa-row-actions),.sa-people li>div:not(.sa-row-actions){flex:1;min-width:0}
+.sa-requests strong,.sa-people strong{display:flex;align-items:center;gap:8px;font-size:13.5px}
+.sa-requests small,.sa-people small{display:block;font-size:12px;color:#5f7468;margin-top:2px}
+.sa-row-actions button.is-primary{background:#174e3b;color:#fff}
+.sa-row-actions button.is-primary[data-action=busy]::after{border-color:#fff #fff #fff transparent}
+.sa-row-actions button.is-danger{background:#fde7e2;color:#a53a29}
+.sa-subhead{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#5f7468;margin:18px 6px 8px}
+.db-avatar.is-pending{background:#fff3d6;color:#c98a16}
+@media(max-width:780px){.sa-requests li,.sa-people li{flex-wrap:wrap}.sa-requests .sa-row-actions,.sa-people .sa-row-actions{width:100%}}
+.sa-layout .sx-current{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#e3f6ec;color:#17734f}

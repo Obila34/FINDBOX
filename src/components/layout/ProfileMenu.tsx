@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { UserRound, ChevronDown, ArrowUpRight } from "lucide-react";
 import { Sheet } from "@/components/ui/Sheet";
 import "./app-navigation.css";
-export function ProfileMenu({ name = "Your FindBox" }: { name?: string }) {
+export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?: string; role?: string }) {
+  const staff = role === "staff" || role === "manager";
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   return (
@@ -26,16 +27,22 @@ export function ProfileMenu({ name = "Your FindBox" }: { name?: string }) {
       >
         <nav className="fb-profile-menu" aria-label="Profile menu">
           {[
+            ...(role === "manager" ? [["/app/school-admin", "School workspace", "Students, teachers, setup and parent links"]] : []),
+            ...(role === "parent" ? [["/app/children", "Your children", "Add a child and manage their logins"]] : []),
             [
               "/app/account",
               "Profile & settings",
               "Your details and daily streak",
             ],
-            [
-              "/app/shop/account",
-              "Orders & tags",
-              "Purchases and supplied tags",
-            ],
+            ["/app/security", "Security & devices", "Passkeys, two-step login and signed-in devices"],
+            ...(staff ? [] : [
+              [
+                "/app/shop/account",
+                "Orders & tags",
+                "Purchases and supplied tags",
+              ],
+              ["/app/transfers", "Ownership transfers", "Approve an item changing hands"],
+            ]),
             ["/app/help", "Help & support", "Questions, problems and feedback"],
             ["/app/refer", "Refer FindBox", "Share with family or your school"],
           ].map(([to, title, description]) => (

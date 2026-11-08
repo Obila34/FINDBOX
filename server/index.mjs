@@ -14,6 +14,9 @@ const config = {
   supportAdminIds: (process.env.SUPPORT_ADMIN_IDS || "").split(",").map(s=>s.trim()).filter(Boolean),
   trustedProxy,
   origin: process.env.APP_ORIGIN || "http://localhost:5173",
+  // Optional dedicated portals, e.g. https://ops.findbox.africa and https://school.findbox.africa.
+  opsOrigin: process.env.OPS_ORIGIN || "",
+  schoolOrigin: process.env.SCHOOL_ORIGIN || "",
   paystackKey: process.env.PAYSTACK_SECRET_KEY,
   resendKey: process.env.RESEND_API_KEY,
   mailFrom: process.env.MAIL_FROM,

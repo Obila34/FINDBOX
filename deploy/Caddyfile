@@ -1,8 +1,4 @@
-{$SITE_ADDRESS} {
-  @www host www.findbox.africa
-  redir @www https://findbox.africa{uri} permanent
-  redir /how-it-works "/#how-it-works" 308
-  encode zstd gzip
+(security_headers) {
   header {
     X-Content-Type-Options nosniff
     Referrer-Policy strict-origin-when-cross-origin
@@ -10,14 +6,14 @@
     Strict-Transport-Security "max-age=31536000"
     Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
   }
-  @company path /company /company/* /app /app/* /manage /manage/* /t /t/*
-  header @company X-Robots-Tag "noindex, nofollow, noarchive"
-  header @company Cache-Control "no-store"
+}
+
+(spa) {
   handle /api/* {
     reverse_proxy api:3001
   }
   handle {
-    root * /srv
+    root * {args[0]}
     @immutable path /assets/* /media/*
     header @immutable Cache-Control "public, max-age=604800"
     @fresh path /index.html /sw.js /manifest.webmanifest
@@ -25,4 +21,37 @@
     try_files {path} /index.html
     file_server
   }
+}
+
+# Families and the public website.
+{$SITE_ADDRESS} {
+  @www host www.findbox.africa
+  redir @www https://findbox.africa{uri} permanent
+  redir /how-it-works "/#how-it-works" 308
+  encode zstd gzip
+  import security_headers
+  @company path /company /company/* /app /app/* /manage /manage/* /t /t/*
+  header @company X-Robots-Tag "noindex, nofollow, noarchive"
+  header @company Cache-Control "no-store"
+  import spa /srv
+}
+
+# Company and developer workspace: its own build, never indexed, optionally limited to known networks.
+{$OPS_SITE_ADDRESS} {
+  encode zstd gzip
+  import security_headers
+  header X-Robots-Tag "noindex, nofollow, noarchive"
+  header Cache-Control "no-store"
+  @outside not remote_ip {$OPS_ALLOWED_IPS}
+  respond @outside "This workspace is not available from your network." 403
+  import spa /srv-ops
+}
+
+# Teachers and school administrators.
+{$SCHOOL_SITE_ADDRESS} {
+  encode zstd gzip
+  import security_headers
+  header X-Robots-Tag "noindex, nofollow, noarchive"
+  redir / /school/sign-in 302
+  import spa /srv
 }

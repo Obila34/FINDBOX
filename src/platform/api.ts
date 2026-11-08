@@ -8,6 +8,8 @@ export class ApiError extends Error {
 }
 /** Which sign-in portal the current page belongs to; shared pages send none. */
 export function currentPortal(path = location.pathname): "family" | "school" | "ops" | null {
+  if (location.hostname.startsWith("ops.")) return "ops";
+  if (location.hostname.startsWith("school.")) return "school";
   if (/^\/company(\/|$)/.test(path)) return "ops";
   if (/^\/(manage|school)(\/|$)/.test(path) || path === "/app/school-admin") return "school";
   if (/^\/(shop|app\/(home|items|register|report|gallery|cases|streaks|found|account|sign-in|sign-up|forgot|reset|verify|shop))(\/|$)/.test(path)) return "family";
