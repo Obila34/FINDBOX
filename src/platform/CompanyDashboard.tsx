@@ -156,7 +156,7 @@ export function CompanyDashboard({ role, name, overview, health, busy, onRefresh
   const orders = overview?.orders?.filter(o => (orderStatus === 'all' || o.status === orderStatus) && o.id.toLowerCase().includes(orderSearch.toLowerCase())) || []
   const quick = admin
     ? [{ label: 'Create invoice', icon: <FileText size={17} />, run: () => go('invoices', 'invoice') }, { label: 'Publish update', icon: <Bell size={17} />, run: () => go('announcements', 'announcement') }, { label: 'Invite client', icon: <UserPlus size={17} />, run: () => go('clients', 'invite') }]
-    : [{ label: 'Onboard school', icon: <School size={17} />, run: () => go('schools', 'school-new') }, { label: 'School access', icon: <ShieldCheck size={17} />, run: () => go('school-access') }, { label: 'Manage accounts', icon: <Users size={17} />, run: () => go('users') }]
+    : [{ label: 'Onboard school', icon: <School size={17} />, run: () => go('schools', 'school-new') }, { label: 'School access', icon: <ShieldCheck size={17} />, run: () => go('schools') }, { label: 'Manage accounts', icon: <Users size={17} />, run: () => go('users') }]
 
   return (
     <main className={`db-root ${admin ? 'is-admin' : 'is-developer'}`}>

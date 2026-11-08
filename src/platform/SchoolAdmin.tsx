@@ -15,13 +15,13 @@ import './dashboard.css'
 import './school-admin.css'
 
 type Row = Record<string, any>
-type View = 'overview' | 'lost-found' | 'students' | 'points' | 'safeguarding' | 'settings'
+type View = 'overview' | 'lost-found' | 'students' | 'staff' | 'points' | 'safeguarding' | 'settings'
 type Case = Recovery & { created_at?: string; collected_at?: string | null }
 
 const REASON = 'School administrator reviewed and approved this change'
 const STATUSES = ['active', 'left', 'transferred', 'archived']
 const views: [View, string, typeof LayoutDashboard][] = [
-  ['overview', 'Overview', LayoutDashboard], ['lost-found', 'Lost & found', PackageSearch], ['students', 'Students', GraduationCap],
+  ['overview', 'Overview', LayoutDashboard], ['lost-found', 'Lost & found', PackageSearch], ['students', 'Students', GraduationCap], ['staff', 'Teachers', Users],
   ['points', 'Collection points', MapPin], ['safeguarding', 'Safeguarding', ShieldCheck], ['settings', 'School settings', Settings],
 ]
 const nice = (s: string) => s.replaceAll('_', ' ').replace(/^./, c => c.toUpperCase())
@@ -89,15 +89,18 @@ export function SchoolAdmin() {
   const [me, setMe] = useState<Row | null>(null)
   const [q, setQ] = useState(''), [search, setSearch] = useState(''), [status, setStatus] = useState('all'), [page, setPage] = useState(0), [more, setMore] = useState(false)
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true)
-  const [panel, setPanel] = useState<{ kind: 'student' | 'import' | 'point' | 'settings' | 'parents'; row?: Row } | null>(null)
+  const [panel, setPanel] = useState<{ kind: 'student' | 'import' | 'point' | 'settings' | 'parents' | 'teacher'; row?: Row } | null>(null)
+  const [staff, setStaff] = useState<{ members: Row[]; invites: Row[] }>({ members: [], invites: [] }), [requests, setRequests] = useState<Row[]>([]), [confirmRemove, setConfirmRemove] = useState('')
   const [preview, setPreview] = useState<Row[]>([]), [pending, setPending] = useState<Row[]>([]), [drag, setDrag] = useState(false)
   const [flash, setFlash] = useState('')
 
   async function loadCore() {
-    const [s, w, b, first] = await Promise.all([
+    const [s, w, b, first, team, asks] = await Promise.all([
       api<Row>('/school/setup'), api<Row>('/workspace'), api<{ rows: Row[] }>('/school/boxes'),
       api<{ rows: Row[]; hasMore: boolean }>('/school/students?q=&status=all&page=0'),
+      api<{ members: Row[]; invites: Row[] }>('/school/staff'), api<{ rows: Row[] }>('/school/child-requests'),
     ])
+    setStaff(team); setRequests(asks.rows)
     setSetup(s); setCases(w.cases || []); setMe(w.user); setBoxes(b.rows); setStudentCount({ n: first.rows.length, more: first.hasMore }); setError('')
     return JSON.stringify([s, w.cases, b.rows, first.rows.length])
   }
@@ -169,6 +172,7 @@ export function SchoolAdmin() {
             <button key={id} type="button" className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}>
               <Icon size={18} />{label}
               {id === 'lost-found' && stats.waiting > 0 && <b>{stats.waiting}</b>}
+              {id === 'students' && requests.length > 0 && <b>{requests.length}</b>}
               {id === 'overview' && doneSteps < checklist.length && <i className="sa-nav-dot" aria-label="Setup incomplete" />}
             </button>
           ))}
@@ -248,6 +252,14 @@ export function SchoolAdmin() {
             <a className="sa-btn is-ghost" href="/api/school/students/export?format=csv" download="FindBox-students.csv"><Download size={16} />Export</a>
             <button type="button" className="sa-btn" onClick={() => setPanel({ kind: 'student' })}><Plus size={16} />Add student</button>
           </SectionHead>
+          {requests.length > 0 && <section className="db-card sa-requests">
+            <header><h3><UserPlus size={18} />Parents asking to add a child</h3><span className="db-count">{requests.length}</span></header>
+            <ul>{requests.map(r => <li key={r.id}>
+              <span className="db-avatar">{initials(r.name)}</span>
+              <div><strong>{r.name} · {r.class_name}</strong><small>Requested by {r.guardian} ({r.guardian_email}){r.match_id ? ' · matches a student already on your roster' : ' · will be added to your roster'}</small></div>
+              <div className="sa-row-actions"><button type="button" disabled={busy} onClick={() => void act('/school/child-requests/' + r.id + '/decline', {}, `Request for ${r.name} declined.`)}>Decline</button><button type="button" className="is-primary" disabled={busy} onClick={() => void act('/school/child-requests/' + r.id + '/approve', {}, `${r.name} is now linked to ${r.guardian}.`)}><Check size={15} />Approve</button></div>
+            </li>)}</ul>
+          </section>}
           {!(setup.checklist.contact && setup.checklist.privacy) && <div className="sa-banner"><ShieldCheck size={20} /><div><strong>One step before adding students</strong><p>Record your school contact and safeguarding policy. It protects the children on your roster.</p></div><button type="button" className="sa-btn" onClick={() => setPanel({ kind: 'settings' })}>Add now</button></div>}
           <div className="sa-toolbar">
             <label className="sa-search"><Search size={17} /><input aria-label="Search student roster" placeholder="Search name, ID or class" value={search} onChange={e => setSearch(e.target.value)} /></label>
@@ -270,6 +282,30 @@ export function SchoolAdmin() {
               ))}</tbody>
             </table></div> : <div className="sa-empty"><GraduationCap size={34} /><strong>{q || status !== 'all' ? 'No students match this view' : 'No students yet'}</strong><p>{q || status !== 'all' ? 'Try another search or filter.' : 'Add students one at a time or import your whole roster from a spreadsheet.'}</p>{!q && status === 'all' && <div><button type="button" className="sa-btn" onClick={() => setPanel({ kind: 'import' })}><FileUp size={16} />Import CSV</button><button type="button" className="sa-btn is-ghost" onClick={() => setPanel({ kind: 'student' })}><Plus size={16} />Add one</button></div>}</div>}
             <div className="sa-pager"><button type="button" disabled={!page} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page + 1}</span><button type="button" disabled={!more} onClick={() => setPage(page + 1)}>Next</button></div>
+          </section>
+        </div>}
+
+        {view === 'staff' && <div className="sa-view" key="staff">
+          <SectionHead title="Teachers & staff" lede="People who can receive found items and hand them back. Teachers sign in at the school portal.">
+            <button type="button" className="sa-btn" onClick={() => setPanel({ kind: 'teacher' })}><UserPlus size={16} />Invite a teacher</button>
+          </SectionHead>
+          <section className="db-card sa-people">
+            <ul>{staff.members.map(m => <li key={m.id}>
+              <span className="db-avatar">{initials(m.name)}</span>
+              <div><strong>{m.name}{m.id === me?.id && <span className="sx-current">You</span>}</strong><small>{m.email}{m.last_seen ? ' · last active ' + new Date(m.last_seen).toLocaleDateString('en-KE') : ' · not signed in yet'}</small></div>
+              <span className={`db-pill ${m.role === 'manager' ? 'is-good' : ''}`}>{m.role === 'manager' ? 'Administrator' : 'Teacher'}</span>
+              {m.role === 'staff' && (confirmRemove === m.id
+                ? <div className="sa-row-actions"><button type="button" onClick={() => setConfirmRemove('')}>Keep</button><button type="button" className="is-danger" disabled={busy} onClick={() => { setConfirmRemove(''); void act('/school/staff/' + m.id + '/remove', {}, `${m.name} no longer has access.`) }}>Remove access</button></div>
+                : <div className="sa-row-actions"><button type="button" onClick={() => setConfirmRemove(m.id)}>Remove</button></div>)}
+            </li>)}</ul>
+            {staff.invites.length > 0 && <>
+              <h4 className="sa-subhead">Waiting to accept</h4>
+              <ul>{staff.invites.map(i => <li key={i.id}>
+                <span className="db-avatar is-pending"><Clock size={15} /></span>
+                <div><strong>{i.name}</strong><small>{i.email} · invitation expires {new Date(i.expires_at).toLocaleDateString('en-KE')}</small></div>
+                <div className="sa-row-actions"><button type="button" disabled={busy} onClick={() => void act('/school/staff/invites/' + i.id + '/cancel', {}, `Invitation to ${i.email} cancelled.`)}>Cancel</button></div>
+              </li>)}</ul>
+            </>}
           </section>
         </div>}
 
@@ -344,6 +380,16 @@ export function SchoolAdmin() {
       </Panel>}
 
       {panel?.kind === 'parents' && <Panel title="Invite parents" eyebrow="FAMILIES" onClose={() => setPanel(null)}><ParentInvite schoolName={school.name} live={lifecycle === 'active'} /></Panel>}
+
+      {panel?.kind === 'teacher' && <Panel title="Invite a teacher" eyebrow="TEACHERS" busy={busy} onClose={() => setPanel(null)}>
+        <form className="sa-form" onSubmit={e => { const d = values(e); void act('/school/staff/invite', { name: d.name, email: d.email }, `Invitation sent to ${d.email}.`) }}>
+          <fieldset disabled={busy}>
+            <Input name="name" label="Full name" maxLength={100} placeholder="e.g. Grace Wanjiru" />
+            <Input name="email" label="Work email" type="email" hint="They get an email to set their own password. The link works for 3 days." />
+            <div className="sa-form-actions"><button type="button" className="sa-btn is-ghost" onClick={() => setPanel(null)}>Cancel</button><button className="sa-btn">Send invitation</button></div>
+          </fieldset>
+        </form>
+      </Panel>}
 
       {panel?.kind === 'point' && <Panel title={panel.row?.id ? 'Edit collection point' : 'Add a collection point'} eyebrow="COLLECTION POINTS" busy={busy} onClose={() => setPanel(null)}>
         <form className="sa-form" onSubmit={e => { const d = values(e); void act('/school/boxes', { id: panel.row?.id, name: d.name, directions: d.directions, hours: d.hours, active: d.active === 'on', publicListing: d.publicListing === 'on', reason: REASON }, `${d.name} saved.`, d.name) }}>

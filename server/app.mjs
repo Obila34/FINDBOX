@@ -5,6 +5,7 @@ import { companyEmailRoutes } from './company-email.mjs';
 import { companyRoutes } from './company.mjs';
 import { supportRoutes } from "./support.mjs";
 import { accountRoutes } from "./account.mjs";
+import { passkeyRoutes } from "./passkeys.mjs";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -115,7 +116,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
       );
       if (req.headers.origin)
         requireThat(
-          req.headers.origin === cfg.origin,
+          [cfg.origin, cfg.opsOrigin, cfg.schoolOrigin].filter(Boolean).includes(req.headers.origin),
           403,
           "Origin is not allowed",
         );
@@ -281,6 +282,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   await studentLoginRoutes(app,{pool,user});
   await schoolRoutes(app, { pool, cfg, user });
   await accountRoutes(app, { pool, cfg, user, session, google, sessionToken });
+  await passkeyRoutes(app, { pool, cfg, user, session });
   await supportRoutes(app, { pool, cfg, user });
   await companyEmailRoutes(app,{pool,cfg,mailer});
   await companyRoutes(app, { pool, cfg, user, daraja });
@@ -343,7 +345,11 @@ If this was you, there is nothing to do. If not, change your password and sign o
     { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
     async (req, reply) => {
       const d = clean(
-        z.object({ email, password: z.string().min(1).max(128), portal: z.enum(["family", "school", "ops"]).optional() }),
+        z.object({
+          email: z.string().trim().toLowerCase().max(254).transform((v) => (v.includes("@") ? v : v + "@students.findbox.invalid")).pipe(email),
+          password: z.string().min(1).max(128),
+          portal: z.enum(["family", "school", "ops"]).optional(),
+        }),
         req.body,
       );
       const u = (

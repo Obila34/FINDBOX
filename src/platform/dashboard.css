@@ -133,3 +133,27 @@
 @media(max-width:750px){.db-root{padding:12px 16px 40px;gap:14px}.db-hero{flex-direction:column;padding:24px 20px;border-radius:20px}.db-hero-side{align-items:flex-start}.db-hero-actions{justify-content:flex-start}.db-quick button{flex:1 1 auto;justify-content:center}.db-kpis{gap:10px}.db-kpi{padding:16px}.db-kpi-foot{flex-wrap:wrap}.db-attention li{grid-template-columns:auto 1fr}.db-attention li>button{grid-column:1/-1;justify-content:center}}
 @media(max-width:420px){.db-kpis{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.db-root *,.db-hero{animation:none!important;transition:none!important}.db-spark-line{stroke-dashoffset:0}}
+.db-vars{--card:#fff;--ink:#123a2e;--muted:#5f7468;--line:#e3ebe5;--mint:#1f9d6b;--mint-bg:#e3f6ec;--amber:#c98a16;--amber-bg:#fff3d6;--sky:#2479a6;--sky-bg:#e1f0f8;--lilac:#7a5bc4;--lilac-bg:#efe8fb;--coral:#d0533f;--coral-bg:#fde7e2;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+.db-vars h1,.db-vars h3,.db-vars p{margin:0}
+.db-quick a{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;background:#fff;color:#123a2e;font-size:13px;font-weight:700;text-decoration:none;box-shadow:0 6px 18px #0000001f;transition:transform .15s,box-shadow .15s}
+.db-quick a:hover{transform:translateY(-2px);box-shadow:0 10px 24px #00000029}
+a.db-kpi{text-decoration:none;color:inherit}
+.fp-dash{display:grid;gap:16px;margin-bottom:24px}
+.fp-steps ol{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.fp-steps li{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fbfdfc;animation:db-slide .4s ease both}
+.fp-steps li>div{flex:1;min-width:0}.fp-steps li strong{display:block;font-size:13.5px}.fp-steps li small{font-size:12px;color:var(--muted)}
+.fp-steps li.is-done strong{color:var(--muted);text-decoration:line-through}
+.fp-steps li a{display:inline-flex;align-items:center;gap:4px;padding:8px 12px;border-radius:10px;background:#174e3b;color:#fff;font-size:12px;font-weight:700;text-decoration:none}
+.fp-steps-count{font-size:12px;font-weight:700;color:var(--muted)}
+.fp-steps-bar{height:8px;border-radius:999px;background:#e9f0eb;overflow:hidden}
+.fp-steps-bar span{display:block;height:100%;background:var(--mint);border-radius:999px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+@media(max-width:750px){.fp-hero2{padding:22px 18px}.fp-dash .db-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.fp-dash .db-kpi{padding:14px}.fp-dash .db-kpi small{display:none}.db-quick a{flex:1 1 auto;justify-content:center}}
+/* Inside the family and teacher app, beat the older generic .fp-root rules. */
+.fp-root .db-vars .db-quick a{color:#123a2e}
+.fp-root .db-vars .db-card,.fp-root .db-vars .fp-steps{display:block}
+.fp-root .db-vars .fp-steps ol{display:grid;grid-template-columns:1fr}
+.fp-root .db-vars .fp-steps-bar{margin-top:4px}
+.fp-root .db-vars h3{font-size:15px;letter-spacing:0;font-weight:700}
+.fp-root .db-vars .db-hero h1{font-size:clamp(28px,5vw,44px);letter-spacing:-1px;font-weight:700;margin:14px 0 8px}
+.fp-root .db-vars .db-kpi strong{font-size:clamp(24px,3vw,32px)}
+.fp-root .db-vars .fp-steps li a{color:#fff}

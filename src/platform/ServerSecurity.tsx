@@ -2,6 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, Download, KeyRound, LogOut } from "lucide-react";
 import { AuthFrame } from "@/pages/auth/AuthFrame";
+import { browserSupportsWebAuthn, startRegistration } from "@simplewebauthn/browser";
+import { Fingerprint } from "lucide-react";
 import { api, ApiError } from "./api";
 import "./account.css";
 type Security = {
@@ -13,6 +15,7 @@ type Security = {
   googleAvailable: boolean;
   sessions: { id: string; device: string; portal: string; createdAt: string; lastSeenAt: string; expiresAt: string; current: boolean }[];
   trustedDevices: { id: string; label: string; created_at: string; last_used_at: string; expires_at: string }[];
+  passkeys: { id: string; label: string; created_at: string; last_used_at: string | null }[];
 };
 export function ServerSecurity() {
   const nav = useNavigate();
@@ -161,6 +164,37 @@ export function ServerSecurity() {
               {!data.googleLinked && data.googleAvailable && (
                 <a href="/api/auth/google/start?link=1">Link Google account</a>
               )}
+              <h3>Passkeys</h3>
+              <p>Sign in with your fingerprint, face or phone screen lock. Nothing to remember, and it cannot be phished.</p>
+              {data.passkeys?.length > 0 && (
+                <ul className="sx-devices">
+                  {data.passkeys.map((k) => (
+                    <li key={k.id}>
+                      <div><strong><Fingerprint size={15} />{k.label || "Passkey"}</strong><small>Added {new Date(k.created_at).toLocaleDateString("en-KE")}{k.last_used_at ? " · last used " + new Date(k.last_used_at).toLocaleDateString("en-KE") : ""}</small></div>
+                      <button disabled={busy} onClick={() => action(async () => { await api("/account/passkeys/" + k.id + "/remove", {}); setMessage("Passkey removed."); })}>Remove</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {browserSupportsWebAuthn() ? (
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    action(async () => {
+                      const options = await api<Parameters<typeof startRegistration>[0]["optionsJSON"]>("/account/passkeys/options", {});
+                      try {
+                        const response = await startRegistration({ optionsJSON: options });
+                        await api("/account/passkeys/register", { response });
+                        setMessage("Passkey added. Next time, choose Sign in with a passkey.");
+                      } catch (e) {
+                        if ((e as Error).name !== "NotAllowedError") throw e;
+                      }
+                    })
+                  }
+                >
+                  Add a passkey
+                </button>
+              ) : <p>This browser does not support passkeys.</p>}
               <h3>Where you're signed in</h3>
               <ul className="sx-devices">
                 {data.sessions.map((s) => (

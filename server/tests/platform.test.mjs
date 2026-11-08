@@ -1324,3 +1324,59 @@ test("one private code activates every tag in the buyer's pack, once", async () 
   assert.equal((await pool.query("SELECT count(*)::int n FROM items WHERE owner_id='pack-parent'")).rows[0].n, 3);
   assert.equal((await call("POST", "/api/tags/activate-pack", { code: "PACK-0", activationSecret: "pack-secret-0" }, c)).statusCode, 409);
 });
+
+test("school administrators invite and remove teachers, and approve parents' child requests", async () => {
+  await pool.query("INSERT INTO schools(id,name,join_hash,lifecycle,contact_name,contact_email,privacy_basis) VALUES('kids','Kids School','kids-hash','active','Head','head@kids.test','Policy v1')");
+  const pw = await passwordHash("testing-password-123");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('kids-admin','kids-admin@test.com','Kids admin',$1,'manager','kids',true),('kids-parent','kids-parent@test.com','Kids parent',$1,'parent','kids',true)", [pw]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('kids-admin','kids','manager'),('kids-parent','kids','parent') ON CONFLICT DO NOTHING");
+  const admin = await login("kids-admin@test.com"), parent = await login("kids-parent@test.com");
+  // Teachers
+  const mailApp = await createApp({ pool, config: { origin: "http://localhost:5173", resendKey: "fake-no-network", mailFrom: "hello@findbox.africa" } });
+  let r = await mailApp.inject({ method: "POST", url: "/api/school/staff/invite", headers: { "x-findbox-request": "1", "content-type": "application/json", origin: "http://localhost:5173", cookie: admin }, payload: { name: "Teacher T", email: "teacher-t@test.com" } });
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await call("GET", "/api/school/staff", null, admin)).json().invites.length, 1);
+  assert.equal((await call("POST", "/api/school/staff/invite", { name: "X", email: "x@test.com" }, parent)).statusCode, 403);
+  const mail = (await pool.query("SELECT body FROM outbox WHERE recipient_email='teacher-t@test.com' LIMIT 1")).rows[0].body;
+  const token = mail.match(/token=([^\s]+)/)[1];
+  r = await call("POST", "/api/school/invitations/accept", { token, password: "teacher-password-123" });
+  assert.equal(r.statusCode, 200, r.body);
+  const teacher = (await pool.query("SELECT u.id,m.role FROM users u JOIN memberships m ON m.user_id=u.id WHERE u.email='teacher-t@test.com' AND m.school_id='kids'")).rows[0];
+  assert.equal(teacher.role, "staff");
+  assert.ok((await call("GET", "/api/school/staff", null, admin)).json().members.some((m) => m.email === "teacher-t@test.com"));
+  assert.equal((await call("POST", "/api/school/staff/kids-admin/remove", {}, admin)).statusCode, 409);
+  assert.equal((await call("POST", "/api/school/staff/" + teacher.id + "/remove", {}, admin)).statusCode, 200);
+  assert.equal((await pool.query("SELECT 1 FROM memberships WHERE user_id=$1 AND school_id='kids'", [teacher.id])).rowCount, 0);
+  // Children
+  r = await call("POST", "/api/family/children/request", { name: "Ama Kids", className: "Grade 2" }, parent);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await call("POST", "/api/family/children/request", { name: "ama kids", className: "Grade 2" }, parent)).statusCode, 409);
+  const pending = (await call("GET", "/api/school/child-requests", null, admin)).json().rows;
+  assert.equal(pending.length, 1);
+  assert.equal((await call("POST", "/api/school/child-requests/" + pending[0].id + "/approve", {}, admin)).statusCode, 200);
+  assert.equal((await call("POST", "/api/school/child-requests/" + pending[0].id + "/approve", {}, admin)).statusCode, 409);
+  assert.equal((await pool.query("SELECT guardian_id FROM students WHERE school_id='kids' AND name='Ama Kids'")).rows[0].guardian_id, "kids-parent");
+  assert.ok((await call("GET", "/api/family/roster", null, parent)).json().rows.some((s) => s.name === "Ama Kids"));
+  assert.equal((await call("GET", "/api/family/children/requests", null, parent)).json().rows[0].status, "approved");
+  await mailApp.close();
+});
+
+test("passkey endpoints issue single-use challenges and reject unknown or forged passkeys", async () => {
+  const opts = await app.inject({ method: "POST", url: "/api/auth/passkey/options", headers: { "x-findbox-request": "1", origin: "http://localhost:5173" }, payload: {} });
+  assert.equal(opts.statusCode, 200, opts.body);
+  assert.equal(opts.json().rpId, "localhost");
+  const challengeCookie = [].concat(opts.headers["set-cookie"]).find((c) => c.startsWith("findbox_webauthn=")).split(";")[0];
+  const unknown = await call("POST", "/api/auth/passkey/verify", { response: { id: "not-registered", rawId: "x", type: "public-key", response: {} } }, challengeCookie);
+  assert.equal(unknown.statusCode, 401, unknown.body);
+  // The challenge was consumed, so replaying it fails even for a known key.
+  assert.equal((await call("POST", "/api/auth/passkey/verify", { response: { id: "not-registered" } }, challengeCookie)).statusCode, 400);
+  assert.equal((await call("POST", "/api/account/passkeys/options", {}, null)).statusCode, 401);
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,verified) VALUES('pk-parent','pk-parent@test.com','PK parent',$1,'parent',true)", [await passwordHash("testing-password-123")]);
+  const c = await login("pk-parent@test.com");
+  const reg = await call("POST", "/api/account/passkeys/options", {}, c);
+  assert.equal(reg.statusCode, 200, reg.body);
+  assert.equal(reg.json().user.name, "pk-parent@test.com");
+  const regCookie = [].concat(reg.headers["set-cookie"]).find((v) => v.startsWith("findbox_webauthn=")).split(";")[0];
+  assert.equal((await call("POST", "/api/account/passkeys/register", { response: { id: "forged", response: {} } }, c + "; " + regCookie)).statusCode, 400);
+  assert.deepEqual((await call("GET", "/api/account/security", null, c)).json().passkeys, []);
+});

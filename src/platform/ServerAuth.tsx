@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthFrame } from "@/pages/auth/AuthFrame";
+import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
+import { Fingerprint } from "lucide-react";
 import { api, type User } from "./api";
 import "./account.css";
 type AuthResult = {
@@ -74,6 +76,20 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
       .then((r) => setJoining({ code: linkCode, name: r.name }))
       .catch((e) => setError(e.message));
   }, [linkCode]);
+  async function signInWithPasskey() {
+    setBusy(true);
+    setError("");
+    try {
+      const options = await api<Parameters<typeof startAuthentication>[0]["optionsJSON"]>("/auth/passkey/options", {});
+      const response = await startAuthentication({ optionsJSON: options });
+      enter(await api<AuthResult>("/auth/passkey/verify", { response, portal }));
+    } catch (e) {
+      // Cancelling the browser prompt is not an error worth showing.
+      if ((e as Error).name !== "NotAllowedError" && (e as Error).name !== "AbortError") setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -181,11 +197,12 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
             )}
             {!reset && !verify && (
               <label>
-                Email
+                {signup || school || forgot ? "Email" : "Email or child's username"}
                 <input
                   name="email"
-                  type="email"
+                  type={signup ? "email" : "text"}
                   autoComplete="username"
+                  defaultValue={new URLSearchParams(location.search).get("email") || ""}
                   required
                   maxLength={254}
                 />
@@ -234,6 +251,11 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
                       : "Sign in"}
         </button>
       </form>
+      {!challenge && !signup && !forgot && !reset && !verify && browserSupportsWebAuthn() && (
+        <button type="button" className="fs-passkey" disabled={busy} onClick={() => void signInWithPasskey()}>
+          <Fingerprint size={18} />Sign in with a passkey
+        </button>
+      )}
       {!school && !challenge && !forgot && !reset && !verify && google && (
         <>
           <div className="fs-divider">or</div>

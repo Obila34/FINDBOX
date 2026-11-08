@@ -43,6 +43,8 @@ services:
       HOST: 0.0.0.0
       DATABASE_URL: postgres://findbox:${POSTGRES_PASSWORD}@db:5432/findbox
       APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN to your HTTPS domain}
+      OPS_ORIGIN: ${OPS_ORIGIN:-}
+      SCHOOL_ORIGIN: ${SCHOOL_ORIGIN:-}
       PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-}
       SUPPORT_ADMIN_IDS: ${SUPPORT_ADMIN_IDS:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
@@ -81,8 +83,15 @@ services:
     build:
       context: .
       target: web
+      args:
+        OPS_ORIGIN: ${OPS_ORIGIN:-}
+        SCHOOL_ORIGIN: ${SCHOOL_ORIGIN:-}
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS to your domain}
+      # Leave unset until DNS exists; the defaults are harmless local-only names.
+      OPS_SITE_ADDRESS: ${OPS_SITE_ADDRESS:-http://ops.localhost}
+      SCHOOL_SITE_ADDRESS: ${SCHOOL_SITE_ADDRESS:-http://school.localhost}
+      OPS_ALLOWED_IPS: ${OPS_ALLOWED_IPS:-0.0.0.0/0 ::/0}
     networks:
       default:
         ipv4_address: 172.30.77.10

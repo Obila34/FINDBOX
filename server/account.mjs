@@ -183,6 +183,7 @@ export async function accountRoutes(app, { pool, cfg, user, session, google, ses
         expiresAt: s.expires_at,
         current: s.token_hash === hash(sessionToken(req)),
       })),
+      passkeys: (await pool.query("SELECT left(id,16) AS id,label,created_at,last_used_at FROM passkeys WHERE user_id=$1 ORDER BY created_at", [u.id])).rows,
       trustedDevices: (await pool.query("SELECT left(token_hash,16) AS id,label,created_at,last_used_at,expires_at FROM trusted_devices WHERE user_id=$1 AND expires_at>now() ORDER BY last_used_at DESC", [u.id])).rows,
     };
   });

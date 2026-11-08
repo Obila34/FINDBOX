@@ -1,55 +1,31 @@
 import {PrivacyNotice} from './platform/PrivacyNotice'
 import {useSearchMetadata} from './lib/useSearchMetadata'
-import {SchoolInvitation,GuardianRoster,OwnershipTransfers} from './platform/SchoolWorkspace'
+import {SchoolInvitation,OwnershipTransfers} from './platform/SchoolWorkspace'
+import {FamilyChildren} from './platform/FamilyChildren'
 import {SchoolAdmin} from './platform/SchoolAdmin'
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoadBoundary } from '@/components/ui/LoadBoundary'
-import { AppShell } from '@/components/layout/AppShell'
-import { ManageShell } from '@/components/layout/ManageShell'
-import { AppEntry, RequireRole } from '@/components/layout/guards'
 import { Toaster, Celebration } from '@/components/ui/Toaster'
 import { usePauseWhenHidden } from '@/lib/hooks'
-import { Skeleton } from '@/components/ui/EmptyState'
 
 const Support=lazy(()=>import('@/pages/support/Support').then(m=>({default:m.Support})))
-const Company=lazy(()=>import('@/platform/Company').then(m=>({default:m.Company})))
+// Portal builds: the ops build contains only the company workspace; once ops has its own address,
+// the public build leaves the company workspace out entirely.
+const TARGET=import.meta.env.VITE_TARGET as string|undefined
+const OPS_URL=(import.meta.env.VITE_OPS_URL as string|undefined)||''
+const SCHOOL_URL=(import.meta.env.VITE_SCHOOL_URL as string|undefined)||''
+const Company=OPS_URL&&TARGET!=='ops'?null:lazy(()=>import('@/platform/Company').then(m=>({default:m.Company})))
+const SCHOOL_PATHS=/^\/(school|manage)(\/|$)|^\/app\/(school-admin|school-invitation)$/
+function MovedTo({url}:{url:string}){useEffect(()=>{window.location.replace(url)},[url]);return <p className="fb-scene-load" role="status">Opening <a href={url}>{new URL(url).host}</a>…</p>}
 const ServerStorefront=lazy(()=>import('@/commerce/ServerStorefront').then(m=>({default:m.ServerStorefront})))
 const ServerAuth=lazy(()=>import('@/platform/ServerAuth').then(m=>({default:m.ServerAuth})))
 const ServerSecurity=lazy(()=>import('@/platform/ServerSecurity').then(m=>({default:m.ServerSecurity})))
 const Platform=lazy(()=>import('@/platform/Platform').then(m=>({default:m.Platform})))
-const Storefront = lazy(() => import('@/commerce/Storefront').then(m => ({ default: m.Storefront })))
 const Journey=lazy(()=>import('@/pages/landing/Journey').then(m=>({default:m.Journey})))
 const Landing = lazy(() => import('@/pages/landing/Landing').then(m => ({ default: m.Landing })))
-const TagLanding = lazy(() => import('@/pages/landing/TagLanding').then(m => ({ default: m.TagLanding })))
-const Welcome = lazy(() => import('@/pages/auth/Welcome').then(m => ({ default: m.Welcome })))
-import { SignIn } from '@/pages/auth/SignIn'
-import { SignUp } from '@/pages/auth/SignUp'
-const Forgot = lazy(() => import('@/pages/auth/Forgot').then(m => ({ default: m.Forgot })))
-const Invite = lazy(() => import('@/pages/auth/Invite').then(m => ({ default: m.Invite })))
-const Onboarding = lazy(() => import('@/pages/auth/Onboarding').then(m => ({ default: m.Onboarding })))
-const Account = lazy(() => import('@/pages/auth/Account').then(m => ({ default: m.Account })))
-const Home = lazy(() => import('@/pages/family/Home').then(m => ({ default: m.Home })))
-const Items = lazy(() => import('@/pages/family/Items').then(m => ({ default: m.Items })))
-const ItemDetail = lazy(() => import('@/pages/family/ItemDetail').then(m => ({ default: m.ItemDetail })))
-const RegisterItem = lazy(() => import('@/pages/family/RegisterItem').then(m => ({ default: m.RegisterItem })))
-const ReportLost = lazy(() => import('@/pages/family/ReportLost').then(m => ({ default: m.ReportLost })))
-const Gallery = lazy(() => import('@/pages/family/Gallery').then(m => ({ default: m.Gallery })))
-const ClaimForm = lazy(() => import('@/pages/family/ClaimForm').then(m => ({ default: m.ClaimForm })))
-const Inbox = lazy(() => import('@/pages/family/Inbox').then(m => ({ default: m.Inbox })))
-const CaseView = lazy(() => import('@/pages/family/CaseView').then(m => ({ default: m.CaseView })))
-const Streaks = lazy(() => import('@/pages/student/Streaks').then(m => ({ default: m.Streaks })))
-const FoundSomething = lazy(() => import('@/pages/student/FoundSomething').then(m => ({ default: m.FoundSomething })))
-const Queue = lazy(() => import('@/pages/staff/Queue').then(m => ({ default: m.Queue })))
-const Scan = lazy(() => import('@/pages/staff/Scan').then(m => ({ default: m.Scan })))
-const LogFound = lazy(() => import('@/pages/staff/LogFound').then(m => ({ default: m.LogFound })))
-const CaseDetail = lazy(() => import('@/pages/staff/CaseDetail').then(m => ({ default: m.CaseDetail })))
-const StaffGallery = lazy(() => import('@/pages/staff/StaffGallery').then(m => ({ default: m.StaffGallery })))
-const ActivityFeed = lazy(() => import('@/pages/staff/ActivityFeed').then(m => ({ default: m.ActivityFeed })))
-const Settings = lazy(() => import('@/pages/management/Settings').then(m => ({ default: m.Settings })))
 import { NotFound } from '@/pages/NotFound'
 
-const Dashboard = lazy(() => import('@/pages/management/Dashboard').then((m) => ({ default: m.Dashboard })))
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -67,23 +43,31 @@ export function App() {
   usePauseWhenHidden()
   useSearchMetadata()
   const platformLocation = useLocation()
+  const here=platformLocation.pathname+platformLocation.search+platformLocation.hash
+  if(TARGET==='ops'){
+    if(platformLocation.pathname==='/app/security') return <LoadBoundary><Suspense fallback={<p>Opening security…</p>}><ServerSecurity/></Suspense></LoadBoundary>
+    return Company?<LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>:null
+  }
+  if(OPS_URL&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <MovedTo url={OPS_URL}/>
+  if(SCHOOL_URL&&location.origin!==SCHOOL_URL&&SCHOOL_PATHS.test(platformLocation.pathname)) return <MovedTo url={SCHOOL_URL+here}/>
+  if(SCHOOL_URL&&location.origin===SCHOOL_URL&&!SCHOOL_PATHS.test(platformLocation.pathname)&&!/^\/(app\/(security|help|feedback|inbox|boxes|forgot|reset|verify)|privacy)/.test(platformLocation.pathname)) return <Navigate to="/school/sign-in" replace/>
   if(['/privacy','/privacy/children'].includes(platformLocation.pathname)) return <PrivacyNotice/>
   if(['/app/school-invitation','/app/guardian-invitation'].includes(platformLocation.pathname)) return <SchoolInvitation/>
   if(platformLocation.pathname==='/app/transfers') return <OwnershipTransfers/>
-  if(platformLocation.pathname==='/app/children') return <GuardianRoster/>
+  if(platformLocation.pathname==='/app/children') return <FamilyChildren/>
   if(platformLocation.pathname==='/app/school-admin') return <SchoolAdmin/>
-  if(/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
+  if(Company&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
   if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
-  if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/school(\/sign-in)?\/?$/.test(platformLocation.pathname)){
+  if(/^\/school(\/sign-in)?\/?$/.test(platformLocation.pathname)){
     if(platformLocation.pathname!=='/school/sign-in') return <Navigate to="/school/sign-in" replace/>
     return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the school portal…</div>}><ServerAuth portal="school"/></Suspense></LoadBoundary>
   }
-  if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
+  if(/^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
     const p=platformLocation.pathname;
     const content=/^\/app\/(sign-in|sign-up|forgot|reset|verify)$/.test(p)?<ServerAuth/>:p==='/app/security'?<ServerSecurity/>:<Platform/>;
     return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening FindBox…</div>}>{content}</Suspense></LoadBoundary>
   }
-  if (/^\/(shop|app\/shop)(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the store…</div>}>{import.meta.env.VITE_SERVER_MODE==='true'?<ServerStorefront/>:<Storefront />}</Suspense></LoadBoundary>
+  if (/^\/(shop|app\/shop)(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the store…</div>}><ServerStorefront/></Suspense></LoadBoundary>
 
   return (
     <>
@@ -92,49 +76,7 @@ export function App() {
         <Route path="/" element={<RootEntry />} />
         <Route path="/how-it-works" element={<Navigate to="/#how-it-works" replace/>} />
         <Route path="/schools" element={<Journey/>} />
-        <Route path="/t/:code" element={<TagLanding />} />
         <Route path="/demo" element={<Navigate to="/app/sign-in" replace />} />
-
-        <Route path="/app" element={<AppEntry />} />
-        <Route path="/app/welcome" element={<Welcome />} />
-        <Route path="/app/sign-in" element={<SignIn />} />
-        <Route path="/app/sign-up" element={<SignUp />} />
-        <Route path="/app/forgot" element={<Forgot />} />
-        <Route path="/app/invite" element={<Invite />} />
-
-        <Route element={<RequireRole roles={['parent', 'student']} />}>
-          <Route path="/app/onboarding" element={<Onboarding />} />
-          <Route element={<AppShell />}>
-            <Route path="/app/home" element={<Home />} />
-            <Route path="/app/items" element={<Items />} />
-            <Route path="/app/items/:id" element={<ItemDetail />} />
-            <Route path="/app/register" element={<RegisterItem />} />
-            <Route path="/app/report" element={<ReportLost />} />
-            <Route path="/app/report/:id" element={<ReportLost />} />
-            <Route path="/app/gallery" element={<Gallery />} />
-            <Route path="/app/gallery/:id/claim" element={<ClaimForm />} />
-            <Route path="/app/cases/:id" element={<CaseView />} />
-            <Route path="/app/inbox" element={<Inbox />} />
-            <Route path="/app/quest" element={<Navigate to="/app/streaks" replace />} />
-            <Route path="/app/streaks" element={<Streaks />} />
-            <Route path="/app/found" element={<FoundSomething />} />
-            <Route path="/app/account" element={<Account />} />
-          </Route>
-        </Route>
-
-        <Route element={<RequireRole roles={['staff', 'manager']} />}>
-          <Route element={<ManageShell />}>
-            <Route path="/manage" element={<Queue />} />
-            <Route path="/manage/scan" element={<Scan />} />
-            <Route path="/manage/log" element={<LogFound />} />
-            <Route path="/manage/cases/:id" element={<CaseDetail />} />
-            <Route path="/manage/gallery" element={<StaffGallery />} />
-            <Route path="/manage/activity" element={<ActivityFeed />} />
-            <Route path="/manage/dashboard" element={<Suspense fallback={<div className="grid gap-4 md:grid-cols-4"><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /><Skeleton className="h-28" /></div>}><Dashboard /></Suspense>} />
-            <Route path="/manage/settings" element={<Settings />} />
-          </Route>
-        </Route>
-
         <Route path="*" element={<NotFound />} />
       </Routes></Suspense></LoadBoundary>
       <Toaster />
