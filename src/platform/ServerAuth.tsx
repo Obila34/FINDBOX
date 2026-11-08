@@ -135,9 +135,7 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
       title={
         challenge
           ? "One more check."
-          : school && !forgot && !reset && !verify
-            ? "School portal."
-            : signup
+          : signup
             ? "Your world, connected."
             : forgot
               ? "Let’s get you back in."
@@ -147,8 +145,9 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
                   ? "Verify your email."
                   : "Welcome back."
       }
-      lede={school ? "For teachers and school administrators. Accounts are created by your school's invitation." : "For parents, guardians and students: your tags, items and orders."}
+      lede={school ? "For teachers and school administrators. Accounts are created by your school's invitation." : signup ? "Create a parent account for your family's labels, items and orders." : "For parents, guardians and students: your tags, items and orders."}
       back={{ to: "/", label: "Back to FindBox" }}
+      tone={school ? "school" : "family"}
     >
       <form className="fs-form" onSubmit={submit}>
         {challenge ? (
@@ -189,10 +188,6 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
                     <small className="fs-hint">No code? Create your account now and add your school later.</small>
                   </label>
                 )}
-                <p>
-                  Creates a parent account. Students are added by their school
-                  or guardian.
-                </p>
               </>
             )}
             {!reset && !verify && (
