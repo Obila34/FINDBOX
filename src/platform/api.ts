@@ -6,7 +6,22 @@ export class ApiError extends Error {
     super(message);
   }
 }
+function signal(phase: "start" | "success" | "error", path: string, message = "") {
+  window.dispatchEvent(new CustomEvent("findbox-action", { detail: { phase, path, message } }));
+}
 export async function api<T>(path: string, body?: unknown): Promise<T> {
+  if (body === undefined) return request<T>(path, body);
+  signal("start", path);
+  try {
+    const result = await request<T>(path, body);
+    signal("success", path);
+    return result;
+  } catch (e) {
+    signal("error", path, (e as Error).message);
+    throw e;
+  }
+}
+async function request<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
     response = await fetch("/api" + path, {

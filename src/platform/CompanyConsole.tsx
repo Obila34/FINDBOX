@@ -4,11 +4,12 @@ import {SchoolAccessConsole} from './SchoolWorkspace'
 
 import { useEffect,useRef,useState,type ReactNode,type FormEvent } from 'react'
 
-import { LayoutDashboard,Users,FileText,ShoppingBag,School,MessageSquare,Bell,Settings,Code2,Package,Mail,History,Search,Plus,ArrowUpRight,Download,LoaderCircle,X,Check,ChevronLeft,ChevronRight,LogOut,RefreshCw,ShieldCheck } from 'lucide-react'
+import { LayoutDashboard,Users,FileText,ShoppingBag,School,MessageSquare,Bell,Settings,Code2,Package,Mail,History,Search,Plus,Download,LoaderCircle,X,Check,ChevronLeft,ChevronRight,LogOut,RefreshCw,ShieldCheck } from 'lucide-react'
 
 import { api,ApiError,money } from './api'
 
 import './console.css'
+import { useToastMessage } from './feedback'
 
 type Row=Record<string,any>
 
@@ -35,6 +36,11 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
  useEffect(()=>{if(!form&&!joinCode)return;const previous=document.activeElement as HTMLElement|null;const old=document.body.style.overflow;document.body.style.overflow='hidden';const panel=document.querySelector<HTMLElement>('.cx-modal [role="dialog"]');const controls=()=>Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]),input,textarea,select,a[href]')||[]).filter(el=>!el.matches(':disabled'));controls()[0]?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape'&&!busy){setForm(null);setJoinCode('');window.dispatchEvent(new Event('findbox-form-saved'))}if(e.key==='Tab'){const list=controls(),first=list[0],last=list[list.length-1];if(!list.length){e.preventDefault();return}if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus()}}};document.addEventListener('keydown',key);return()=>{document.body.style.overflow=old;document.removeEventListener('keydown',key);previous?.focus()}},[form,joinCode,busy])
 
  useEffect(()=>{const t=setTimeout(()=>{setQ(search);setPage(0)},300);return()=>clearTimeout(t)},[search])
+
+ useToastMessage(message,setMessage)
+
+ // Dashboard cards jump straight to the section that needs attention.
+ useEffect(()=>{const go=(e:Event)=>{const {tab:next,form:kind}=(e as CustomEvent<{tab:string;form?:string}>).detail;setTab(next);setPage(0);setSearch('');setError('');if(kind)open(kind)};window.addEventListener('findbox-console-tab',go);return()=>window.removeEventListener('findbox-console-tab',go)},[])
 
  const viewRef=useRef(''),loadEpoch=useRef(0);viewRef.current=tab+'|'+q+'|'+page
  async function load(background=false){
@@ -110,7 +116,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
 
  return <div className="cx-layout"><aside className="cx-sidebar"><div className="cx-workspace"><span><ShieldCheck size={22}/></span><strong>{isAdmin?'Company admin':'Developer studio'}</strong><small>{access.name}</small></div><p>WORKSPACE</p><button className={tab==='overview'?'active':''} onClick={()=>{setTab('overview');setPage(0)}}><LayoutDashboard size={18}/> Overview</button>{tabs.map(([id,label,Icon])=><button key={id} className={tab===id?'active':''} onClick={()=>{setTab(id);setPage(0);setSearch('');setError('');setMessage('')}}><Icon size={18}/>{label}</button>)}<p>ACCOUNTABILITY</p><button className={tab==='audit'?'active':''} onClick={()=>{setTab('audit');setPage(0);setSearch('')}}><History size={18}/> Audit history</button><a href="/company"><Code2 size={18}/> Switch account</a><button onClick={onLogout}><LogOut size={18}/> Log out</button><div className="cx-sidebar-note">Every change has an owner.<br/>Sensitive actions require a recent sign-in.</div></aside>
 
- <div className="cx-content">{tab==='overview'?<><div className="cx-shortcuts">{isAdmin?<><button onClick={()=>{setTab('clients');setSearch('');setPage(0)}}><Users/> Explore clients <ArrowUpRight size={16}/></button><button onClick={()=>{setTab('invoices');open('invoice')}}><FileText/> Create invoice <Plus size={16}/></button><button onClick={()=>{setTab('announcements');open('announcement')}}><Bell/> Publish update <Plus size={16}/></button></>:<><button onClick={()=>setTab('users')}><Users/> Manage accounts <ArrowUpRight size={16}/></button><button onClick={()=>setTab('items')}><Package/> Correct an item <ArrowUpRight size={16}/></button><button onClick={()=>setTab('mail')}><Mail/> Inspect delivery <ArrowUpRight size={16}/></button></>}</div>{children}</>:<div className="cx-section"><header className="cx-section-header"><div><p className="co-eyebrow">{isAdmin?'FINDBOX OPERATIONS':'DEVELOPER WORKSPACE'}</p><h1>{labels[tab]}</h1><p>{tab==='invoices'?'Branded PDFs, clear records and deliberate delivery.':tab==='users'?'Correct accounts without exposing passwords or bypassing verification.':'Search records, inspect details and take accountable action.'}</p></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={17}/> Refresh</button></header>
+ <div className="cx-content">{tab==='overview'?<>{children}</>:<div className="cx-section"><header className="cx-section-header"><div><p className="co-eyebrow">{isAdmin?'FINDBOX OPERATIONS':'DEVELOPER WORKSPACE'}</p><h1>{labels[tab]}</h1><p>{tab==='invoices'?'Branded PDFs, clear records and deliberate delivery.':tab==='users'?'Correct accounts without exposing passwords or bypassing verification.':'Search records, inspect details and take accountable action.'}</p></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={17}/> Refresh</button></header>
 
  {['ledger','privacy','reports'].includes(tab)?<OperationsPanel kind={tab as 'ledger'|'privacy'|'reports'}/>:tab==='school-access'?<SchoolAccessConsole onReauthenticate={onLogout}/>:tab==='settings'?<section className="co-panel"><h2>Business identity</h2><p>{profile?.data?.legalName}</p><p>{profile?.data?.email}</p><p>{profile?.data?.address||'Billing address pending'}</p><p>{profile?.data?.issuerConfirmed?'Issuing details confirmed':'Draft/pro forma invoices only until billing details are confirmed.'}</p><button className="co-button" onClick={()=>open('profile',profile?.data||{})}>Edit business profile</button></section>:tab==='announcements'?<section className="cx-banner"><div><p className="co-eyebrow">KEEP EVERYONE INFORMED</p><h2>A clear update goes a long way.</h2><p>Publish an in-app notification for everyone, your company team or a single school. Messages expire automatically.</p><button className="co-button" onClick={()=>open('announcement')}>Create announcement <Plus size={17}/></button></div><img src="/media/avatars/findbox-explorer-640.webp" alt=""/></section>:<><div className="cx-toolbar"><label><Search size={17}/><input aria-label="Search workspace records" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search this section…"/></label>{tab==='clients'&&<button className="co-button" onClick={()=>open('invite')}>Invite client <Plus size={16}/></button>}{tab==='invoices'&&<button className="co-button" onClick={()=>open('invoice')}>New invoice <Plus size={16}/></button>}{tab==='schools'&&!isAdmin&&<button className="co-button" onClick={()=>open('school-new')}>Onboard school <Plus size={16}/></button>}</div>{loading?<p role="status">Loading records…</p>:<div className="cx-records">{visibleRows.map(r=><article className="cx-record" key={r.id}><div className="cx-record-icon">{tab==='invoices'?<FileText/>:tab==='schools'?<School/>:tab==='items'?<Package/>:tab==='mail'?<Mail/>:<Users/>}</div><div className="cx-record-data">{summary(r).map((v,i)=>i===0?<h2 key={i}>{String(v??'')}</h2>:<span key={i}>{String(v??'')}</span>)}</div><div className="cx-record-actions">
 
@@ -134,7 +140,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
 
  </div></article>)}{!visibleRows.length&&<div className="cx-empty"><Search/><h2>No records yet</h2><p>{q?'Try another search.':'Records will appear as your FindBox community grows.'}</p></div>}</div>}<div className="cx-pagination"><button disabled={!page||loading} onClick={()=>setPage(n=>n-1)}><ChevronLeft size={16}/> Previous</button><span>Page {page+1}</span><button disabled={!more||loading} onClick={()=>setPage(n=>n+1)}>Next <ChevronRight size={16}/></button></div></>}
 
- </div>}{message&&<div className="cx-toast" role="status"><Check size={17}/>{message}<button aria-label="Dismiss notification" onClick={()=>setMessage('')}><X size={16}/></button></div>}{error&&!form&&<p className="co-error" role="alert">{error}</p>}
+ </div>}{error&&!form&&<p className="co-error" role="alert">{error}</p>}
 
  </div>
 
