@@ -1209,3 +1209,31 @@ test('developer-only onboarding, private invitation, school setup, roster lifecy
  assert.equal((await request('GET','/api/school/students',undefined,manager)).statusCode,401);
  }finally{await ops.close()}
 });
+
+test('complimentary demo tags enforce owner, school, expiry and private activation, complete recovery without a sale',async()=>{
+ const password='demo-test-private-2026',pw=await passwordHash(password);
+ for(const [uid,email,role,school] of [['demo-owner','demo-owner@test.com','parent','school-a'],['demo-other','demo-other@test.com','parent','school-a'],['demo-staff','demo-staff@test.com','staff','school-a']]){
+  await pool.query('INSERT INTO users(id,name,email,password_hash,role,school_id,verified) VALUES($1,$1,$2,$3,$4,$5,true)',[uid,email,pw,role,school]);
+  await pool.query('INSERT INTO memberships(user_id,school_id,role) VALUES($1,$2,$3) ON CONFLICT(user_id,school_id) DO NOTHING',[uid,school,role]);
+ }
+ const owner=await login('demo-owner@test.com',password),stranger=await login('demo-other@test.com',password),operator=await login('demo-staff@test.com',password);
+ const before=Number((await pool.query('SELECT count(*) FROM orders')).rows[0].count);
+ for(const [key,school,expiry]of[['demo-main','school-a',new Date(Date.now()+3600000)],['demo-expired','school-a',new Date(Date.now()-1000)],['demo-foreign','school-b',new Date(Date.now()+3600000)]]){
+  await pool.query("INSERT INTO tags(id,code,activation_hash,format,product_id,status) VALUES($1,$2,$3,'sticker','everyday-12','allocated')",[key,'FB-'+key,hash('demo-private')]);
+  await pool.query('INSERT INTO demo_tag_grants(tag_id,owner_id,school_id,created_by,request_key,expires_at) VALUES($1,$2,$3,$4,$1,$5)',[key,'demo-owner',school,'demo-staff',expiry]);
+ }
+ const payload={code:'FB-demo-main',activationSecret:'demo-private',name:'Demonstration bottle',category:'bottle'};
+ assert.equal((await call('POST','/api/tags/activate',payload,stranger)).statusCode,400);
+ assert.equal((await call('POST','/api/tags/activate',{...payload,activationSecret:'incorrect'},owner)).statusCode,400);
+ for(const code of ['FB-demo-expired','FB-demo-foreign'])assert.equal((await call('POST','/api/tags/activate',{...payload,code},owner)).statusCode,400);
+ const activated=await call('POST','/api/tags/activate',payload,owner);assert.equal(activated.statusCode,200,activated.body);
+ assert.equal((await call('POST','/api/tags/activate',payload,owner)).statusCode,409);
+ const scan=await call('GET','/api/tags/FB-demo-main');assert.equal(scan.statusCode,200);assert(!scan.body.includes('demo-owner@test.com'));assert(!scan.body.includes('demo-private'));
+ const lost=await call('POST','/api/items/'+activated.json().id+'/lost',{},owner);assert.equal(lost.statusCode,200,lost.body);
+ const found=await call('POST','/api/found',{code:payload.code,boxId:'box-a'},operator);assert.equal(found.statusCode,200,found.body);
+ const caseId=found.json().id;
+ const receipt=await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator);assert.equal(receipt.statusCode,200,receipt.body);
+ const collection=await call('POST','/api/staff/cases/'+caseId+'/collect',{verification:'Presenter checked the fictional demo ownership record'},operator);assert.equal(collection.statusCode,200,collection.body);
+ assert.equal((await pool.query('SELECT status FROM cases WHERE id=$1',[caseId])).rows[0].status,'returned');
+ assert.equal(Number((await pool.query('SELECT count(*) FROM orders')).rows[0].count),before);
+});

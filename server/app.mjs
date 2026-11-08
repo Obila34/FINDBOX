@@ -725,13 +725,13 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
     return transaction(pool, async (db) => {
       const tag = (
         await db.query(
-          "SELECT t.*,o.user_id AS purchaser FROM tags t LEFT JOIN orders o ON o.id=t.order_id WHERE t.code=$1 FOR UPDATE OF t",
+          "SELECT t.*,o.user_id AS purchaser,g.owner_id AS demo_owner,g.school_id AS demo_school,g.expires_at AS demo_expires FROM tags t LEFT JOIN orders o ON o.id=t.order_id LEFT JOIN demo_tag_grants g ON g.tag_id=t.id WHERE t.code=$1 FOR UPDATE OF t",
           [d.code],
         )
       ).rows[0];
       requireThat(
         tag &&
-          tag.purchaser === u.id &&
+          (tag.purchaser === u.id || (tag.demo_owner === u.id && tag.demo_school === u.school_id && new Date(tag.demo_expires).getTime() > Date.now())) &&
           tag.activation_hash === hash(d.activationSecret),
         400,
         "Tag or activation code is not valid for your account",

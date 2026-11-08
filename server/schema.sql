@@ -135,3 +135,14 @@ CREATE TABLE IF NOT EXISTS ownership_transfers(id text PRIMARY KEY,item_id text 
 CREATE UNIQUE INDEX IF NOT EXISTS ownership_transfer_pending ON ownership_transfers(item_id) WHERE status='pending';
 ALTER TABLE schools ADD COLUMN IF NOT EXISTS public_listing boolean NOT NULL DEFAULT false;
 ALTER TABLE boxes ADD COLUMN IF NOT EXISTS public_listing boolean NOT NULL DEFAULT false;
+
+-- Complimentary demonstration stock, separate from paid orders and sales.
+CREATE TABLE IF NOT EXISTS demo_tag_grants (
+ tag_id text PRIMARY KEY REFERENCES tags(id),
+ owner_id text NOT NULL REFERENCES users(id),
+ school_id text NOT NULL REFERENCES schools(id),
+ created_by text NOT NULL REFERENCES users(id),
+ request_key text NOT NULL UNIQUE,
+ expires_at timestamptz NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
