@@ -75,13 +75,13 @@ export async function companyEmailRoutes(app,{pool,cfg,mailer}) {
       }
       // Keep the row/cooldown after consuming a code so a fresh login cannot bypass resend limits.
       await db.query("UPDATE company_email_challenges SET code_hash='',delivered=false WHERE user_id=$1",[row.user_id]);
-      await db.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,company_email_verified) VALUES($1,$2,now()+interval '8 hours',false,true)",[hash(sessionToken),row.user_id]);
+      await db.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,company_email_verified,portal,user_agent) VALUES($1,$2,now()+interval '8 hours',false,true,'ops',$3)",[hash(sessionToken),row.user_id,String(req.headers['user-agent']||'').slice(0,300)]);
       await db.query('INSERT INTO audit_log(id,user_id,action) VALUES($1,$2,$3)',[id(),row.user_id,'company_email_verified']);
       return true;
     });
     requireThat(outcome,401,'Code is incorrect, expired or already used. Request a new code after the timer ends.');
     reply.clearCookie('findbox_company_challenge',{path:'/api/company/auth'});
-    reply.setCookie('findbox_session',sessionToken,{path:'/',httpOnly:true,secure:cfg.production,sameSite:'lax',maxAge:28800});
+    reply.setCookie('findbox_ops_session',sessionToken,{path:'/',httpOnly:true,secure:cfg.production,sameSite:'lax',maxAge:28800});
     return {ok:true};
   });
 }

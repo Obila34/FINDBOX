@@ -74,6 +74,10 @@ export function App() {
   if(platformLocation.pathname==='/app/school-admin') return <SchoolAdmin/>
   if(/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
   if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
+  if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/school(\/sign-in)?\/?$/.test(platformLocation.pathname)){
+    if(platformLocation.pathname!=='/school/sign-in') return <Navigate to="/school/sign-in" replace/>
+    return <LoadBoundary><Suspense fallback={<div className="fb-scene-load">Opening the school portal…</div>}><ServerAuth portal="school"/></Suspense></LoadBoundary>
+  }
   if(import.meta.env.VITE_SERVER_MODE==='true' && /^\/(app|manage|t)(\/|$)/.test(platformLocation.pathname) && !platformLocation.pathname.startsWith('/app/shop')){
     const p=platformLocation.pathname;
     const content=/^\/app\/(sign-in|sign-up|forgot|reset|verify)$/.test(p)?<ServerAuth/>:p==='/app/security'?<ServerSecurity/>:<Platform/>;

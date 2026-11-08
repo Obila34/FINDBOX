@@ -198,3 +198,21 @@ tr.is-flash td,.is-flash{animation:sa-flash 1.8s ease}
 .sa-mini strong{font-size:22px}
 .sa-mini>.db-link{grid-column:1/-1;justify-self:start;margin:6px 0 0 -10px}
 @media(max-width:780px){.sa-layout .db-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sa-layout .db-kpi{padding:14px;gap:8px}.sa-layout .db-kpi strong{font-size:26px}.sa-layout .db-kpi-label{font-size:11.5px}.sa-layout .db-kpi small{display:none}.sa-layout .db-hero h1{font-size:26px}}
+.sa-qr{display:grid;justify-items:center;gap:10px;padding:18px;border:1px solid #e3ebe5;border-radius:18px;background:#fbfdfc;text-align:center}
+.sa-qr img,.sa-qr span{width:200px;height:200px;border-radius:12px;animation:db-pop .5s cubic-bezier(.2,.9,.3,1.3) both}
+.sa-qr p{font-size:13px;color:#5f7468}
+.sa-copy{display:flex;gap:8px}.sa-copy input{flex:1;font-size:13px!important}
+.sa-share{display:flex;flex-wrap:wrap;gap:8px}.sa-share .sa-btn{flex:1 1 auto}
+.sa-rotate{justify-self:start;color:#7a5a1a!important}
+.sa-poster{display:none}
+@media print{
+  body *{visibility:hidden!important}
+  .sa-poster,.sa-poster *{visibility:visible!important}
+  .sa-poster{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:18px;position:fixed;inset:0;background:#fff;color:#123a2e;text-align:center;padding:48px;font-family:Arial,Helvetica,sans-serif}
+  .sa-poster-kicker{font-size:22px;font-weight:800;letter-spacing:2px}
+  .sa-poster h1{font-size:44px;margin:0}.sa-poster h2{font-size:24px;font-weight:400;margin:0}
+  .sa-poster img{width:340px;height:340px}
+  .sa-poster ol{font-size:20px;text-align:left;line-height:1.8}
+  .sa-poster-link{font-size:13px;color:#5f7468;word-break:break-all}
+  .sa-panel-backdrop{background:none!important;backdrop-filter:none!important}
+}

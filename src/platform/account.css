@@ -95,3 +95,16 @@
   outline: 2px solid #6f895e;
   outline-offset: 3px;
 }
+.sx-devices{list-style:none;margin:10px 0 16px;padding:0;display:grid;gap:8px}
+.sx-devices li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #e3ebe5;border-radius:12px;background:#fbfdfc}
+.sx-devices strong{display:flex;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.sx-devices small{display:block;font-size:12px;color:#5f7468;margin-top:3px}
+.sx-devices button{flex-shrink:0;padding:8px 12px;border-radius:9px;background:#eef5ef;color:#174e3b;font-size:12px;font-weight:700}
+.sx-current{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#e3f6ec;color:#17734f}
+.fs-trust{display:flex!important;align-items:flex-start;gap:10px;font-weight:400!important;font-size:13px;line-height:1.5}
+.fs-trust input{width:auto!important;margin-top:3px}
+.fs-portal-switch{display:block;margin-top:18px;padding-top:16px;border-top:1px solid #dfe8e2;font-size:13px;color:#5f7468}
+.fs-portal-switch a{color:#174e3b;font-weight:700}
+.fs-joining{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:12px;background:#e3f6ec;color:#17734f;font-size:14px}
+.fs-optional{font-size:11px;font-weight:600;color:#5f7468;background:#f0f4f1;padding:2px 8px;border-radius:999px;margin-left:6px}
+.fs-hint{display:block;font-size:12px;color:#5f7468;font-weight:400;margin-top:4px}

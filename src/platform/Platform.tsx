@@ -117,6 +117,7 @@ export function Platform() {
       code: string;
       boxes: Workspace["boxes"];
     } | null>(null);
+  const [packMode, setPackMode] = useState(true);
   const [selectedCase, setSelectedCase] = useState(""),
     [action, setAction] = useState("receive");
 
@@ -219,7 +220,7 @@ export function Platform() {
   }, [path, user?.id]);
   useEffect(() => {
     if (loaded && !user && !auth && !shop && !publicScan)
-      navigate("/app/sign-in", { replace: true });
+      navigate(path.startsWith("/manage") ? "/school/sign-in" : "/app/sign-in", { replace: true });
     if (user && path === "/app")
       navigate(user.role === "manager" ? "/app/school-admin" : staff ? "/manage" : "/app/home", { replace: true });
   }, [loaded, user, path, auth, shop, publicScan, staff, navigate]);
@@ -903,15 +904,22 @@ export function Platform() {
                   onSubmit={(e) => {
                     const d = fields(e);
                     run(async () => {
-                      await api("/tags/activate", d);
+                      const r = await api<{ activated?: number }>(packMode ? "/tags/activate-pack" : "/tags/activate", d);
                       await reload();
                       navigate("/app/items");
                       setNotice(
-                        "Tag activated. Your belonging is now connected.",
+                        packMode
+                          ? `${r.activated} tags activated. Give each one a name from Items whenever you like.`
+                          : "Tag activated. Your belonging is now connected.",
                       );
                     });
                   }}
                 >
+                  <div className="fp-mode" role="group" aria-label="What are you activating?">
+                    <button type="button" aria-pressed={packMode} onClick={() => setPackMode(true)}>Whole pack</button>
+                    <button type="button" aria-pressed={!packMode} onClick={() => setPackMode(false)}>One tag</button>
+                  </div>
+                  <p className="fp-muted">{packMode ? "Enter the ID and private code of any one tag in the pack. Every tag in it activates together." : "Activate a single tag and describe the belonging now."}</p>
                   <Field
                     name="code"
                     label="Tag ID"
@@ -924,9 +932,9 @@ export function Platform() {
                     label="Private activation code"
                     autoComplete="off"
                   />
-                  {selectCategory()}
+                  {!packMode && selectCategory()}
                   <label className="fp-field">
-                    <span>Account that owns this belonging</span>
+                    <span>{packMode ? "Who are these tags for?" : "Account that owns this belonging"}</span>
                     <select name="ownerId">
                       <option value="">My account</option>
                       {workspace.children.map((c) => (
@@ -936,18 +944,19 @@ export function Platform() {
                       ))}
                     </select>
                   </label>
-                  <Field
+                  {!packMode && <Field
                     name="name"
                     label="Belonging name"
                     placeholder="Green school sweater"
                     maxLength={100}
-                  />
+                  />}
                   <Field
                     name="childName"
                     label="Belongs to (optional)"
                     required={false}
                     maxLength={100}
                   />
+                  {!packMode && <>
                   <Field
                     name="color"
                     label="Colour (optional)"
@@ -960,6 +969,7 @@ export function Platform() {
                     required={false}
                     maxLength={500}
                   />
+                  </>}
                   <button
                     className="fp-primary"
                     disabled={busy || !user.verified}

@@ -9,7 +9,8 @@ type AuthResult = {
   mfaSetupRequired?: boolean;
   security?: { requiresMfa: boolean; mfaSetupRequired: boolean };
 };
-export function ServerAuth() {
+export function ServerAuth({ portal = "family" }: { portal?: "family" | "school" }) {
+  const school = portal === "school";
   const location = useLocation(),
     nav = useNavigate(),
     path = location.pathname;
@@ -17,8 +18,10 @@ export function ServerAuth() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
-    [challenge, setChallenge] = useState(false);
-  const signup = path.endsWith("sign-up"),
+    [challenge, setChallenge] = useState(false),
+    [joining, setJoining] = useState<{ code: string; name: string } | null>(null);
+  const linkCode = new URLSearchParams(location.search).get("school") || "";
+  const signup = !school && path.endsWith("sign-up"),
     forgot = path.endsWith("forgot"),
     reset = path.endsWith("reset"),
     verify = path.endsWith("verify");
@@ -34,7 +37,7 @@ export function ServerAuth() {
     }
     const from = location.state?.from;
     nav(
-      typeof from === "string" && /^\/(app|shop|refer)(\/|$)/.test(from)
+      typeof from === "string" && !school && /^\/(app|shop|refer)(\/|$)/.test(from)
         ? from
         : r.user.role === "manager"
           ? "/app/school-admin"
@@ -64,6 +67,13 @@ export function ServerAuth() {
     setMessage("");
     setChallenge(false);
   }, [path]);
+  // A school's parent link carries its code, so families never have to type one.
+  useEffect(() => {
+    if (!linkCode) return;
+    api<{ name: string }>("/schools/join/" + encodeURIComponent(linkCode))
+      .then((r) => setJoining({ code: linkCode, name: r.name }))
+      .catch((e) => setError(e.message));
+  }, [linkCode]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -72,7 +82,7 @@ export function ServerAuth() {
     try {
       if (challenge) {
         enter(
-          await api<AuthResult>("/account/mfa/challenge", { code: d.code }),
+          await api<AuthResult>("/account/mfa/challenge", { code: d.code, trustDevice: d.trustDevice === "on" }),
         );
         return;
       }
@@ -96,10 +106,7 @@ export function ServerAuth() {
         return;
       }
       enter(
-        await api<AuthResult>("/auth/" + (signup ? "signup" : "login"), {
-          ...d,
-          role: "parent",
-        }),
+        await api<AuthResult>("/auth/" + (signup ? "signup" : "login"), signup ? { ...d, role: "parent" } : { email: d.email, password: d.password, portal }),
       );
     } catch (e) {
       setError((e as Error).message);
@@ -112,7 +119,9 @@ export function ServerAuth() {
       title={
         challenge
           ? "One more check."
-          : signup
+          : school && !forgot && !reset && !verify
+            ? "School portal."
+            : signup
             ? "Your world, connected."
             : forgot
               ? "Let’s get you back in."
@@ -122,7 +131,7 @@ export function ServerAuth() {
                   ? "Verify your email."
                   : "Welcome back."
       }
-      lede="One secure account for your app, tags and orders."
+      lede={school ? "For teachers and school administrators. Accounts are created by your school's invitation." : "For parents, guardians and students: your tags, items and orders."}
       back={{ to: "/", label: "Back to FindBox" }}
     >
       <form className="fs-form" onSubmit={submit}>
@@ -135,6 +144,12 @@ export function ServerAuth() {
               required
               maxLength={32}
             />
+          </label>
+        ) : null}
+        {challenge ? (
+          <label className="fs-trust">
+            <input type="checkbox" name="trustDevice" />
+            Trust this device for 30 days. Only tick this on your own phone or computer.
           </label>
         ) : (
           <>
@@ -149,13 +164,18 @@ export function ServerAuth() {
                     maxLength={100}
                   />
                 </label>
-                <label>
-                  School invitation code
-                  <input name="schoolCode" required maxLength={100} />
-                </label>
+                {joining ? (
+                  <p className="fs-joining">Joining <strong>{joining.name}</strong><input type="hidden" name="schoolCode" value={joining.code} /></p>
+                ) : (
+                  <label>
+                    School code <span className="fs-optional">Optional</span>
+                    <input name="schoolCode" maxLength={100} placeholder="From your school's letter or poster" />
+                    <small className="fs-hint">No code? Create your account now and add your school later.</small>
+                  </label>
+                )}
                 <p>
-                  Creates a parent account. Students and staff use their school
-                  or guardian’s invitation process.
+                  Creates a parent account. Students are added by their school
+                  or guardian.
                 </p>
               </>
             )}
@@ -214,7 +234,7 @@ export function ServerAuth() {
                       : "Sign in"}
         </button>
       </form>
-      {!challenge && !forgot && !reset && !verify && google && (
+      {!school && !challenge && !forgot && !reset && !verify && google && (
         <>
           <div className="fs-divider">or</div>
           <button
@@ -234,7 +254,10 @@ export function ServerAuth() {
         </>
       )}
       {!challenge && !forgot && !reset && !verify && !signup && <Link className="fb-link" to="/app/forgot">Forgot password?</Link>}
-      {!reset && !verify && !forgot && <Link className="fb-link" to={signup?"/app/sign-in":"/app/sign-up"} state={location.state}>{signup?"Already a member? Sign in":"Join FindBox · Create an account"}</Link>}
+      {!school && !reset && !verify && !forgot && <Link className="fb-link" to={signup?"/app/sign-in":"/app/sign-up"} state={location.state}>{signup?"Already a member? Sign in":"Join FindBox · Create an account"}</Link>}
+      {!challenge && !reset && !verify && !forgot && (school
+        ? <p className="fs-portal-switch">Parent or student? <Link to="/app/sign-in">Use the family sign-in</Link></p>
+        : <p className="fs-portal-switch">Teacher or school administrator? <Link to="/school/sign-in">Sign in to the school portal</Link></p>)}
       {(reset || verify || forgot) && (
         <Link to="/app/sign-in" className="fb-link">
           Back to sign in

@@ -42,3 +42,8 @@ button[data-action=error]{animation:fx-shake .45s ease;box-shadow:0 0 0 3px #c24
 /* Recovery workspace notices stay in view while the page scrolls. */
 .fp-notice{position:sticky;top:12px;z-index:30;box-shadow:0 10px 30px #12392d1f;animation:fx-in .32s cubic-bezier(.2,.9,.3,1.2) both}
 .sc-workspace .sc-action-feedback{animation:fx-in .3s ease both}
+
+/* Activate: whole pack or one tag */
+.fp-mode{display:flex;gap:4px;padding:4px;border-radius:12px;background:#e9f0eb;margin-bottom:8px}
+.fp-mode button{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:700;color:#4b6658}
+.fp-mode button[aria-pressed=true]{background:#fff;color:#174e3b;box-shadow:0 2px 6px #12392d14}

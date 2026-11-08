@@ -41,7 +41,7 @@ export function Company() {
     e.preventDefault();setBusy(true);setError('');setDenied(false)
     const f=new FormData(e.currentTarget)
     try {
-      const r=await api<{requiresMfa?:boolean;mfaSetupRequired?:boolean;emailChallenge?:boolean;resendAt:string;serverNow:string}>(emailChallenge?'/company/auth/verify':challenge?'/account/mfa/challenge':emailEnabled?'/company/auth/start':'/auth/login',(challenge||emailChallenge)?{code:f.get('code')}:{email:f.get('email'),password:f.get('password')})
+      const r=await api<{requiresMfa?:boolean;mfaSetupRequired?:boolean;emailChallenge?:boolean;resendAt:string;serverNow:string}>(emailChallenge?'/company/auth/verify':challenge?'/account/mfa/challenge':emailEnabled?'/company/auth/start':'/auth/login',(challenge||emailChallenge)?{code:f.get('code')}:emailEnabled?{email:f.get('email'),password:f.get('password')}:{email:f.get('email'),password:f.get('password'),portal:'ops'})
       if(r.emailChallenge){emailTiming(r);return}
       if(r.mfaSetupRequired){setSetup(true);setChallenge(false)}
       else if(r.requiresMfa)setChallenge(true)

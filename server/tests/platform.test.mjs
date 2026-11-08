@@ -1038,7 +1038,7 @@ test('company email codes enforce expiry, resend cooldown, retry limits, binding
   await pool.query("UPDATE company_email_challenges SET expires_at=now()+interval '60 seconds' WHERE user_id='email-admin'");
   const verified=await request('/api/company/auth/verify',{code:sent[1].code},nextCookie);assert.equal(verified.statusCode,200,verified.body);
   assert.equal((await request('/api/company/auth/verify',{code:sent[1].code},nextCookie)).statusCode,401);
-  const sessionCookie=verified.headers['set-cookie'].find(v=>v.startsWith('findbox_session=')).split(';')[0];
+  const sessionCookie=verified.headers['set-cookie'].find(v=>v.startsWith('findbox_ops_session=')).split(';')[0];
   const access=await emailApp.inject({method:'GET',url:'/api/company/access',headers:{cookie:sessionCookie}});assert.equal(access.statusCode,200,access.body);
   assert.equal((await pool.query("SELECT mfa_verified,company_email_verified FROM sessions WHERE token_hash=$1",[hash(sessionCookie.split('=')[1])])).rows[0].mfa_verified,false);
  }finally{await emailApp.close()}
@@ -1236,4 +1236,91 @@ test('complimentary demo tags enforce owner, school, expiry and private activati
  const collection=await call('POST','/api/staff/cases/'+caseId+'/collect',{verification:'Presenter checked the fictional demo ownership record'},operator);assert.equal(collection.statusCode,200,collection.body);
  assert.equal((await pool.query('SELECT status FROM cases WHERE id=$1',[caseId])).rows[0].status,'returned');
  assert.equal(Number((await pool.query('SELECT count(*) FROM orders')).rows[0].count),before);
+});
+
+test("portals separate sign-ins, renew family sessions, trust devices and sign out single devices", async () => {
+  const windows = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0 Safari/537.36", iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1";
+  const loginAs = (email, portal, extra = {}) => app.inject({ method: "POST", url: "/api/auth/login", remoteAddress: "127.0.2." + loginClient++, headers: { "x-findbox-request": "1", origin: "http://localhost:5173", "user-agent": windows, ...extra }, payload: { email, password: "testing-password-123", ...(portal ? { portal } : {}) } });
+  const first = (r, name) => [].concat(r.headers["set-cookie"]).find((v) => v.startsWith(name + "=")).split(";")[0];
+  // Staff cannot use the family sign-in, and get their own school cookie through the school portal.
+  const wrong = await loginAs("staff@test.com", "family");
+  assert.equal(wrong.statusCode, 403, wrong.body);
+  assert.match(wrong.json().error, /school portal/);
+  const right = await loginAs("staff@test.com", "school");
+  assert.equal(right.statusCode, 200, right.body);
+  assert.ok(first(right, "findbox_school_session"));
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('portal-parent','portal-parent@test.com','Portal parent',$1,'parent','school-a',true)", [await passwordHash("testing-password-123")]);
+  assert.equal((await loginAs("portal-parent@test.com", "school")).statusCode, 403);
+  const fam = await loginAs("portal-parent@test.com", "family");
+  assert.equal(fam.statusCode, 200, fam.body);
+  const famCookie = first(fam, "findbox_session"), famHash = hash(famCookie.split("=")[1]);
+  // A family session renews while it is used.
+  await pool.query("UPDATE sessions SET expires_at=now()+interval '1 day',last_seen_at=now()-interval '1 hour' WHERE token_hash=$1", [famHash]);
+  assert.equal((await call("GET", "/api/workspace", null, famCookie)).statusCode, 200);
+  const renewed = (await pool.query("SELECT expires_at FROM sessions WHERE token_hash=$1", [famHash])).rows[0].expires_at;
+  assert.ok(new Date(renewed).getTime() - Date.now() > 29 * 864e5);
+  // Two-step login, then trusting this device skips the code on the next sign-in here only.
+  const { totp } = await import("../mfa.mjs");
+  const setup = await call("POST", "/api/account/mfa/setup", {}, famCookie);
+  assert.equal(setup.statusCode, 200, setup.body);
+  const confirmed = await call("POST", "/api/account/mfa/confirm", { code: totp(setup.json().secret) }, famCookie);
+  assert.equal(confirmed.statusCode, 200, confirmed.body);
+  const limited = await loginAs("portal-parent@test.com", "family");
+  assert.equal(limited.json().requiresMfa, true);
+  const challenged = await app.inject({ method: "POST", url: "/api/account/mfa/challenge", headers: { "x-findbox-request": "1", origin: "http://localhost:5173", "content-type": "application/json", "user-agent": windows, cookie: first(limited, "findbox_session") }, payload: { code: confirmed.json().recoveryCodes[0], trustDevice: true } });
+  assert.equal(challenged.statusCode, 200, challenged.body);
+  const device = first(challenged, "findbox_device");
+  const trusted = await loginAs("portal-parent@test.com", "family", { cookie: device });
+  assert.equal(trusted.json().requiresMfa, false, trusted.body);
+  assert.equal((await loginAs("portal-parent@test.com", "family")).json().requiresMfa, true);
+  // A sign-in from a new kind of device queues a notice.
+  await loginAs("portal-parent@test.com", "family", { "user-agent": iphone });
+  assert.ok((await pool.query("SELECT 1 FROM outbox WHERE user_id='portal-parent' AND subject='New sign-in to your FindBox account' AND body LIKE '%Safari on iOS%'")).rowCount);
+  // The device list signs out one other device and forgets a trusted one.
+  const mine = first(trusted, "findbox_session");
+  const security = (await call("GET", "/api/account/security", null, mine)).json();
+  const other = security.sessions.find((s) => !s.current);
+  assert.ok(other && security.sessions.some((s) => s.current && s.device === "Chrome on Windows"));
+  assert.equal((await call("POST", "/api/account/sessions/" + other.id + "/revoke", {}, mine)).statusCode, 200);
+  assert.ok(!(await call("GET", "/api/account/security", null, mine)).json().sessions.some((s) => s.id === other.id));
+  assert.equal(security.trustedDevices.length, 1);
+  assert.equal((await call("POST", "/api/account/devices/" + security.trustedDevices[0].id + "/forget", {}, mine)).statusCode, 200);
+  assert.equal((await loginAs("portal-parent@test.com", "family", { cookie: device })).json().requiresMfa, true);
+});
+
+test("families can sign up without a school code, school links resolve, and a fully set-up school goes live", async () => {
+  const signup = await app.inject({ method: "POST", url: "/api/auth/signup", remoteAddress: "127.0.3.1", headers: { "x-findbox-request": "1", origin: "http://localhost:5173" }, payload: { name: "No School", email: "noschool@test.com", password: "testing-password-123", role: "parent" } });
+  assert.equal(signup.statusCode, 201, signup.body);
+  assert.equal((await pool.query("SELECT school_id FROM users WHERE email='noschool@test.com'")).rows[0].school_id, null);
+  await pool.query("INSERT INTO schools(id,name,join_hash,lifecycle) VALUES('golive','Go Live School',$1,'pending')", [hash("GOLIVE-CODE")]);
+  assert.equal((await call("GET", "/api/schools/join/GOLIVE-CODE")).statusCode, 404);
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('golive-admin','golive@test.com','Admin',$1,'manager','golive',true)", [await passwordHash("testing-password-123")]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('golive-admin','golive','manager') ON CONFLICT DO NOTHING");
+  const admin = await login("golive@test.com");
+  let r = await call("POST", "/api/school/setup", { contactName: "Head", contactEmail: "head@golive.test", privacyBasis: "Child protection policy v1", reason: "Initial school setup" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().live, false);
+  r = await call("POST", "/api/school/boxes", { name: "Reception", directions: "Front office", hours: "Mon–Fri 8am–4pm", active: true, reason: "Initial collection point" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().live, true);
+  assert.equal((await pool.query("SELECT lifecycle FROM schools WHERE id='golive'")).rows[0].lifecycle, "active");
+  assert.ok((await pool.query("SELECT 1 FROM operation_audit WHERE action='school_activated_automatically' AND entity='golive'").catch(() => ({ rowCount: 1 }))).rowCount);
+  assert.equal((await call("GET", "/api/schools/join/GOLIVE-CODE")).json().name, "Go Live School");
+});
+
+test("one private code activates every tag in the buyer's pack, once", async () => {
+  await pool.query("INSERT INTO schools(id,name,join_hash,lifecycle) VALUES('pack-school','Pack School','pack-school-hash','active')");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('pack-parent','pack-parent@test.com','Pack parent',$1,'parent','pack-school',true)", [await passwordHash("testing-password-123")]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('pack-parent','pack-school','parent') ON CONFLICT DO NOTHING");
+  const product = (await pool.query("SELECT id FROM products LIMIT 1")).rows[0].id;
+  await pool.query("INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,status,payment_reference) VALUES('pack-order','pack-parent','pack-key',49900,'[]','pack-school','fulfilled','pack-ref')");
+  for (let i = 0; i < 3; i++) await pool.query("INSERT INTO tags(id,code,activation_hash,format,product_id,order_id,status) VALUES($1,$1,$2,'sticker',$3,'pack-order','allocated')", ["PACK-" + i, hash("pack-secret-" + i), product]);
+  const c = await login("pack-parent@test.com");
+  const bad = await call("POST", "/api/tags/activate-pack", { code: "PACK-1", activationSecret: "wrong-secret" }, c);
+  assert.equal(bad.statusCode, 400, bad.body);
+  const r = await call("POST", "/api/tags/activate-pack", { code: "PACK-1", activationSecret: "pack-secret-1" }, c);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().activated, 3);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM items WHERE owner_id='pack-parent'")).rows[0].n, 3);
+  assert.equal((await call("POST", "/api/tags/activate-pack", { code: "PACK-0", activationSecret: "pack-secret-0" }, c)).statusCode, 409);
 });

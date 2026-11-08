@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import QRCode from 'qrcode'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ClipboardList, Clock, Download, FileUp, GraduationCap, HelpCircle,
   Inbox, LayoutDashboard, LogOut, MapPin, PackageCheck, PackageSearch, Pencil, Plus, Search, Settings, ShieldCheck,
-  UserPlus, X,
+  UserPlus, X, Copy, Printer, Share2, Users, RefreshCw,
 } from 'lucide-react'
 import { api, ApiError, type Recovery } from './api'
 import { CaseSafeguards } from './OperationsPanel'
@@ -88,7 +89,7 @@ export function SchoolAdmin() {
   const [me, setMe] = useState<Row | null>(null)
   const [q, setQ] = useState(''), [search, setSearch] = useState(''), [status, setStatus] = useState('all'), [page, setPage] = useState(0), [more, setMore] = useState(false)
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [loading, setLoading] = useState(true)
-  const [panel, setPanel] = useState<{ kind: 'student' | 'import' | 'point' | 'settings'; row?: Row } | null>(null)
+  const [panel, setPanel] = useState<{ kind: 'student' | 'import' | 'point' | 'settings' | 'parents'; row?: Row } | null>(null)
   const [preview, setPreview] = useState<Row[]>([]), [pending, setPending] = useState<Row[]>([]), [drag, setDrag] = useState(false)
   const [flash, setFlash] = useState('')
 
@@ -118,8 +119,9 @@ export function SchoolAdmin() {
   async function act(path: string, body: unknown, success: string, highlight?: string) {
     setBusy(true)
     try {
-      await api(path, body)
+      const result = await api<Row>(path, body)
       notify(success)
+      if (result?.live) window.setTimeout(() => notify(`${setup?.school.name} is now live. Families can join with your parent link.`), 400)
       window.dispatchEvent(new Event('findbox-form-saved'))
       setPanel(null)
       if (highlight) { setFlash(highlight); window.setTimeout(() => setFlash(''), 1800) }
@@ -128,7 +130,7 @@ export function SchoolAdmin() {
     } catch { return false } finally { setBusy(false) }
   }
 
-  async function signOut() { try { await api('/auth/logout', {}) } finally { navigate('/app/sign-in') } }
+  async function signOut() { try { await api('/auth/logout', {}) } finally { navigate('/school/sign-in') } }
 
   const now = Date.now()
   const stats = useMemo(() => {
@@ -145,13 +147,13 @@ export function SchoolAdmin() {
     { key: 'contact', done: setup.checklist.contact, title: 'Add a responsible contact', detail: 'Who parents and FindBox can reach.', action: () => setPanel({ kind: 'settings' }), cta: 'Add contact' },
     { key: 'privacy', done: setup.checklist.privacy, title: 'Record your safeguarding policy', detail: 'A reference to your consent and retention policy.', action: () => setPanel({ kind: 'settings' }), cta: 'Add policy' },
     { key: 'collection', done: setup.checklist.collection, title: 'Set up a collection point', detail: 'Where found items wait for families.', action: () => setPanel({ kind: 'point' }), cta: 'Add point' },
-    { key: 'active', done: setup.checklist.active, title: 'School goes live', detail: setup.checklist.active ? 'Families can join with your school code.' : 'FindBox activates your school once the steps above are done.', action: undefined, cta: '' },
+    { key: 'active', done: setup.checklist.active, title: 'School goes live', detail: setup.checklist.active ? 'Families can now join with your parent link or poster.' : 'Happens automatically once the steps above are done.', action: undefined, cta: '' },
   ] : []
   const doneSteps = checklist.filter(c => c.done).length
 
   if (!setup) return (
     <main className="sa-gate">
-      {loading ? <p role="status">Opening your school workspace…</p> : <section><ShieldCheck size={36} /><h1>School administrators only</h1><p>{error || 'Sign in with your school administrator account to continue.'}</p><Link className="sa-btn" to="/app/sign-in">Sign in <ArrowRight size={16} /></Link></section>}
+      {loading ? <p role="status">Opening your school workspace…</p> : <section><ShieldCheck size={36} /><h1>School administrators only</h1><p>{error || 'Sign in with your school administrator account to continue.'}</p><Link className="sa-btn" to="/school/sign-in">Sign in to the school portal <ArrowRight size={16} /></Link></section>}
     </main>
   )
 
@@ -190,6 +192,7 @@ export function SchoolAdmin() {
               <p>{stats.waiting ? `${stats.waiting} ${stats.waiting === 1 ? 'item is' : 'items are'} waiting at your collection points.` : 'No items are waiting for collection right now.'}{stats.overdue ? ` ${stats.overdue} ${stats.overdue === 1 ? 'is' : 'are'} past the collection date.` : ''}</p>
               <div className="db-quick">
                 <button type="button" onClick={() => setPanel({ kind: 'student' })}><UserPlus size={17} />Add student</button>
+                <button type="button" onClick={() => setPanel({ kind: 'parents' })}><Users size={17} />Invite parents</button>
                 <button type="button" onClick={() => setPanel({ kind: 'import' })}><FileUp size={17} />Import roster</button>
                 <Link className="sa-quick-link" to="/manage/log"><PackageCheck size={17} />Log a found item</Link>
               </div>
@@ -240,6 +243,7 @@ export function SchoolAdmin() {
 
         {view === 'students' && <div className="sa-view" key="students">
           <SectionHead title="Students" lede="Your roster. Children don't need an email or password to be protected.">
+            <button type="button" className="sa-btn is-ghost" onClick={() => setPanel({ kind: 'parents' })}><Users size={16} />Invite parents</button>
             <button type="button" className="sa-btn is-ghost" onClick={() => setPanel({ kind: 'import' })}><FileUp size={16} />Import CSV</button>
             <a className="sa-btn is-ghost" href="/api/school/students/export?format=csv" download="FindBox-students.csv"><Download size={16} />Export</a>
             <button type="button" className="sa-btn" onClick={() => setPanel({ kind: 'student' })}><Plus size={16} />Add student</button>
@@ -339,6 +343,8 @@ export function SchoolAdmin() {
         </div>
       </Panel>}
 
+      {panel?.kind === 'parents' && <Panel title="Invite parents" eyebrow="FAMILIES" onClose={() => setPanel(null)}><ParentInvite schoolName={school.name} live={lifecycle === 'active'} /></Panel>}
+
       {panel?.kind === 'point' && <Panel title={panel.row?.id ? 'Edit collection point' : 'Add a collection point'} eyebrow="COLLECTION POINTS" busy={busy} onClose={() => setPanel(null)}>
         <form className="sa-form" onSubmit={e => { const d = values(e); void act('/school/boxes', { id: panel.row?.id, name: d.name, directions: d.directions, hours: d.hours, active: d.active === 'on', publicListing: d.publicListing === 'on', reason: REASON }, `${d.name} saved.`, d.name) }}>
           <fieldset disabled={busy}>
@@ -390,6 +396,42 @@ export function SchoolAdmin() {
       setPanel(null); setPreview([]); setPending([]); window.dispatchEvent(new Event('findbox-form-saved')); setView('students'); await refresh()
     } catch { /* the toast and button shake already explain it */ } finally { setBusy(false) }
   }
+}
+
+/** Parent join link, QR code and a printable poster, so families never type a code. */
+function ParentInvite({ schoolName, live }: { schoolName: string; live: boolean }) {
+  const [code, setCode] = useState<string | null | undefined>(undefined), [qr, setQr] = useState(''), [confirm, setConfirm] = useState(false)
+  const link = code ? `${location.origin}/app/sign-up?school=${encodeURIComponent(code)}` : ''
+  useEffect(() => { api<Row>('/school/join-link').then(r => setCode(r.code)).catch(() => setCode(null)) }, [])
+  useEffect(() => { if (link) void QRCode.toDataURL(link, { margin: 1, width: 520, color: { dark: '#123a2e', light: '#ffffff' } }).then(setQr) }, [link])
+  async function create() { try { setCode((await api<Row>('/school/join-link', {})).code); setConfirm(false); notify('New parent link ready. The previous link no longer works.') } catch { /* toast already shown */ } }
+  async function copy() { try { await navigator.clipboard.writeText(link); notify('Link copied. Paste it into WhatsApp, SMS or your newsletter.') } catch { notify('Copy did not work. Select the link and copy it manually.', 'error') } }
+  const message = `Join ${schoolName} on FindBox to help your child's lost belongings find their way home: ${link}`
+  if (code === undefined) return <p className="sa-note" role="status">Loading your parent link…</p>
+  return (
+    <div className="sa-form">
+      {!live && <div className="sa-banner"><Clock size={20} /><div><strong>Not live yet</strong><p>Your link starts working as soon as setup is complete.</p></div></div>}
+      {code ? <>
+        <div className="sa-qr">{qr ? <img src={qr} alt={`QR code that opens the ${schoolName} sign-up page`} /> : <span />}<p>Parents scan this with their phone camera to join {schoolName}.</p></div>
+        <label className="sa-field"><span>Parent link</span><div className="sa-copy"><input readOnly value={link} onFocus={e => e.currentTarget.select()} /><button type="button" className="sa-btn" onClick={() => void copy()}><Copy size={15} />Copy</button></div></label>
+        <div className="sa-share">
+          <a className="sa-btn is-ghost" href={'https://wa.me/?text=' + encodeURIComponent(message)} target="_blank" rel="noreferrer"><Share2 size={16} />Share on WhatsApp</a>
+          <a className="sa-btn is-ghost" href={'sms:?&body=' + encodeURIComponent(message)}><Share2 size={16} />Send by SMS</a>
+          <button type="button" className="sa-btn is-ghost" onClick={() => window.print()}><Printer size={16} />Print poster</button>
+        </div>
+        {confirm ? <div className="sa-banner"><AlertTriangle size={20} /><div><strong>Replace this link?</strong><p>Anyone with the old link or poster will need the new one.</p></div><button type="button" className="sa-btn" onClick={() => void create()}>Replace</button></div>
+          : <button type="button" className="db-link sa-rotate" onClick={() => setConfirm(true)}><RefreshCw size={14} />Make a new link</button>}
+        <div className="sa-poster" aria-hidden="true">
+          <p className="sa-poster-kicker">FINDBOX</p>
+          <h1>Lost something at {schoolName}?</h1>
+          <h2>Tag your child's things. Get them back.</h2>
+          {qr && <img src={qr} alt="" />}
+          <ol><li>Scan this code with your phone camera</li><li>Create your free parent account</li><li>Add your child and protect their belongings</li></ol>
+          <p className="sa-poster-link">{link}</p>
+        </div>
+      </> : <div className="sa-empty is-small"><Users size={30} /><p>Create a link and QR code that parents can use to join {schoolName}. No code to type.</p><button type="button" className="sa-btn" onClick={() => void create()}><Plus size={16} />Create parent link</button></div>}
+    </div>
+  )
 }
 
 function SectionHead({ title, lede, children }: { title: string; lede: string; children?: ReactNode }) {

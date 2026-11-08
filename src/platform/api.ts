@@ -6,6 +6,13 @@ export class ApiError extends Error {
     super(message);
   }
 }
+/** Which sign-in portal the current page belongs to; shared pages send none. */
+export function currentPortal(path = location.pathname): "family" | "school" | "ops" | null {
+  if (/^\/company(\/|$)/.test(path)) return "ops";
+  if (/^\/(manage|school)(\/|$)/.test(path) || path === "/app/school-admin") return "school";
+  if (/^\/(shop|app\/(home|items|register|report|gallery|cases|streaks|found|account|sign-in|sign-up|forgot|reset|verify|shop))(\/|$)/.test(path)) return "family";
+  return null;
+}
 function signal(phase: "start" | "success" | "error", path: string, message = "") {
   window.dispatchEvent(new CustomEvent("findbox-action", { detail: { phase, path, message } }));
 }
@@ -21,6 +28,10 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
     throw e;
   }
 }
+function portalHeader(): Record<string, string> {
+  const p = currentPortal();
+  return p ? { "X-FindBox-Portal": p } : {};
+}
 async function request<T>(path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
@@ -30,8 +41,8 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
       cache: "no-store",
       headers:
         body === undefined
-          ? {}
-          : { "Content-Type": "application/json", "X-FindBox-Request": "1" },
+          ? portalHeader()
+          : { "Content-Type": "application/json", "X-FindBox-Request": "1", ...portalHeader() },
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: AbortSignal.timeout(20000),
     });

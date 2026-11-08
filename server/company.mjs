@@ -18,6 +18,7 @@ export async function companyRoutes(app, { pool, cfg, user, daraja }) {
   });
   async function operator(req, roles = ['admin', 'developer']) {
     const u = await user(req, true);
+    requireThat(!u.session_portal || u.session_portal === 'ops', 403, 'Sign in through the FindBox operations sign-in to use this workspace');
     const grant = (await pool.query('SELECT role FROM company_access WHERE user_id=$1', [u.id])).rows[0];
     requireThat(grant && roles.includes(grant.role), 403, 'Company access required');
     requireThat(u.verified, 403, 'Verify your email before continuing');
