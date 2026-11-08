@@ -20,6 +20,7 @@ import {
   requireThat,
 } from "./security.mjs";
 import { transaction } from "./db.mjs";
+import { COOKIE, DEVICE_COOKIE, PORTAL_SIGN_IN, SESSION_MS, FAMILY_ABSOLUTE_MS, naturalPortal, requestPortal, sessionToken, cookieOptions, deviceLabel } from "./portals.mjs";
 import { paymentProvider, validSignature } from "./payments.mjs";
 import { notify } from "./worker.mjs";
 const text = (max = 160) => z.string().trim().min(1).max(max);
@@ -143,10 +144,10 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
     });
   });
   async function user(req, allowLimited = false) {
-    const token = req.cookies.findbox_session;
+    const token = sessionToken(req);
     requireThat(token, 401, "Please sign in");
     const result = await pool.query(
-      "SELECT u.*,(SELECT role FROM company_access WHERE user_id=u.id) AS company_role,s.school_id AS school_id,COALESCE(m.role,CASE WHEN u.role='student' THEN 'student' ELSE 'parent' END) AS role,s.created_at AS session_created_at,s.mfa_verified AS session_mfa_verified,s.company_email_verified AS session_company_email_verified FROM users u JOIN sessions s ON u.id=s.user_id LEFT JOIN memberships m ON m.user_id=u.id AND m.school_id=s.school_id WHERE u.disabled_at IS NULL AND s.token_hash=$1 AND s.expires_at>$2 AND (s.school_id IS NULL OR m.user_id IS NOT NULL)",
+      "SELECT u.*,(SELECT role FROM company_access WHERE user_id=u.id) AS company_role,s.school_id AS school_id,COALESCE(m.role,CASE WHEN u.role='student' THEN 'student' ELSE 'parent' END) AS role,s.created_at AS session_created_at,s.mfa_verified AS session_mfa_verified,s.company_email_verified AS session_company_email_verified,s.portal AS session_portal FROM users u JOIN sessions s ON u.id=s.user_id LEFT JOIN memberships m ON m.user_id=u.id AND m.school_id=s.school_id WHERE u.disabled_at IS NULL AND s.token_hash=$1 AND s.expires_at>$2 AND (s.school_id IS NULL OR m.user_id IS NOT NULL)",
       [hash(token), new Date()],
     );
     requireThat(
@@ -155,6 +156,8 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
       "Your session has expired. Please sign in.",
     );
     const u = result.rows[0];
+    // Record activity at most every five minutes; family sessions renew while in use, up to 90 days.
+    await pool.query("UPDATE sessions SET last_seen_at=now(),expires_at=CASE WHEN portal='family' THEN LEAST(now()+$2::interval,created_at+$3::interval) ELSE expires_at END WHERE token_hash=$1 AND last_seen_at<now()-interval '5 minutes'", [hash(token), SESSION_MS.family / 1000 + ' seconds', FAMILY_ABSOLUTE_MS / 1000 + ' seconds']);
     if(u.school_id&&!/^\/api\/(auth|account|support)\//.test(req.url)) requireThat((await pool.query("SELECT 1 FROM schools WHERE id=$1 AND lifecycle IN ('active','pending')",[u.school_id])).rowCount,403,"School access is suspended or archived");
     requireThat(
       allowLimited || (cfg.companyEmailEnabled && u.company_role && u.session_company_email_verified) ||
@@ -173,6 +176,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
       403,
       "School staff access required",
     );
+    requireThat(!u.session_portal || u.session_portal === "school", 403, "Sign in through the school portal to continue");
     return u;
   }
   async function verified(req) {
@@ -180,7 +184,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
     requireThat(u.verified, 403, "Verify your email before continuing");
     return u;
   }
-  async function session(reply, u, { mfaVerified = false } = {}) {
+  async function session(reply, u, { mfaVerified = false, req = null, portal: wanted = null } = {}) {
     const membership = u.school_id
       ? (
           await pool.query(
@@ -197,28 +201,41 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
       };
     else if (membership) u = { ...u, role: membership.role };
     const grant = (await pool.query('SELECT role FROM company_access WHERE user_id=$1', [u.id])).rows[0];
+    const portal = naturalPortal(u, grant?.role);
+    if (wanted && wanted !== portal)
+      throw Object.assign(new Error(portal === "school" ? "Teachers and school administrators sign in through the school portal at " + PORTAL_SIGN_IN.school + "." : portal === "ops" ? "This account uses the FindBox operations sign-in." : "Parents and students sign in at " + PORTAL_SIGN_IN.family + "."), { statusCode: 403 });
+    const ua = String(req?.headers["user-agent"] || "").slice(0, 300), label = deviceLabel(ua);
+    // A device trusted after a previous two-step check skips the code (never for operations accounts).
+    if (!mfaVerified && portal !== "ops" && u.mfa_secret && req?.cookies?.[DEVICE_COOKIE]) {
+      const trusted = await pool.query("UPDATE trusted_devices SET last_used_at=now() WHERE token_hash=$1 AND user_id=$2 AND expires_at>now() RETURNING 1", [hash(req.cookies[DEVICE_COOKIE]), u.id]);
+      if (trusted.rowCount) mfaVerified = true;
+    }
     const limited =
       !mfaVerified &&
       (!!grant || !!u.mfa_secret ||
         (cfg.production && ["staff", "manager"].includes(u.role)));
     const token = secret();
     await pool.query(
-      "INSERT INTO sessions(token_hash,user_id,expires_at,school_id,mfa_verified) VALUES($1,$2,$3,$4,$5)",
+      "INSERT INTO sessions(token_hash,user_id,expires_at,school_id,mfa_verified,portal,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7)",
       [
         hash(token),
         u.id,
-        limited ? new Date(Date.now() + 600000) : plusDays(7),
+        new Date(Date.now() + (limited ? 600000 : SESSION_MS[portal])),
         u.school_id,
         mfaVerified,
+        portal,
+        ua,
       ],
     );
-    reply.setCookie("findbox_session", token, {
-      path: "/",
-      httpOnly: true,
-      secure: cfg.production,
-      sameSite: "lax",
-      maxAge: limited ? 600 : 604800,
-    });
+    // Family cookies outlive a single session window because the server renews them while in use.
+    reply.setCookie(COOKIE[portal], token, cookieOptions(cfg, limited ? 600 : portal === "family" ? FAMILY_ABSOLUTE_MS / 1000 : SESSION_MS[portal] / 1000));
+    // Alert on a correct password from a new kind of device, even before the two-step code is entered.
+    if (req) {
+      const known = await pool.query("INSERT INTO known_devices(user_id,label) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING (SELECT count(*) FROM known_devices WHERE user_id=$1)::int AS before", [u.id, label]);
+      if (known.rowCount && known.rows[0].before > 0)
+        await pool.query("INSERT INTO outbox(id,user_id,subject,body) VALUES($1,$2,$3,$4)", [id(), u.id, "New sign-in to your FindBox account", `Your account was just signed in on ${label}.
+If this was you, there is nothing to do. If not, change your password and sign out other devices from Profile settings & security.`]);
+    }
     return {
       user: publicUser(u),
       requiresMfa: limited,
@@ -263,7 +280,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
   }
   await studentLoginRoutes(app,{pool,user});
   await schoolRoutes(app, { pool, cfg, user });
-  await accountRoutes(app, { pool, cfg, user, session, google });
+  await accountRoutes(app, { pool, cfg, user, session, google, sessionToken });
   await supportRoutes(app, { pool, cfg, user });
   await companyEmailRoutes(app,{pool,cfg,mailer});
   await companyRoutes(app, { pool, cfg, user, daraja });
@@ -291,18 +308,17 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
           email,
           password,
           role: z.enum(["parent", "student"]),
-          schoolCode: text(100),
+          schoolCode: z.string().trim().max(100).optional().default(""),
         }),
         req.body,
       );
       requireThat(data.role !== "student",403,"Students must be added by their school administrator. Ask your school or guardian for access.");
-      const school = (
-        await pool.query("SELECT id FROM schools WHERE join_hash=$1 AND lifecycle='active'", [
-          hash(data.schoolCode),
-        ])
-      ).rows[0];
+      // The school code is optional: families can join a school later from their account.
+      const school = data.schoolCode
+        ? (await pool.query("SELECT id FROM schools WHERE join_hash=$1 AND lifecycle='active'", [hash(data.schoolCode)])).rows[0]
+        : null;
       requireThat(
-        school,
+        !data.schoolCode || school,
         400,
         "School code is not valid. Ask your school for its invitation code.",
       );
@@ -311,14 +327,14 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
         const u = (
           await db.query(
             "INSERT INTO users(id,name,email,password_hash,role,school_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",
-            [id(), data.name, data.email, pw, data.role, school.id],
+            [id(), data.name, data.email, pw, data.role, school?.id || null],
           )
         ).rows[0];
         await sendToken(db, u, "verify");
         return u;
       });
       reply.code(201);
-      return session(reply, u);
+      return session(reply, u, { req, portal: "family" });
     },
   );
   const dummyHash = await passwordHash(secret());
@@ -327,7 +343,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
     { config: { rateLimit: { max: 10, timeWindow: "15 minutes" } } },
     async (req, reply) => {
       const d = clean(
-        z.object({ email, password: z.string().min(1).max(128) }),
+        z.object({ email, password: z.string().min(1).max(128), portal: z.enum(["family", "school", "ops"]).optional() }),
         req.body,
       );
       const u = (
@@ -339,7 +355,7 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
       );
       await pool.query('INSERT INTO audit_log(id,user_id,action) VALUES($1,$2,$3)', [id(), valid && u ? u.id : null, valid && u ? 'login_success' : 'login_failed']);
       requireThat(u && valid && !u.disabled_at, 401, "Email or password is incorrect");
-      return session(reply, u);
+      return session(reply, u, { req, portal: d.portal || null });
     },
   );
   app.get("/api/auth/me", async (req) => ({
@@ -358,11 +374,11 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
     })(),
   }));
   app.post("/api/auth/logout", async (req, reply) => {
-    if (req.cookies.findbox_session)
-      await pool.query("DELETE FROM sessions WHERE token_hash=$1", [
-        hash(req.cookies.findbox_session),
-      ]);
-    reply.clearCookie("findbox_session", { path: "/" });
+    const p = requestPortal(req), names = p ? [COOKIE[p]] : Object.values(COOKIE);
+    for (const name of names) {
+      if (req.cookies[name]) await pool.query("DELETE FROM sessions WHERE token_hash=$1", [hash(req.cookies[name])]);
+      reply.clearCookie(name, { path: "/" });
+    }
     return { ok: true };
   });
   app.post(
@@ -771,6 +787,55 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
         ],
       );
       return { id: itemId };
+    });
+  });
+  // One private code from any tag proves the sealed pack is in hand, so the whole pack activates at once.
+  app.post("/api/tags/activate-pack", async (req) => {
+    const u = await verified(req);
+    const d = clean(
+      z.object({
+        code: text(100),
+        activationSecret: text(200),
+        childName: z.string().trim().max(100).default(""),
+        ownerId: z.string().max(100).default(""),
+      }),
+      req.body,
+    );
+    requireThat(u.school_id, 409, "Join your school before activating tags, so finders know where to bring items.");
+    return transaction(pool, async (db) => {
+      const tag = (
+        await db.query(
+          "SELECT t.*,o.user_id AS purchaser FROM tags t JOIN orders o ON o.id=t.order_id WHERE t.code=$1 FOR UPDATE OF t",
+          [d.code],
+        )
+      ).rows[0];
+      requireThat(
+        tag && tag.purchaser === u.id && tag.activation_hash === hash(d.activationSecret),
+        400,
+        "Tag or activation code is not valid for your account",
+      );
+      const ownerId = d.ownerId || u.id;
+      if (ownerId !== u.id)
+        requireThat(
+          (await db.query("SELECT 1 FROM users WHERE id=$1 AND guardian_id=$2 AND school_id=$3", [ownerId, u.id, u.school_id])).rowCount,
+          403,
+          "This child is not linked to your account",
+        );
+      const pack = (
+        await db.query(
+          "SELECT t.id,p.name AS product FROM tags t JOIN products p ON p.id=t.product_id WHERE t.order_id=$1 AND t.product_id=$2 AND t.status='allocated' ORDER BY t.code FOR UPDATE OF t",
+          [tag.order_id, tag.product_id],
+        )
+      ).rows;
+      requireThat(pack.length, 409, "Every tag in this pack is already active");
+      for (const [i, t] of pack.entries()) {
+        await db.query("UPDATE tags SET status='active',owner_id=$1 WHERE id=$2", [u.id, t.id]);
+        await db.query(
+          "INSERT INTO items(id,tag_id,owner_id,school_id,name,category,child_name) VALUES($1,$2,$3,$4,$5,'other',$6)",
+          [id(), t.id, ownerId, u.school_id, `Tag ${i + 1}`, d.childName],
+        );
+      }
+      return { activated: pack.length };
     });
   });
   app.get("/api/tags/:code", async (req) => {

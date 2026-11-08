@@ -11,7 +11,8 @@ type Security = {
   mfaVerified: boolean;
   googleLinked: boolean;
   googleAvailable: boolean;
-  sessions: { createdAt: string; expiresAt: string; current: boolean }[];
+  sessions: { id: string; device: string; portal: string; createdAt: string; lastSeenAt: string; expiresAt: string; current: boolean }[];
+  trustedDevices: { id: string; label: string; created_at: string; last_used_at: string; expires_at: string }[];
 };
 export function ServerSecurity() {
   const nav = useNavigate();
@@ -160,13 +161,32 @@ export function ServerSecurity() {
               {!data.googleLinked && data.googleAvailable && (
                 <a href="/api/auth/google/start?link=1">Link Google account</a>
               )}
-              <h3>Active sessions</h3>
-              {data.sessions.map((s, i) => (
-                <p key={i}>
-                  {s.current ? "This session" : "Another session"} ·{" "}
-                  {new Date(s.createdAt).toLocaleDateString()}
-                </p>
-              ))}
+              <h3>Where you're signed in</h3>
+              <ul className="sx-devices">
+                {data.sessions.map((s) => (
+                  <li key={s.id}>
+                    <div>
+                      <strong>{s.device}{s.current && <span className="sx-current">This device</span>}</strong>
+                      <small>{s.portal === "ops" ? "Operations" : s.portal === "school" ? "School portal" : "Family app"} · last active {new Date(s.lastSeenAt).toLocaleString("en-KE")}</small>
+                    </div>
+                    {!s.current && (
+                      <button disabled={busy} onClick={() => action(async () => { await api("/account/sessions/" + s.id + "/revoke", {}); setMessage(s.device + " has been signed out."); })}>Sign out</button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {data.trustedDevices?.length > 0 && <>
+                <h3>Trusted devices</h3>
+                <p>These skip the two-step code for 30 days. Your password is still needed.</p>
+                <ul className="sx-devices">
+                  {data.trustedDevices.map((d) => (
+                    <li key={d.id}>
+                      <div><strong>{d.label}</strong><small>Trusted until {new Date(d.expires_at).toLocaleDateString("en-KE")}</small></div>
+                      <button disabled={busy} onClick={() => action(async () => { await api("/account/devices/" + d.id + "/forget", {}); setMessage(d.label + " is no longer trusted."); })}>Forget</button>
+                    </li>
+                  ))}
+                </ul>
+              </>}
               <button
                 disabled={busy}
                 onClick={() =>
@@ -176,7 +196,7 @@ export function ServerSecurity() {
                   })
                 }
               >
-                Sign out other sessions
+                Sign out all other devices
               </button>
             </section>
             <section>

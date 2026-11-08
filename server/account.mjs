@@ -11,7 +11,8 @@ import {
 import { transaction } from "./db.mjs";
 import { googleProvider } from "./google.mjs";
 import { seal, unseal, newMfaSecret, validStep } from "./mfa.mjs";
-export async function accountRoutes(app, { pool, cfg, user, session, google }) {
+import { DEVICE_COOKIE, TRUSTED_DEVICE_MS, deviceLabel } from "./portals.mjs";
+export async function accountRoutes(app, { pool, cfg, user, session, google, sessionToken }) {
   const audit = (db, uid, action) =>
     db.query("INSERT INTO audit_log(id,user_id,action) VALUES($1,$2,$3)", [
       id(),
@@ -143,7 +144,7 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
         await audit(db, account.id, "google_linked");
         return account;
       });
-      await session(reply, u);
+      await session(reply, u, { req });
       reply.clearCookie("findbox_oauth", { path: "/api/auth/google" });
       return reply.redirect("/app/sign-in?google=complete");
     } catch {
@@ -155,7 +156,7 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
     const u = await user(req, true);
     const sessions = (
       await pool.query(
-        "SELECT created_at,expires_at,token_hash FROM sessions WHERE user_id=$1 AND expires_at>now() ORDER BY created_at DESC",
+        "SELECT created_at,expires_at,token_hash,portal,user_agent,last_seen_at FROM sessions WHERE user_id=$1 AND expires_at>now() ORDER BY last_seen_at DESC",
         [u.id],
       )
     ).rows;
@@ -174,10 +175,15 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
         )
       ).rowCount,
       sessions: sessions.map((s) => ({
+        id: s.token_hash.slice(0, 16),
+        device: deviceLabel(s.user_agent),
+        portal: s.portal || "family",
         createdAt: s.created_at,
+        lastSeenAt: s.last_seen_at,
         expiresAt: s.expires_at,
-        current: s.token_hash === hash(req.cookies.findbox_session),
+        current: s.token_hash === hash(sessionToken(req)),
       })),
+      trustedDevices: (await pool.query("SELECT left(token_hash,16) AS id,label,created_at,last_used_at,expires_at FROM trusted_devices WHERE user_id=$1 AND expires_at>now() ORDER BY last_used_at DESC", [u.id])).rows,
     };
   });
   app.post("/api/account/mfa/setup", async (req) => {
@@ -234,13 +240,13 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
       await audit(db, u.id, "mfa_enabled");
       return { recoveryCodes: codes };
     });
-    await session(reply,u,{mfaVerified:true});
+    await session(reply,u,{mfaVerified:true,req});
     return result;
   });
   app.post("/api/account/mfa/challenge", async (req, reply) => {
     const u = await user(req, true);
-    const { code } = z
-      .object({ code: z.string().min(6).max(32) })
+    const { code, trustDevice } = z
+      .object({ code: z.string().min(6).max(32), trustDevice: z.boolean().optional() })
       .parse(req.body);
     await transaction(pool, async (db) => {
       const row = (
@@ -272,18 +278,40 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
           u.id,
         ]);
       await db.query("DELETE FROM sessions WHERE token_hash=$1", [
-        hash(req.cookies.findbox_session),
+        hash(sessionToken(req)),
       ]);
       await audit(db, u.id, "mfa_verified");
     });
-    return session(reply, u, { mfaVerified: true });
+    // Remember this browser for 30 days so the code is not asked again here (never for operations accounts).
+    if (trustDevice && !u.company_role) {
+      const device = secret();
+      await pool.query("INSERT INTO trusted_devices(token_hash,user_id,label,expires_at) VALUES($1,$2,$3,$4)", [hash(device), u.id, deviceLabel(String(req.headers["user-agent"] || "")), new Date(Date.now() + TRUSTED_DEVICE_MS)]);
+      reply.setCookie(DEVICE_COOKIE, device, { path: "/", httpOnly: true, secure: cfg.production, sameSite: "lax", maxAge: TRUSTED_DEVICE_MS / 1000 });
+      await audit(pool, u.id, "device_trusted");
+    }
+    return session(reply, u, { mfaVerified: true, req });
+  });
+  app.post("/api/account/sessions/:id/revoke", async (req) => {
+    const u = await user(req);
+    const r = await pool.query("DELETE FROM sessions WHERE user_id=$1 AND left(token_hash,16)=$2 AND token_hash<>$3", [u.id, String(req.params.id).slice(0, 16), hash(sessionToken(req))]);
+    requireThat(r.rowCount, 404, "That device is already signed out");
+    await audit(pool, u.id, "session_revoked");
+    return { ok: true };
+  });
+  app.post("/api/account/devices/:id/forget", async (req) => {
+    const u = await user(req);
+    const r = await pool.query("DELETE FROM trusted_devices WHERE user_id=$1 AND left(token_hash,16)=$2", [u.id, String(req.params.id).slice(0, 16)]);
+    requireThat(r.rowCount, 404, "That device is no longer trusted");
+    await audit(pool, u.id, "trusted_device_forgotten");
+    return { ok: true };
   });
   app.post("/api/account/sessions/revoke", async (req) => {
     const u = await user(req);
     await pool.query(
       "DELETE FROM sessions WHERE user_id=$1 AND token_hash<>$2",
-      [u.id, hash(req.cookies.findbox_session)],
+      [u.id, hash(sessionToken(req))],
     );
+    await pool.query("DELETE FROM trusted_devices WHERE user_id=$1", [u.id]);
     await audit(pool, u.id, "other_sessions_revoked");
     return { ok: true };
   });
@@ -332,12 +360,12 @@ export async function accountRoutes(app, { pool, cfg, user, session, google }) {
     ).rows[0];
     requireThat(m, 403, "You do not belong to this school");
     await pool.query("DELETE FROM sessions WHERE token_hash=$1", [
-      hash(req.cookies.findbox_session),
+      hash(sessionToken(req)),
     ]);
     return session(
       reply,
       { ...u, school_id: d.schoolId, role: m.role },
-      { mfaVerified: u.session_mfa_verified },
+      { mfaVerified: u.session_mfa_verified, req },
     );
   });
 

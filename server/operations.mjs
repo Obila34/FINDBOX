@@ -4,6 +4,7 @@ import { id,secret,hash,requireThat,passwordHash } from './security.mjs';
 import { transaction } from './db.mjs';
 import { invoicePdf } from './invoice-pdf.mjs';
 import { mailReady } from './mail.mjs';
+import { sealCode } from './mfa.mjs';
 const text=n=>z.string().trim().min(1).max(n);
 const calendarDate=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>Number.isFinite(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v,'Enter a valid calendar date');
 const reasonText=z.string().trim().min(8).max(500);
@@ -75,7 +76,7 @@ export async function operationsRoutes(app,{pool,cfg,operator}){
  });
  app.post('/api/company/schools',async req=>{
   const u=await developer(req);recent(u);const d=z.object({requestKey:z.string().uuid(),name:text(160),box:text(100),directions:text(500),hours:text(200),reason:reasonText}).strict().parse(req.body);const code=secret().slice(0,16),sid=id();
-  const result=await transaction(pool,async db=>{const previous=(await db.query('SELECT id FROM schools WHERE request_key=$1',[d.requestKey])).rows[0];if(previous)return {id:previous.id,alreadyCreated:true};await db.query("INSERT INTO schools(id,name,join_hash,request_key,lifecycle) VALUES($1,$2,$3,$4,'pending')",[sid,d.name,hash(code),d.requestKey]);await db.query('INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES($1,$2,$3,$4,$5)',[id(),sid,d.box,d.directions,d.hours]);await audit(db,u,'school_created',sid,d.reason,{name:d.name});return {id:sid,joinCode:code}});return result;
+  const result=await transaction(pool,async db=>{const previous=(await db.query('SELECT id FROM schools WHERE request_key=$1',[d.requestKey])).rows[0];if(previous)return {id:previous.id,alreadyCreated:true};await db.query("INSERT INTO schools(id,name,join_hash,request_key,lifecycle,join_code_sealed) VALUES($1,$2,$3,$4,'pending',$5)",[sid,d.name,hash(code),d.requestKey,sealCode(code,cfg)]);await db.query('INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES($1,$2,$3,$4,$5)',[id(),sid,d.box,d.directions,d.hours]);await audit(db,u,'school_created',sid,d.reason,{name:d.name});return {id:sid,joinCode:code}});return result;
  });
  app.post('/api/company/schools/:id',async req=>{
   const u=await developer(req);recent(u);const d=change.extend({name:text(160),collectionDays:z.number().int().min(1).max(90)}).strict().parse(req.body);
@@ -83,7 +84,7 @@ export async function operationsRoutes(app,{pool,cfg,operator}){
  });
  app.post('/api/company/schools/:id/code',async req=>{
   const u=await developer(req);recent(u);const d=change.strict().parse(req.body),code=secret().slice(0,16);
-  await transaction(pool,async db=>{requireThat((await db.query('UPDATE schools SET join_hash=$1,revision=revision+1 WHERE id=$2 AND revision=$3',[hash(code),req.params.id,d.revision])).rowCount,409,'School changed; refresh before rotating the code');await audit(db,u,'school_code_rotated',req.params.id,d.reason)});return {joinCode:code};
+  await transaction(pool,async db=>{requireThat((await db.query('UPDATE schools SET join_hash=$1,join_code_sealed=$4,revision=revision+1 WHERE id=$2 AND revision=$3',[hash(code),req.params.id,d.revision,sealCode(code,cfg)])).rowCount,409,'School changed; refresh before rotating the code');await audit(db,u,'school_code_rotated',req.params.id,d.reason)});return {joinCode:code};
  });
  app.post('/api/company/support/:id',async req=>{
   const u=await admin(req);recent(u);const d=z.object({status:z.enum(['new','in_progress','resolved']),reply:z.string().trim().max(4000),reason:reasonText}).strict().parse(req.body);

@@ -72,3 +72,6 @@ export function validStep(secret, code, previous = -1) {
   return -1;
 }
 export const newMfaSecret = () => base32(randomBytes(20));
+
+/** Seals a school join code for later sharing; without an encryption key the code is simply not stored. */
+export function sealCode(code, cfg) { try { return seal(code, cfg); } catch { return null; } }

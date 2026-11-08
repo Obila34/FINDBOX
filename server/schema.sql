@@ -146,3 +146,12 @@ CREATE TABLE IF NOT EXISTS demo_tag_grants (
  expires_at timestamptz NOT NULL,
  created_at timestamptz NOT NULL DEFAULT now()
 );
+-- Portals, device-aware sessions and trusted devices.
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS portal text CHECK(portal IS NULL OR portal IN ('family','school','ops'));
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent text NOT NULL DEFAULT '';
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_seen_at timestamptz NOT NULL DEFAULT now();
+CREATE TABLE IF NOT EXISTS trusted_devices(token_hash text PRIMARY KEY,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,label text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),last_used_at timestamptz NOT NULL DEFAULT now(),expires_at timestamptz NOT NULL);
+CREATE INDEX IF NOT EXISTS trusted_devices_user ON trusted_devices(user_id);
+CREATE TABLE IF NOT EXISTS known_devices(user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,label text NOT NULL,first_seen_at timestamptz NOT NULL DEFAULT now(),PRIMARY KEY(user_id,label));
+-- Lets school administrators share a parent join link without rotating the code.
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS join_code_sealed text;

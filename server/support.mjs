@@ -1,3 +1,4 @@
+import { sessionToken } from "./portals.mjs";
 import { z } from "zod";
 import { id, hash, secret, requireThat } from "./security.mjs";
 import { transaction } from "./db.mjs";
@@ -42,7 +43,7 @@ export async function supportRoutes(app, { pool, cfg, user }) {
       })
       .parse(req.body);
     requireThat(!d.website, 400, "Unable to submit this request");
-    const u = req.cookies.findbox_session ? await user(req) : null;
+    const u = sessionToken(req) ? await user(req) : null;
     const scope = u ? "user:" + u.id : "email:" + hash(d.email);
     const ticket = await transaction(pool, async (db) => {
       await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [scope]);
