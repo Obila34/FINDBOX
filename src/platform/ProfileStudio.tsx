@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Camera, Check, Trash2, Sparkles } from 'lucide-react'
-import { ACCENTS, ProfileAvatar, saveProfile, squarePhoto, useProfile, type Profile } from './profile'
+import { ACCENTS, ICON_GROUPS, ProfileAvatar, saveProfile, squarePhoto, useProfile, type Profile } from './profile'
 import { notify } from './feedback'
 import { cx } from '@/lib/util'
 import './profile-studio.css'
 
-const EMOJIS = ['🎒', '📚', '⚽', '🏀', '🎨', '🎧', '🧪', '🚀', '🌿', '🦁', '🐢', '🦊', '🐼', '🌻', '⭐', '🔥', '🎹', '🏊', '🧩', '🛹', '🎯', '🌍', '🍉', '💡']
 const TAGLINES = ['Always packs the night before', 'Bottle back, every day', 'Label everything', 'Lost nothing this term']
 
 /** Personal profile editor: photo, emoji, accent ring, name and tagline, with a live preview. */
@@ -37,7 +36,7 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
     } catch (err) { notify((err as Error).message, 'error') } finally { setBusy(false) }
   }
 
-  return <form className="ps-card" onSubmit={submit}>
+  return <form className="ps-card" onSubmit={submit} style={{ ['--ps-accent' as string]: ACCENTS[draft.accent]?.[0] }}>
     <div className="ps-preview" style={{ ['--ps-accent' as string]: ACCENTS[draft.accent]?.[0] }}>
       <motion.div key={draft.avatar || draft.emoji || draft.accent} initial={still ? false : { scale: 0.85, rotate: -6, opacity: 0 }} animate={{ scale: 1, rotate: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}>
         <ProfileAvatar profile={draft} size={96} />
@@ -53,10 +52,15 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
 
     <div className="ps-section">
       <div className="ps-row"><h3>Picture</h3>{draft.avatar && <button type="button" className="ps-ghost" onClick={() => set({ avatar: null })}><Trash2 size={14} />Remove photo</button>}</div>
-      <div className="ps-emojis" role="radiogroup" aria-label="Profile emoji">
-        <button type="button" role="radio" aria-checked={!draft.emoji && !draft.avatar} className={cx(!draft.emoji && !draft.avatar && 'is-on')} onClick={() => set({ emoji: '', avatar: null })}>Aa</button>
-        {EMOJIS.map(e => <motion.button whileTap={{ scale: 0.85 }} type="button" role="radio" aria-checked={draft.emoji === e && !draft.avatar} key={e} className={cx(draft.emoji === e && !draft.avatar && 'is-on')} onClick={() => set({ emoji: e, avatar: null })}>{e}</motion.button>)}
-      </div>
+      <button type="button" className={cx('ps-initials', !draft.emoji && !draft.avatar && 'is-on')} aria-pressed={!draft.emoji && !draft.avatar} onClick={() => set({ emoji: '', avatar: null })}>Use my initials</button>
+      {ICON_GROUPS.map(group => <div key={group.title} className="ps-icon-group">
+        <p>{group.title}</p>
+        <div className="ps-emojis" role="radiogroup" aria-label={group.title}>
+          {group.icons.map(([key, label, Icon]) => { const on = draft.emoji === 'i:' + key && !draft.avatar; return <motion.button whileTap={{ scale: 0.85 }} whileHover={still ? undefined : { y: -2 }} type="button" role="radio" aria-checked={on} aria-label={label} title={label} key={key} className={cx(on && 'is-on')} onClick={() => set({ emoji: 'i:' + key, avatar: null })}>
+            <Icon size={20} strokeWidth={1.6} />
+          </motion.button> })}
+        </div>
+      </div>)}
       <button type="button" className="ps-upload" onClick={() => file.current?.click()}><Camera size={16} />Upload a photo</button>
     </div>
 

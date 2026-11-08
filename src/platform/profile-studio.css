@@ -35,3 +35,12 @@
 @media (min-width: 1024px) { .ps-save { bottom: 24px; } }
 
 @media (max-width: 480px) { .ps-preview { flex-direction: column; align-items: flex-start; gap: 14px; padding: 20px; } .ps-preview h2 { white-space: normal; } }
+
+/* Learning icon picker */
+.ps-icon-group { margin-top: 12px; }
+.ps-icon-group > p { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #78806f; margin-bottom: 8px; }
+.ps-emojis button { color: #c4c9c0; }
+.ps-emojis button:hover { color: #f8f9f3; }
+.ps-emojis button.is-on { color: #050806; background: linear-gradient(135deg, var(--ps-accent, #aebe9e), #657b56); border-color: transparent; }
+.ps-initials { padding: 8px 14px; font-size: 12px; border-radius: 99px; color: #c4c9c0; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); }
+.ps-initials.is-on { color: #050806; background: #e7ecde; }
