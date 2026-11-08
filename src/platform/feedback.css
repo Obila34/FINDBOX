@@ -1,15 +1,15 @@
 /* Shared action feedback: toasts and button states for every workspace. */
 .fx-toasts{position:fixed;right:96px;bottom:24px;z-index:400;display:grid;gap:10px;width:min(400px,calc(100vw - 32px));pointer-events:none}
-.fx-toast{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:14px 14px 16px;border-radius:14px;background:#123f31;color:#fff;box-shadow:0 14px 40px #0b2a2033,0 2px 6px #0b2a2026;font:500 13px/1.45 Arial,Helvetica,sans-serif;pointer-events:auto;animation:fx-in .32s cubic-bezier(.2,.9,.3,1.2) both}
+.fx-toast{position:relative;overflow:hidden;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:14px 14px 16px;border-radius:14px;background:#122620;color:#fff;box-shadow:0 14px 40px #0b2a2033,0 2px 6px #0b2a2026;font:500 13px/1.45 Arial,Helvetica,sans-serif;pointer-events:auto;animation:fx-in .32s cubic-bezier(.2,.9,.3,1.2) both}
 .fx-toast p{margin:0;color:inherit}
 .fx-toast.is-error{background:#7d2620}
-.fx-toast.is-info{background:#24425a}
+.fx-toast.is-info{background:#121d26}
 .fx-toast.is-leaving{animation:fx-out .2s ease-in forwards}
-.fx-toast-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#ffffff26}
-.fx-toast.is-success .fx-toast-icon{background:#3ecf8e;color:#0d3326;animation:fx-pop .45s .1s cubic-bezier(.2,.9,.3,1.5) both}
+.fx-toast-icon{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.03)}
+.fx-toast.is-success .fx-toast-icon{background:#3ecf8e;color:#d4ede4;animation:fx-pop .45s .1s cubic-bezier(.2,.9,.3,1.5) both}
 .fx-toast>button{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;color:#ffffffc0;background:none;border:0;cursor:pointer}
-.fx-toast>button:hover{background:#ffffff1f;color:#fff}
-.fx-toast-timer{position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ffffff55;transform-origin:left;animation:fx-timer linear forwards}
+.fx-toast>button:hover{background:rgba(255,255,255,0.03);color:#fff}
+.fx-toast-timer{position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(255,255,255,0.033);transform-origin:left;animation:fx-timer linear forwards}
 .fx-toast:hover .fx-toast-timer{animation-play-state:paused}
 
 /* Every workspace button gives a small press response. */
@@ -20,13 +20,13 @@
 button[data-action]{position:relative}
 button[data-action=busy],button[data-action=done]{color:transparent!important}
 button[data-action=busy]>*,button[data-action=done]>*{opacity:0}
-button[data-action=busy]::after{content:'';position:absolute;inset:0;margin:auto;width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-color:#ffffffaa #ffffffaa #ffffffaa transparent;animation:fx-spin .7s linear infinite;opacity:1!important}
+button[data-action=busy]::after{content:'';position:absolute;inset:0;margin:auto;width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-color:rgba(255,255,255,0.09) rgba(255,255,255,0.09) rgba(255,255,255,0.09) transparent;animation:fx-spin .7s linear infinite;opacity:1!important}
 button[data-action=busy]{cursor:progress}
 button[data-action=done]{background:#1f8a5b!important;border-color:#1f8a5b!important;box-shadow:0 0 0 4px #1f8a5b2e;animation:fx-pop .4s cubic-bezier(.2,.9,.3,1.5)}
-button[data-action=done]::after{content:'';position:absolute;inset:0;margin:auto;width:6px;height:11px;border:solid #fff;border-width:0 2.5px 2.5px 0;transform:translateY(-2px) rotate(45deg);animation:fx-tick .3s ease-out both}
+button[data-action=done]::after{content:'';position:absolute;inset:0;margin:auto;width:6px;height:11px;border:solid rgba(255,255,255,0.09);border-width:0 2.5px 2.5px 0;transform:translateY(-2px) rotate(45deg);animation:fx-tick .3s ease-out both}
 button[data-action=error]{animation:fx-shake .45s ease;box-shadow:0 0 0 3px #c2413a40!important}
 /* Light buttons need a dark spinner. */
-.cx-record-actions button[data-action=busy]::after,.cx-section-header button[data-action=busy]::after,.co-actions button[data-action=busy]::after,.cx-pagination button[data-action=busy]::after{border-color:#174e3b #174e3b #174e3b transparent}
+.cx-record-actions button[data-action=busy]::after,.cx-section-header button[data-action=busy]::after,.co-actions button[data-action=busy]::after,.cx-pagination button[data-action=busy]::after{border-color:#6bc7a7 #6bc7a7 #6bc7a7 transparent}
 
 @keyframes fx-in{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
 @keyframes fx-out{to{opacity:0;transform:translateX(24px)}}
@@ -44,6 +44,6 @@ button[data-action=error]{animation:fx-shake .45s ease;box-shadow:0 0 0 3px #c24
 .sc-workspace .sc-action-feedback{animation:fx-in .3s ease both}
 
 /* Activate: whole pack or one tag */
-.fp-mode{display:flex;gap:4px;padding:4px;border-radius:12px;background:#e9f0eb;margin-bottom:8px}
-.fp-mode button{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:700;color:#4b6658}
-.fp-mode button[aria-pressed=true]{background:#fff;color:#174e3b;box-shadow:0 2px 6px #12392d14}
+.fp-mode{display:flex;gap:4px;padding:4px;border-radius:12px;background:#131b16;margin-bottom:8px}
+.fp-mode button{flex:1;padding:10px;border-radius:9px;font-size:13px;font-weight:700;color:#d3d9cc}
+.fp-mode button[aria-pressed=true]{background:#0e1410;color:#d4ede4;box-shadow:0 2px 6px #12392d14}

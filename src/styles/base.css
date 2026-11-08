@@ -27,7 +27,7 @@
   .fb-tile { background: var(--fb-paper); border: 1px solid var(--fb-line); border-radius: var(--r-md); box-shadow: var(--sh-tile); }
   .fb-tile-dark { background: var(--fb-teal-800); border: 1px solid var(--fb-teal-900); border-radius: var(--r-md); color: #fff; }
   .fb-grid-texture { background-image: radial-gradient(rgba(13, 97, 102, 0.10) 0.8px, transparent 0.9px); background-size: 7px 7px; }
-  .fb-grid-texture-dark { background-image: radial-gradient(rgba(255, 255, 255, 0.10) 0.8px, transparent 0.9px); background-size: 7px 7px; }
+  .fb-grid-texture-dark { background-image: radial-gradient(rgba(255,255,255,0.03) 0.8px, transparent 0.9px); background-size: 7px 7px; }
   .fb-container { width: 100%; max-width: var(--content-max); margin-inline: auto; padding-inline: var(--gutter); }
   .fb-press { transition: transform var(--motion-fast) var(--ease-out), box-shadow var(--motion-fast) var(--ease-out), background-color var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast); }
   .fb-press:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }

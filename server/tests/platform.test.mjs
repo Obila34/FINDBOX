@@ -68,6 +68,7 @@ before(async () => {
       password,
       port: 55439,
       persistent: false,
+      initdbFlags: ["--encoding=UTF8", "--locale=C"],
       authMethod: "scram-sha-256",
       postgresFlags: ["-h", "127.0.0.1"],
       onLog: () => {},
@@ -1379,4 +1380,24 @@ test("passkey endpoints issue single-use challenges and reject unknown or forged
   const regCookie = [].concat(reg.headers["set-cookie"]).find((v) => v.startsWith("findbox_webauthn=")).split(";")[0];
   assert.equal((await call("POST", "/api/account/passkeys/register", { response: { id: "forged", response: {} } }, c + "; " + regCookie)).statusCode, 400);
   assert.deepEqual((await call("GET", "/api/account/security", null, c)).json().passkeys, []);
+});
+test("profiles save a name, tagline, accent, emoji and a real photo, and reject anything else", async () => {
+  const parent = await login("kids-parent@test.com");
+  const before = (await call("GET", "/api/account/profile", undefined, parent)).json();
+  assert.equal(before.accent, "sage");
+  const png = "data:image/png;base64," + Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]).toString("base64");
+  const saved = await call("POST", "/api/account/profile", { tagline: "Bottle back, every day", accent: "sky", emoji: "🎒", avatar: png }, parent);
+  assert.equal(saved.statusCode, 200, saved.body);
+  assert.deepEqual({ ...saved.json(), name: undefined }, { name: undefined, tagline: "Bottle back, every day", accent: "sky", emoji: "🎒", avatar: png });
+  // An SVG or a file pretending to be a PNG is refused; unknown accents and markup in emoji are refused.
+  const svg = "data:image/svg+xml;base64," + Buffer.from("<svg onload=alert(1)>").toString("base64");
+  assert.equal((await call("POST", "/api/account/profile", { avatar: svg }, parent)).statusCode, 400);
+  const fake = "data:image/png;base64," + Buffer.from("<script>alert(1)</script>").toString("base64");
+  assert.equal((await call("POST", "/api/account/profile", { avatar: fake }, parent)).statusCode, 400);
+  assert.equal((await call("POST", "/api/account/profile", { accent: "neon" }, parent)).statusCode, 400);
+  assert.equal((await call("POST", "/api/account/profile", { emoji: "<b>" }, parent)).statusCode, 400);
+  // Leaving the photo out keeps it; null removes it.
+  assert.equal((await call("POST", "/api/account/profile", { tagline: "" }, parent)).json().avatar, png);
+  assert.equal((await call("POST", "/api/account/profile", { avatar: null, name: before.name }, parent)).json().avatar, null);
+  assert.equal((await call("GET", "/api/account/profile")).statusCode, 401);
 });

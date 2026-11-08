@@ -164,3 +164,5 @@ CREATE INDEX IF NOT EXISTS child_requests_school ON child_requests(school_id,sta
 CREATE TABLE IF NOT EXISTS passkeys(id text PRIMARY KEY,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,public_key text NOT NULL,counter bigint NOT NULL DEFAULT 0,transports text NOT NULL DEFAULT '',label text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),last_used_at timestamptz);
 CREATE INDEX IF NOT EXISTS passkeys_user ON passkeys(user_id);
 CREATE TABLE IF NOT EXISTS webauthn_challenges(token_hash text PRIMARY KEY,challenge text NOT NULL,user_id text REFERENCES users(id) ON DELETE CASCADE,purpose text NOT NULL CHECK(purpose IN ('register','login')),expires_at timestamptz NOT NULL);
+-- Personal profile: photo, tagline, accent colour and emoji.
+CREATE TABLE IF NOT EXISTS user_profiles(user_id text PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,avatar text,tagline text NOT NULL DEFAULT '',accent text NOT NULL DEFAULT 'sage',emoji text NOT NULL DEFAULT '',updated_at timestamptz NOT NULL DEFAULT now());

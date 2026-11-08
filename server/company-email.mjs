@@ -1,3 +1,4 @@
+import { renderEmail, codeBlock } from './email-template.mjs';
 import { randomInt, createHmac, timingSafeEqual } from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { z } from 'zod';
@@ -10,9 +11,10 @@ export function companyMailer(cfg) {
   return async (to,code) => {
     requireThat(emailReady(cfg),503,'Email sign-in delivery is not configured');
     const text=`Your FindBox company sign-in code is ${code}. It expires after 60 seconds and can be used once. Never share it. If you did not request this, ignore this email.`;
+    const html=renderEmail({subject:'Your FindBox sign-in code',text:'Use this code to finish signing in to the FindBox company workspace. It expires after 60 seconds and can be used once. Never share it. If you did not request this, ignore this email.',origin:cfg.origin,extraHtml:codeBlock(code)});
     try {
-      if(transport){const result=await transport.sendMail({from:cfg.mailFrom,to,subject:'Your FindBox sign-in code',text});requireThat(result.accepted?.length===1,503,'Email was not accepted');}
-      else {const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+cfg.resendKey,'Content-Type':'application/json'},body:JSON.stringify({from:cfg.mailFrom,to,subject:'Your FindBox sign-in code',text}),signal:AbortSignal.timeout(15000)});requireThat(r.ok,503,'Email was not accepted');}
+      if(transport){const result=await transport.sendMail({from:cfg.mailFrom,to,subject:'Your FindBox sign-in code',text,html});requireThat(result.accepted?.length===1,503,'Email was not accepted');}
+      else {const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+cfg.resendKey,'Content-Type':'application/json'},body:JSON.stringify({from:cfg.mailFrom,to,subject:'Your FindBox sign-in code',text,html}),signal:AbortSignal.timeout(15000)});requireThat(r.ok,503,'Email was not accepted');}
     }catch{throw Object.assign(new Error('Could not send your code. Try again after one minute.'),{statusCode:503});}
   };
 }
