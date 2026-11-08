@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 umask 077
+if [ -e /opt/findbox-deploy-paused ]; then
+  echo "Production deployment is paused by the owner. Leave the current site running." >&2
+  exit 78
+fi
 exec 9>/opt/findbox-deploy.lock
 flock -w 600 9
 archive=$(mktemp /opt/findbox-release-XXXXXX.tgz)

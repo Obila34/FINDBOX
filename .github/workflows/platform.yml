@@ -37,7 +37,8 @@ jobs:
 
   deploy:
     needs: verify
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deployment is paused until the owner explicitly requests resumption.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.FINDBOX_AUTO_DEPLOY == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: findbox-production
