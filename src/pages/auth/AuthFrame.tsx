@@ -1,12 +1,22 @@
 import {type ReactNode} from 'react'
 import {Link,useLocation} from 'react-router-dom'
-import {ArrowLeft,ShieldCheck,ScanLine,Check,ArrowUpRight} from 'lucide-react'
-import {StudioBrand} from '@/components/brand/StudioBrand'
-import {PublicMenu} from '@/components/layout/PublicMenu'
-import {cx} from '@/lib/util'
-import './auth-experience.css'
-export function AuthFrame({children,title,lede,back,tone='family',width='sm'}:{children:ReactNode;title:string;lede?:string;back?:{to:string;label:string};tone?:'family'|'school';width?:'sm'|'md'}){
- const {pathname,state}=useLocation();const signup=pathname.endsWith('sign-up');
- return <div className="fb-auth-page ax-page"><header className="fb-site-header"><div className="fb-pill-nav pm-centered-nav"><StudioBrand/><PublicMenu/><div className="ax-header-actions"><Link to="/#how-it-works">See how it works <ArrowUpRight size={15}/></Link></div></div></header><main className="fb-auth-main fb-container ax-main"><section className="fb-auth-story ax-story" aria-label="FindBox belongings illustration"><div className="ax-orbit ax-orbit-one"/><div className="ax-orbit ax-orbit-two"/><div className="ax-story-top"><span>YOUR FINDBOX ACCOUNT</span></div><div className="ax-product-stage"><div className="ax-product-card"><img src={signup?"/media/editorial/auth-signup.webp":"/media/editorial/auth-signin.webp"} alt={signup?"School lunchbox, stationery and identification labels":"School backpack with an enclosed identification tag"}/><span>SCHOOL BELONGINGS</span></div><div className="ax-scan"><ScanLine size={25}/><div><strong>A small scan.</strong><span>A way back.</span></div><div className="ax-scan-light"/></div><div className="ax-return"><span><Check size={17}/></span>Back where it belongs.<i/></div><svg className="ax-path" viewBox="0 0 500 360" aria-hidden="true"><path d="M50 100 C140 -10 460 20 420 180 S230 360 120 260"/></svg></div><div className="fb-auth-story-copy ax-copy"><p><span className="fb-brand-dot"/>{tone==='school'?'FOR YOUR SCHOOL COMMUNITY':signup?'HELLO, NEW BEGINNINGS.':'GOOD TO HAVE YOU BACK.'}</p><h2>Every lost item finds its way back home.</h2><span><ShieldCheck size={17}/>Private details. School-verified returns.</span></div><Link to="/#how-it-works" className="ax-story-link">How it works <ArrowUpRight size={17}/></Link></section><section className={cx('fb-auth-form fb-enter ax-form',width==='md'&&'fb-auth-form-wide')}>{['/app/sign-in','/app/sign-up'].includes(pathname)?<nav className="fb-auth-tabs" aria-label="Account access"><Link to="/app/sign-in" state={state} aria-current={!signup?'page':undefined}>Sign in</Link><Link to="/app/sign-up" state={state} aria-current={signup?'page':undefined}>Sign up</Link></nav>:<p className="fb-auth-kicker">{tone==='school'?'School workspace':'Your FindBox'}</p>}{back&&<Link to={back.to} className="ax-back"><ArrowLeft size={14}/>{back.label}</Link>}<h1 className="fb-display text-[clamp(2rem,3vw,2.8rem)] leading-[1.08]">{title}</h1>{lede&&<p className="ax-lede">{lede}</p>}<div className="ax-fields">{children}</div><nav className="ax-help-links" aria-label="Account help"><Link to="/contact">Need a hand?<span>Contact FindBox ↗</span></Link><Link to="/privacy">Your privacy<span>How we protect it ↗</span></Link></nav><p className="ax-footer-note">Your school. Your belongings. One connected community.</p></section></main></div>
+import {SignIn1} from '@/components/ui/modern-stunning-sign-in'
+
+/** Every family and school sign-in screen, plus account security, shares the cinematic sign-in card. */
+export function AuthFrame({children,title,lede,back,tone='family',width='sm',kicker}:{children:ReactNode;title:string;lede?:string;back?:{to:string;label:string};tone?:'family'|'school';width?:'sm'|'md';kicker?:string}){
+ const {pathname,state}=useLocation()
+ const signup=pathname.endsWith('sign-up')
+ const switchable=['/app/sign-in','/app/sign-up'].includes(pathname)
+ return <SignIn1
+  title={title}
+  lede={lede}
+  kicker={kicker??(tone==='school'?'School portal':undefined)}
+  tabs={switchable?{mode:signup?'sign-up':'sign-in',signIn:'/app/sign-in',signUp:'/app/sign-up',state}:undefined}
+  screen={pathname}
+  back={back}
+  image={tone==='school'?'/media/editorial/staff.webp':signup?'/media/editorial/auth-signup.webp':'/media/editorial/auth-signin.webp'}
+  wide={width==='md'}
+  footer={<nav aria-label="Account help" className="flex gap-6 text-xs text-gray-400"><Link to="/contact" className="cinema-link">Need a hand?</Link><Link to="/privacy" className="cinema-link">Your privacy</Link></nav>}
+ >{children}</SignIn1>
 }
 export function DemoAccountNote({className}:{className?:string}){return <p className={className}/>}

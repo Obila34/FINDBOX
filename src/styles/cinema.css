@@ -1,0 +1,77 @@
+/* Cinematic surfaces shared by the landing page and every sign-in screen. */
+@import '@fontsource/cormorant-garamond/500-italic.css';
+
+.noise-overlay {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+}
+.bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 260px 260px;
+}
+
+.cinema-root { background: #050806; color: #f8f9f3; }
+.cinema-root .fb-footer-v3 h2 { display: none; }
+.cinema-root ::selection { background: #aebe9e; color: #050806; }
+.cinema-link { position: relative; color: rgba(231, 236, 222, 0.8); transition: color .3s ease; }
+.cinema-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 1px; background: currentColor; transform: scaleX(0); transform-origin: right; transition: transform .45s cubic-bezier(.16,1,.3,1); }
+.cinema-link:hover, .cinema-link:focus-visible { color: #f8f9f3; }
+.cinema-link:hover::after, .cinema-link:focus-visible::after { transform: scaleX(1); transform-origin: left; }
+
+/* The spotlight that follows the pointer across feature cards. */
+.spotlight { position: relative; isolation: isolate; }
+.spotlight::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: 0; transition: opacity .4s ease; background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(174, 190, 158, 0.16), transparent 60%); }
+.spotlight:hover::before { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-link::after { transition: none; }
+}
+
+/* Forms inside the frosted sign-in card (family, school, security and company sign-in). */
+.fa-card { color: #f8f9f3; }
+.fa-card form { display: grid; gap: 14px; margin: 0; }
+.fa-card form label, .fa-card label { display: grid; gap: 7px; font-size: 12px; color: rgba(231, 236, 222, .75); letter-spacing: .01em; }
+.fa-card input:not([type=checkbox]):not([type=radio]), .fa-card select, .fa-card textarea {
+  width: 100%; padding: 12px 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px;
+  background: rgba(255,255,255,.08); color: #f8f9f3; font-size: 14px; transition: border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.fa-card input::placeholder { color: rgba(231,236,222,.4); }
+.fa-card input:hover { background: rgba(255,255,255,.1); }
+.fa-card input:focus { outline: none; border-color: rgba(174,190,158,.7); background: rgba(255,255,255,.12); box-shadow: 0 0 0 4px rgba(174,190,158,.15); }
+.fa-card input[type=checkbox] { accent-color: #aebe9e; }
+.fa-card form p, .fa-card p, .fa-card .fs-hint, .fa-card small { color: rgba(231,236,222,.6); font-size: 12px; line-height: 1.55; }
+.fa-card .fs-optional { background: rgba(255,255,255,.1); color: rgba(231,236,222,.75); }
+.fa-card .fs-joining { background: rgba(174,190,158,.15); color: #e7ecde; }
+.fa-card .fs-joining strong { color: #f8f9f3; }
+.fa-card .fs-primary, .fa-card form > button:not([type=button]), .fa-card .co-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 4px; padding: 13px 20px;
+  border: 0; border-radius: 999px; background: #e7ecde; color: #050806; font-size: 14px; font-weight: 600;
+  transition: background .25s ease, transform .2s ease, box-shadow .25s ease;
+}
+.fa-card .fs-primary:hover, .fa-card form > button:not([type=button]):hover, .fa-card .co-button:hover { background: #f8f9f3; box-shadow: 0 10px 30px -12px rgba(231,236,222,.6); }
+.fa-card .fs-primary:active, .fa-card form > button:active { transform: scale(.98); }
+.fa-card button:disabled { opacity: .55; cursor: not-allowed; }
+.fa-card .fs-passkey, .fa-card .fs-google, .fa-card form > button[type=button], .fa-card .fs-security button, .fa-card .fs-security a, .fa-card .sx-devices button {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px 18px; margin: 10px 0 0;
+  border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: linear-gradient(180deg, #232825, #1a1f1c); color: #f8f9f3; font-size: 13px;
+  transition: filter .25s ease, transform .2s ease;
+}
+.fa-card .fs-passkey:hover, .fa-card .fs-google:hover, .fa-card form > button[type=button]:hover, .fa-card .fs-security button:hover, .fa-card .fs-security a:hover { filter: brightness(1.2); }
+.fa-card .fs-google span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #f8f9f3; color: #174c39; font-weight: 700; font-size: 12px; }
+.fa-card .fs-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; color: rgba(231,236,222,.45); font-size: 11px; text-transform: uppercase; letter-spacing: .15em; }
+.fa-card .fs-divider::before, .fa-card .fs-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1); }
+.fa-card .fb-link, .fa-card > div a:not(.fs-primary):not(.co-button) { display: block; margin-top: 12px; text-align: center; font-size: 12px; color: rgba(231,236,222,.75); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(231,236,222,.3); transition: color .25s ease; }
+.fa-card .fb-link:hover { color: #f8f9f3; text-decoration-color: currentColor; }
+.fa-card .fb-auth-status { padding: 10px 14px; border-radius: 12px; background: rgba(174,190,158,.12); color: #e7ecde; font-size: 12px; }
+.fa-card .fb-auth-status[role=alert], .fa-card .co-error { background: rgba(229,115,95,.14); color: #f4b4a6; padding: 10px 14px; border-radius: 12px; font-size: 12px; }
+.fa-card .fs-portal-switch { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1); text-align: center; color: rgba(231,236,222,.55); }
+.fa-card .fs-portal-switch a { display: inline; margin: 0; color: #e7ecde; font-weight: 600; }
+.fa-card .fs-security section { border-top: 1px solid rgba(255,255,255,.1); }
+.fa-card .fs-security h2 { color: #f8f9f3; }
+.fa-card .fs-secret { background: rgba(255,255,255,.07); color: #f8f9f3; }
+.fa-card .sx-devices li { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.08); }
+.fa-card .sx-devices small { color: rgba(231,236,222,.55); }
+.fa-card .sx-devices button { width: auto; margin: 0; }
+.fa-card :focus-visible { outline: 2px solid #aebe9e; outline-offset: 3px; }
+.fa-card .fs-optional { width: max-content; }
+.fa-card p.co-error, .fa-card p[role=alert] { background: rgba(229,115,95,.16); color: #f6c3b8; border: 0; }
