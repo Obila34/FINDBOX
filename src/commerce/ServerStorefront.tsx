@@ -2,6 +2,7 @@ import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import catalog from './catalog.json';
 import { isShopBrowsePath } from './access';
 import { LabelDetails } from './LabelJourney';
+import { AppShop } from './AppShop';
 import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -219,11 +220,13 @@ export function ServerStorefront() {
         {!loaded && <p role="status">Opening the store…</p>}
         {(path === "/shop/catalog" || path === "/shop") && (
           <>
+            {inApp ? <AppShop products={products} base={base} /> : <>
             <div className="fc-page-heading">
               <span className="fp-kicker">SMALL THINGS, SORTED</span>
-              <h1>{inApp ? "Shop labels" : "A place for every tag."}</h1>
+              <h1>A place for every tag.</h1>
             </div>
             {cards}
+            </>}
           </>
         )}
         {product && (

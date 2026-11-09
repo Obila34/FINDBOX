@@ -1,5 +1,6 @@
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import { HomeDashboard } from './HomeDashboard'
+import { FamilyItems } from './FamilyItems'
 import './dashboard.css'
 import './school-admin.css'
 import { AppDock } from '@/components/layout/AppDock'
@@ -20,7 +21,6 @@ import {
   MapPin,
   Clock3,
   Check,
-  Plus,
   School,
   PackageCheck,
   CheckCircle2,
@@ -341,7 +341,7 @@ export function Platform() {
         )}
         {user && !auth && !shop && !publicScan && workspace && (
           <>
-            {!["/app/home", "/manage", "/manage/dashboard"].includes(path) && <div className="fp-workspace-title">
+            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
               <div>
                 <span className="fp-kicker">
                   {workspace.school?.name || "YOUR SCHOOL"} / {user.role}
@@ -412,53 +412,13 @@ export function Platform() {
             )}
             {(path === "/app/items" || path.startsWith("/app/items/") || path === "/app/report" || path.startsWith("/app/report/")) && (
               <>
-                <div className="fp-section-heading">
-                  <h2>Your everyday collection.</h2>
-                  <Link to="/app/register">
-                    Activate a tag <Plus size={18} />
-                  </Link>
-                </div>
-                <div className="fp-items">
-                  {workspace.items.map((i) => (
-                    <article key={i.id}>
-                      <img
-                        src={picture(i.category)}
-                        alt={i.category + " illustration"}
-                        loading="lazy"
-                      />
-                      <div>
-                        <span className="fp-kicker">{label(i.status)}</span>
-                        <h3>{i.name}</h3>
-                        <p>
-                          {[i.child_name, i.color]
-                            .filter(Boolean)
-                            .join(" · ") || label(i.category)}
-                        </p>
-                        <small>{i.code}</small>
-                        {!staff && i.status === "with_owner" && (
-                          <button
-                            disabled={busy}
-                            onClick={() =>
-                              run(async () => {
-                                await api("/items/" + i.id + "/lost", {});
-                                await reload();
-                                setNotice("Lost report sent to your school.");
-                              })
-                            }
-                          >
-                            Report lost <ArrowUpRight size={16} />
-                          </button>
-                        )}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                {!workspace.items.length && (
-                  <Empty>
-                    Activate your first tag to add a belonging. No photo upload
-                    needed.
-                  </Empty>
-                )}
+                <FamilyItems workspace={workspace} staff={staff} busy={busy} onReportLost={(id) =>
+                  run(async () => {
+                    await api("/items/" + id + "/lost", {});
+                    await reload();
+                    setNotice("Lost report sent to your school.");
+                  })
+                } />
               </>
             )}
             {path === "/app/register" && (

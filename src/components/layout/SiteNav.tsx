@@ -1,5 +1,5 @@
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { ProfileMenu } from '@/components/layout/ProfileMenu'
@@ -66,6 +66,7 @@ export function SiteNav({ overlay = false, user, links, cart = !user, homeTo }: 
     <div className="fb-site-nav-row">
       <Link to={homeTo ?? (user ? (user.role === 'staff' ? '/manage' : '/app/home') : '/')} aria-label="FindBox home" className="fb-nav-logo"><Logo height={18} /></Link>
       <div className="fb-nav-actions">
+        {user && !['staff', 'manager'].includes(user.role) && <Link to="/app/items?search=1" className="fb-nav-round" aria-label="Search your belongings"><Search size={16} /></Link>}
         <ThemeToggle className="h-8 w-8 md:h-9 md:w-9" />
         {cart && <Link to={shop + '/cart'} className="fb-nav-round" aria-label={`Shopping bag, ${count} items`}><ShoppingBag size={16} />{count > 0 && <span className="fb-nav-badge">{count}</span>}</Link>}
         {user ? <ProfileMenu name={user.name} role={user.role} /> : <Link to="/app/sign-in" data-auth-bypass className="fb-nav-signin">Sign in</Link>}
