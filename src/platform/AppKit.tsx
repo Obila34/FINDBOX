@@ -76,14 +76,15 @@ export function StatStrip({ stats }: { stats: { label: string; value: number; to
 
 const STATUS: Record<string, { label: string; tone: string; Icon: LucideIcon }> = {
   with_owner: { label: 'With you', tone: 'ok', Icon: Check },
-  lost: { label: 'Reported lost', tone: 'alert', Icon: AlertTriangle },
-  reported_lost: { label: 'Reported lost', tone: 'alert', Icon: AlertTriangle },
+  lost: { label: 'Lost', tone: 'alert', Icon: AlertTriangle },
+  reported_lost: { label: 'Lost', tone: 'alert', Icon: AlertTriangle },
   awaiting_collection: { label: 'Ready to collect', tone: 'pop', Icon: Clock },
   awaiting_deposit: { label: 'On its way', tone: 'pop', Icon: Clock },
+  found: { label: 'Found · on its way', tone: 'pop', Icon: Clock },
 }
 
-/** A belonging: photo, status badge, owner and a quick action. */
-export function ItemCard({ name, image, status, owner, code, onReportLost, busy, index = 0, to }: { name: string; image: string; status: string; owner?: string; code: string; onReportLost?: () => void; busy?: boolean; index?: number; to?: string }) {
+/** A belonging: photo, status badge and owner. */
+export function ItemCard({ name, image, status, owner, code, index = 0, to }: { name: string; image: string; status: string; owner?: string; code: string; index?: number; to?: string }) {
   const still = useReducedMotion()
   const st = STATUS[status] ?? { label: status.replaceAll('_', ' '), tone: 'calm', Icon: Check }
   const body = <>
@@ -92,7 +93,6 @@ export function ItemCard({ name, image, status, owner, code, onReportLost, busy,
   </>
   return <motion.article className="pa-card" initial={still ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(index, 8) * 0.05, duration: 0.5, ease }} whileHover={still ? undefined : { y: -4 }}>
     {to ? <Link to={to} className="pa-card-link">{body}</Link> : body}
-    {onReportLost && status === 'with_owner' && <motion.button type="button" whileTap={{ scale: 0.88 }} className="pa-card-action" disabled={busy} onClick={onReportLost} aria-label={`Report ${name} lost`} title="Report lost"><AlertTriangle size={17} /></motion.button>}
   </motion.article>
 }
 

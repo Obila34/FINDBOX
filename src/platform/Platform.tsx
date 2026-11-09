@@ -1,3 +1,5 @@
+import { FoundScan } from "./FoundScan";
+import { Houses } from "./Houses";
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import { HomeDashboard } from './HomeDashboard'
 import { FamilyItems } from './FamilyItems'
@@ -10,7 +12,7 @@ import { imagery } from "@/data/imagery";
 import { SiteNav } from "@/components/layout/SiteNav";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import {
   ArrowUpRight,
   ShoppingBag,
@@ -23,7 +25,7 @@ import {
   Check,
   School,
   PackageCheck,
-  CheckCircle2,
+  Trophy,
 } from "lucide-react";
 import {
   api,
@@ -111,6 +113,7 @@ export function Platform() {
     [publicTag, setPublicTag] = useState<{
       school: string;
       code: string;
+      child?: string;
       boxes: Workspace["boxes"];
     } | null>(null);
   const [packMode, setPackMode] = useState(true);
@@ -140,14 +143,14 @@ export function Platform() {
     ? ([
         ["/app/home", "Home", House],
         ["/app/items", "My items", Package],
-        ["/app/found", "Found", ScanLine],
-        ["/app/streaks", "Streaks", CheckCircle2],
+        ["/app/found", "I found it", ScanLine],
+        ["/app/houses", "Houses", Trophy],
         ["/app/inbox", "Inbox", Bell],
       ] as const)
     : ([
         ["/app/home", "Home", House],
         ["/app/items", "Items", Package],
-        ["/app/register", "Activate", ScanLine],
+        ["/app/found", "I found it", ScanLine],
         ["/app/shop", "Shop", ShoppingBag],
         ["/app/inbox", "Inbox", Bell],
       ] as const);
@@ -311,14 +314,10 @@ export function Platform() {
         ) : null}
         {publicScan && publicTag && (
           <section className="fp-public">
-            <span className="fp-kicker">YOU FOUND SOMETHING THAT MATTERS.</span>
-            <h1>
-              A small kindness.
-              <br />A big difference.
-            </h1>
+            <h1>Thank you for picking this up.</h1>
             <p>
-              This tag belongs to the {publicTag.school} community. Leave the
-              item with a custodian at one of these collection boxes. Owner
+              {publicTag.child ? `This belongs to ${publicTag.child} at ${publicTag.school}.` : `This belongs to someone at ${publicTag.school}.`}{" "}
+              Hand it to a custodian at one of these collection boxes, or sign in and scan it so the family hears straight away. Owner
               details stay private.
             </p>
             <div className="fp-boxes">
@@ -335,21 +334,19 @@ export function Platform() {
               className="fp-primary"
               to={"/app/found?code=" + encodeURIComponent(publicTag.code)}
             >
-              Sign in to report a drop-off <ArrowUpRight size={18} />
+              Sign in to return it <ArrowUpRight size={18} />
             </Link>
           </section>
         )}
         {user && !auth && !shop && !publicScan && workspace && (
           <>
-            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
+            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop", "/app/found", "/app/houses", "/app/inbox", "/app/streaks"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
               <div>
                 <span className="fp-kicker">
-                  {workspace.school?.name || "YOUR SCHOOL"} / {user.role}
+                  {workspace.school?.name || "YOUR SCHOOL"}
                 </span>
                 <h1>
-                  {staff
-                    ? "A little care. A lot more found."
-                    : `Hello, ${user.name.split(" ")[0]}.`}
+                  {`Hello, ${user.name.split(" ")[0]}.`}
                 </h1>
               </div>
               <Link
@@ -379,8 +376,9 @@ export function Platform() {
             {["/app/home", "/manage", "/manage/dashboard"].includes(path) && (
               <>
                 <HomeDashboard user={user} workspace={workspace} staff={staff} />
+                {staff && <>
                 <div className="fp-section-heading">
-                  <h2>{staff ? "The recovery queue" : "On the way home"}</h2>
+                  <h2>The recovery queue</h2>
                   <Link to="/app/gallery">
                     Unclaimed items <ArrowUpRight size={17} />
                   </Link>
@@ -390,17 +388,7 @@ export function Platform() {
                     (c) => !["returned", "closed"].includes(c.status),
                   ),
                 )}
-                {!staff && <div className="fp-quick-links">
-                  <Link to="/app/found">
-                    <ScanLine />
-                    Found something?
-                  </Link>
-
-                  <Link to="/app/orders">
-                    <ShoppingBag />
-                    Your orders & tags
-                  </Link>
-                </div>}
+                </>}
               </>
             )}
             {path === "/manage/collect" && (
@@ -410,26 +398,15 @@ export function Platform() {
                 {caseCards(workspace.cases.filter((c) => c.status === "awaiting_collection"))}
               </>
             )}
-            {(path === "/app/items" || path.startsWith("/app/items/") || path === "/app/report" || path.startsWith("/app/report/")) && (
+            {(path === "/app/items" || path.startsWith("/app/items/")) && (
               <>
-                <FamilyItems workspace={workspace} staff={staff} busy={busy} onReportLost={(id) =>
-                  run(async () => {
-                    await api("/items/" + id + "/lost", {});
-                    await reload();
-                    setNotice("Lost report sent to your school.");
-                  })
-                } />
+                <FamilyItems workspace={workspace} staff={staff} />
               </>
             )}
             {path === "/app/register" && (
               <section className="fp-split-panel">
                 <div>
-                  <span className="fp-kicker">FROM TAG TO BELONGING</span>
-                  <h2>
-                    Scan. Name.
-                    <br />
-                    Make it yours.
-                  </h2>
+                  <h2>Activate a label pack</h2>
                   <p>
                     Use the tag ID and private activation code inside your
                     FindBox pack. Choose a category, add a name, and you’re
@@ -517,51 +494,15 @@ export function Platform() {
               </section>
             )}
             {["/app/found", "/manage/scan", "/manage/log"].includes(path) && (
-              <div className="fp-two-columns">
-                <section className="fp-panel">
-                  <span className="fp-kicker">A GOOD DEED STARTS HERE</span>
-                  <h2>Found a tagged item?</h2>
-                  <p>
-                    Scan the printed QR with your phone camera, then enter its
-                    tag ID here. Staff confirm the physical deposit before
-                    notifying the owner.
-                  </p>
-                  <form
-                    onSubmit={(e) => {
-                      const d = fields(e);
-                      run(async () => {
-                        const r = await api<{ message: string }>("/found", d);
-                        setNotice(r.message);
-                        await reload();
-                      });
-                    }}
-                  >
-                    <Field
-                      name="code"
-                      label="Tag ID"
-                      defaultValue={
-                        new URLSearchParams(location.search).get("code") || ""
-                      }
-                    />
-                    <label className="fp-field">
-                      <span>Collection box</span>
-                      <select name="boxId" required>
-                        {workspace.boxes.map((b) => (
-                          <option value={b.id} key={b.id}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      className="fp-primary"
-                      disabled={busy || !workspace.boxes.length}
-                    >
-                      Report drop-off <ArrowUpRight size={18} />
-                    </button>
-                  </form>
+              <div className={staff ? "fp-two-columns" : "fs-page"}>
+                <section className={staff ? "fp-panel" : ""}>
+                  <header className="fs-head">
+                    <h1>{staff ? "Receive a tagged item" : "I found it"}</h1>
+                    <p>{staff ? "Scan the QR. The family is told once you confirm it is in the box." : "Scan any FindBox QR. If it's yours it comes straight home; if not, its family hears at once."}</p>
+                  </header>
+                  <FoundScan staff={staff} onDone={() => void reload()} />
                 </section>
-                {staff ? (
+                {staff && (
                   <section className="fp-panel">
                     <h2>No tag? Still welcome.</h2>
                     <p>
@@ -605,22 +546,6 @@ export function Platform() {
                         Log untagged item
                       </button>
                     </form>
-                  </section>
-                ) : (
-                  <section className="fp-panel">
-                    <img
-                      className="fp-feature-image"
-                      src="/media/objects/bottle-640.webp"
-                      alt="Water bottle"
-                    />
-                    <h2>Not a tag in sight?</h2>
-                    <p>
-                      Hand the item to your school box custodian. They’ll add it
-                      to the unclaimed gallery.
-                    </p>
-                    <Link to="/app/boxes">
-                      Find a collection box <ArrowUpRight size={18} />
-                    </Link>
                   </section>
                 )}
               </div>
@@ -756,7 +681,7 @@ export function Platform() {
             {path === "/app/inbox" && (
               <>
                 <div className="fp-section-heading">
-                  <h2>Good news lives here.</h2>
+                  <h2>Inbox</h2>
                   <button
                     disabled={busy}
                     onClick={() =>
@@ -784,6 +709,8 @@ export function Platform() {
               </>
             )}
             {path === "/app/streaks" && <ServerStreaks personId={user.id}/>}
+            {path === "/app/houses" && <Houses />}
+            {(path === "/app/report" || path.startsWith("/app/report/")) && <Navigate to="/app/found" replace />}
             {path === "/app/account" && (
               <section className="fp-panel">
                 <ProfileStudio role={user.role} school={workspace.school?.name}/><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
@@ -997,7 +924,6 @@ export function Platform() {
       )}
       <footer className="fp-footer">
         <span className="fb-wordmark">FINDBOX</span>
-        <p>Less worry. More found.</p>
         <Link to="/app/boxes">Collection boxes</Link>
         <Link to="/shop">Find your tags</Link>
       </footer>
