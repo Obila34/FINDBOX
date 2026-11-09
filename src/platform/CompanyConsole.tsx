@@ -92,6 +92,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
   else if(form.kind==='code')await act('/company/schools/'+r.id+'/code',{reason,revision});
 
   else if(form.kind==='fulfill')await act('/company/orders/'+r.id+'/fulfill',{reason});
+  else if(form.kind==='delivered')await act('/company/orders/'+r.id+'/delivered',{reason});
 
   else if(form.kind==='sessions')await act('/company/users/'+r.id+'/sessions',{reason});
 
@@ -135,6 +136,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
  {tab==='schools'&&!isAdmin&&<><button onClick={()=>open('schools',r)}>Edit school</button><button onClick={()=>open('code',r)}>Rotate join code</button></>}
 
  {tab==='orders'&&r.status==='paid'&&<button onClick={()=>open('fulfill',r)}>Fulfil order</button>}
+ {tab==='orders'&&r.status==='fulfilled'&&!r.delivered_at&&<button onClick={()=>open('delivered',r)}>Mark delivered</button>}
 
  {tab==='support'&&<button onClick={()=>open('support',r)}>Review & reply</button>}
 
@@ -177,6 +179,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
 
  {['issue','send','void'].includes(form.kind)&&<p>{form.kind==='send'?`Send ${form.row.number||'this draft as a pro forma estimate'} to ${form.row.customer?.email}? This queues a PDF email and preserves its contents. Pro forma documents are not tax invoices.`:form.kind==='issue'?'Issue an immutable commercial invoice with a permanent number?':'Void this invoice? It cannot be restored; sent invoices require a separate credit-note workflow.'}</p>}
 
+ {form.kind==='delivered'&&<p>Confirm the labels reached the family{form.row.child?` for ${form.row.child}`:''}. They can then scan a label to add each belonging, up to the number of labels ordered.</p>}
  {form.kind==='fulfill'&&<p>Confirm this paid order is physically ready for collection. FindBox will allocate available tags and notify the buyer. This does not record a payment or refund.</p>}
 
  {form.kind==='sessions'&&<p>Sign out all sessions for {form.row.name}? The account password stays unchanged.</p>}{form.kind==='code'&&<p>The existing school join code will stop working. Current memberships are retained.</p>}{form.kind==='mail'&&<p>Retry this exhausted message? A previous ambiguous provider response may have delivered it already.</p>}

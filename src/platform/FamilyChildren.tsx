@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCode } from '@/components/ui/qr-code'
-import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Plus, Printer, QrCode, RefreshCw, School, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Printer, QrCode, RefreshCw, ScanLine, School, UserPlus, X } from 'lucide-react'
 import { HousePicker, type HouseId } from './Houses'
 import { NamedQR } from './NamedQR'
 import { api } from './api'
@@ -11,7 +11,7 @@ import './school-admin.css'
 import './family.css'
 
 type Row = Record<string, any>
-type ChildQr = { id: string; name: string; house: HouseId | null; code: string | null; items: { id: string; name: string; category: string; status: string }[] }
+type ChildQr = { id: string; name: string; house: HouseId | null; code: string | null; items: { id: string; name: string; category: string; status: string }[]; labels: { delivered: number; used: number; remaining: number } }
 const CATEGORIES: [string, string][] = [['clothing', 'Clothing'], ['bottle', 'Bottle'], ['lunchbox', 'Lunchbox'], ['book', 'Book'], ['sports', 'Sports kit'], ['electronics', 'Gadget'], ['keys', 'Keys'], ['other', 'Other']]
 const WORDS = ['mango', 'tiger', 'river', 'sunny', 'zebra', 'pencil', 'rocket', 'banana', 'cloud', 'forest', 'lemon', 'panda', 'comet', 'garden', 'violet', 'maple', 'ocean', 'pepper', 'robin', 'tulip', 'cobalt', 'falcon', 'meadow', 'rainbow', 'savanna', 'acacia', 'baobab', 'kestrel', 'safari', 'jungle', 'lagoon', 'orbit']
 const shortLogin = (login = '') => login.replace('@students.findbox.invalid', '')
@@ -66,7 +66,7 @@ export function FamilyChildren() {
             {c.status === 'active' && <div className="fm-house"><HousePicker value={qrs.find(q => q.id === c.id)?.house} disabled={busy} name={`${c.name}'s house`} onPick={h => void run(async () => { await api('/family/children/' + c.id + '/house', { house: h }); notify(`${c.name} is in ${h[0]!.toUpperCase() + h.slice(1)} house.`) })} /></div>}
             <p className="fm-login">{c.user_id ? <><Check size={14} />Can sign in as <strong>{shortLogin(c.login)}</strong></> : 'No login. Most children do not need one.'}</p>
             <footer>
-              {c.status === 'active' && <button type="button" className="sa-btn" onClick={() => setOpen(c.id)}><QrCode size={15} />QR &amp; belongings ({qrs.find(q => q.id === c.id)?.items.length || 0})</button>}
+              {c.status === 'active' && <button type="button" className="sa-btn" onClick={() => setOpen(c.id)}><QrCode size={15} />Labels &amp; belongings ({qrs.find(q => q.id === c.id)?.items.length || 0})</button>}
               {c.status === 'active' && <button type="button" className="sa-btn is-ghost" onClick={() => setCard({ child: c, password: passphrase() })}><KeyRound size={15} />{c.user_id ? 'New password & card' : 'Create login card'}</button>}
               {c.user_id && <button type="button" className="fm-link" disabled={busy} onClick={() => void run(async () => { await api('/family/roster/' + c.id + '/disable-login', {}); notify(`${c.name}'s login is turned off.`) })}>Turn off login</button>}
             </footer>
@@ -77,27 +77,18 @@ export function FamilyChildren() {
       {open && (() => {
         const child = qrs.find(q => q.id === open)
         if (!child) return null
-        const first = child.name.split(' ')[0]
-        const add = (e: FormEvent<HTMLFormElement>) => {
-          e.preventDefault(); const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>
-          void run(async () => { await api('/family/children/' + child.id + '/items', d); notify(`${d.name} added under ${first}'s QR.`); form.reset() })
-        }
         return <div className="sa-panel-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(null) }}>
           <aside className="sa-panel" role="dialog" aria-modal="true" aria-label={`${child.name}'s QR`}>
-            <header><div><p>ONE QR FOR EVERYTHING</p><h2>{child.name}</h2></div><button type="button" className="sa-panel-close" aria-label="Close" onClick={() => setOpen(null)}><X size={18} /></button></header>
+            <header><div><p>LABELS &amp; BELONGINGS</p><h2>{child.name}</h2></div><button type="button" className="sa-panel-close" aria-label="Close" onClick={() => setOpen(null)}><X size={18} /></button></header>
             <div className="sa-panel-body"><div className="sa-form">
-              {child.code
-                ? <div className="fm-qr" id="fm-labels"><NamedQR code={child.code} name={child.name} size={170} reveal /><div className="nq-sheet fm-print-only">{Array.from({ length: 12 }, (_, i) => <NamedQR key={i} code={child.code!} name={child.name} size={110} />)}</div></div>
-                : <p className="sa-note">{first}'s QR is created when you add their first belonging.</p>}
-              <p className="sa-note">The same QR goes on every sticker and fabric label. Whoever scans it sees {first}'s first name and picks which belonging they found.</p>
+              {child.code && <div className="fm-qr fm-no-print" onContextMenu={e => e.preventDefault()}><NamedQR code={child.code} name={child.name} size={170} reveal /></div>}
+              <div className="fm-labels">
+                <strong>{child.labels.remaining}</strong>
+                <span>{child.labels.delivered ? `label${child.labels.remaining === 1 ? "" : "s"} left of ${child.labels.delivered}` : "labels yet. Order labels to start."}</span>
+              </div>
               <h3 className="fm-sub">Belongings</h3>
               {child.items.length ? <ul className="fm-items">{child.items.map(i => <li key={i.id}><span>{i.name}</span><small>{CATEGORIES.find(c => c[0] === i.category)?.[1] || 'Other'}</small></li>)}</ul> : <p className="sa-note">Nothing listed yet.</p>}
-              <form className="fm-add-item" onSubmit={add}><fieldset disabled={busy}>
-                <input name="name" required maxLength={100} placeholder="e.g. Navy sweater" aria-label="Belonging name" />
-                <select name="category" aria-label="Kind of belonging" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-                <button className="sa-btn"><Plus size={15} />Add</button>
-              </fieldset></form>
-              {child.code && <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link><button type="button" className="sa-btn" onClick={() => window.print()}><Printer size={16} />Print labels</button></div>}
+              <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link>{child.labels.remaining > 0 && <Link className="sa-btn" to="/app/found"><ScanLine size={16} />Scan a label</Link>}</div>
             </div></div>
           </aside>
         </div>

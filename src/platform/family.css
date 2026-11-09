@@ -39,15 +39,15 @@
 .fm-items small{opacity:.7}
 .fm-add-item fieldset{display:flex;gap:8px;flex-wrap:wrap;border:0;padding:0;margin:0}
 .fm-add-item input{flex:1 1 160px;min-width:0}
-.fm-print-only{display:none}
-@media print{
-  body *{visibility:hidden}
-  #fm-labels,#fm-labels *{visibility:visible}
-  #fm-labels{position:absolute;inset:0;padding:12mm;display:block}
-  #fm-labels>.nq{display:none}
-  #fm-labels .fm-print-only{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm}
-  #fm-labels .nq{border:1px dashed #999}
-}
 
 .fm-add-item input,.fm-add-item select{padding:11px 13px;border-radius:12px;border:1px solid var(--pa-line,rgba(255,255,255,.12));background:transparent;color:inherit;font-size:14px}
 .fm-add-item select{flex:0 0 auto}
+
+.fm-labels{display:flex;align-items:baseline;gap:8px;padding:14px 16px;border-radius:16px;background:var(--pa-surface-2,rgba(255,255,255,.04))}
+.fm-labels strong{font-size:30px;letter-spacing:-.03em}
+.fm-labels span{font-size:13.5px;opacity:.8}
+
+/* The child's QR is shown on screen only: it never prints. */
+.fm-no-print, .fm-no-print *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.fm-no-print svg, .fm-no-print canvas, .fm-no-print img{pointer-events:none}
+@media print{.fm-no-print{display:none!important}}

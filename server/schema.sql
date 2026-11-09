@@ -195,3 +195,5 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address text NOT NULL DEFAU
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);
 -- A photo for items handed in without a QR (small, resized in the browser).
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS photo text;
+-- Labels can only be used once FindBox marks the order delivered.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivered_at timestamptz;

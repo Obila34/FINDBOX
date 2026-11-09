@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Camera, Check, Home, ImagePlus, MapPin, Plus, RotateCcw, ScanLine, X } from "lucide-react";
 import { squarePhoto } from "./profile";
 import { useScanner } from "@/lib/useScanner";
@@ -8,7 +8,7 @@ import { notify } from "./feedback";
 import "./houses.css";
 
 type Box = { id: string; name: string; opening_hours: string };
-type Scan = { code: string; mine: boolean; studentId?: string | null; child: string; items: { id: string; name: string; category: string; status: string; open: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
+type Scan = { code: string; mine: boolean; studentId?: string | null; labels?: { delivered: number; used: number; remaining: number } | null; child: string; items: { id: string; name: string; category: string; status: string; open: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
 
 const CATEGORIES: [string, string][] = [["clothing", "Clothing"], ["bottle", "Bottle"], ["lunchbox", "Lunchbox"], ["book", "Book"], ["sports", "Sports kit"], ["electronics", "Gadget"], ["keys", "Keys"], ["other", "Other"]];
 
@@ -64,9 +64,8 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
     if (!scan?.studentId) return;
     const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>;
     setBusy(true);
-    try { await api("/family/children/" + scan.studentId + "/items", d); notify(`${d.name} is now on ${scan.child.split(" ")[0]}'s QR.`); form.reset(); await open(scan.code); } catch { /* toast shown */ } finally { setBusy(false); }
+    try { await api("/family/children/" + scan.studentId + "/items", { ...d, code: scan.code }); notify(`${d.name} is now on ${scan.child.split(" ")[0]}'s QR.`); form.reset(); await open(scan.code); } catch { /* toast shown */ } finally { setBusy(false); }
   }
-  function manual(e: FormEvent<HTMLFormElement>) { e.preventDefault(); void open(codeFrom(String(new FormData(e.currentTarget).get("code") || ""))); }
 
   if (done) return (
     <section className="hs-card fs-done" role="status">
@@ -107,8 +106,10 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
               {box && <button type="button" className="fs-ghost" disabled={busy || !pick} onClick={() => void submit(box)}><MapPin size={16} />Drop at the box</button>}
             </>
           )}
-          {scan.mine && scan.studentId && <form className="fs-add" onSubmit={addBelonging}>
-            <p className="hs-note">Labelling something new? Add it to this QR.</p>
+          {scan.mine && scan.studentId && scan.labels && scan.labels.remaining === 0 && <p className="hs-note fs-add">
+            {scan.labels.delivered ? `All ${scan.labels.delivered} labels are in use.` : "Your labels haven't been delivered yet."} <Link to="/app/shop">Order labels</Link> to add more belongings.</p>}
+          {scan.mine && scan.studentId && (scan.labels?.remaining ?? 0) > 0 && <form className="fs-add" onSubmit={addBelonging}>
+            <p className="hs-note">Labelling something new? Add it to this QR. {scan.labels!.remaining} label{scan.labels!.remaining === 1 ? "" : "s"} left.</p>
             <div><input name="name" required maxLength={100} placeholder="e.g. Navy sweater" aria-label="New belonging" />
               <select name="category" aria-label="Kind of belonging" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
               <button className="fs-ghost" disabled={busy}><Plus size={15} />Add</button></div>
@@ -141,12 +142,8 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
       {scanner.state === "scanning" || scanner.state === "requesting"
         ? <div className="fs-camera"><video ref={scanner.videoRef} muted playsInline /></div>
         : <button type="button" className="fs-start" onClick={() => void scanner.start()} disabled={busy}><span><Camera size={32} /></span>Scan a FindBox QR</button>}
-      {scanner.state === "denied" && <p className="hs-note" role="alert">Camera access is off. Type the code under the QR instead.</p>}
-      {scanner.state === "unsupported" && <p className="hs-note" role="alert">This device can't scan here. Type the code under the QR instead.</p>}
-      <form className="fs-manual" onSubmit={manual}>
-        <input name="code" aria-label="Code under the QR" placeholder="Or type the code, e.g. FB-…" autoComplete="off" />
-        <button className="fp-primary" disabled={busy}>Open</button>
-      </form>
+      {scanner.state === "denied" && <p className="hs-note" role="alert">Camera access is off. Allow the camera for FindBox in your phone settings, then tap Scan again.</p>}
+      {scanner.state === "unsupported" && <p className="hs-note" role="alert">This device can't scan here. Open FindBox on a phone with a camera.</p>}
       <button type="button" className="fs-ghost fs-noqr" onClick={() => { scanner.stop(); setUntagged(true); }}>No QR on it?</button>
     </div>
   );
