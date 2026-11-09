@@ -100,3 +100,9 @@ html[data-theme="light"] .fb-theme-toggle:not(.fb-dark-scope *):hover { backgrou
 .fb-theme-seg { display: inline-flex; padding: 3px; border-radius: 99px; background: color-mix(in srgb, var(--fb-text) 8%, transparent); }
 .fb-theme-seg button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 12px; color: var(--fb-muted); }
 .fb-theme-seg button[aria-pressed=true] { background: var(--fb-text); color: var(--fb-surface); }
+
+/* Shared navigation bar on light pages (the pill and photo overlays stay dark). */
+html[data-theme="light"] .fb-site-nav.is-bar .fb-nav-round { border-color: #dfe5d7; background: #fff; color: #174c39; }
+html[data-theme="light"] .fb-site-nav.is-bar .fb-nav-signin { border-color: #174c39; color: #174c39; }
+html[data-theme="light"] .fb-site-nav.is-bar .fb-nav-signin:hover { background: #174c39; color: #f8f9f3; }
+html[data-theme="light"] .fb-site-nav.is-bar .fb-nav-logo { background: #fff; box-shadow: 0 1px 0 #e1e8d6; }

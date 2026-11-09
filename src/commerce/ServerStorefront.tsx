@@ -201,7 +201,7 @@ export function ServerStorefront() {
   );
   return (
     <div className={"fc-root fb-landing" + (inApp ? " fc-in-app" : "")}>
-      <MarketHeader />
+      <MarketHeader user={user ? { name: user.name, role: user.role } : null} />
       <main className="fc-main" id="main">
         {error && (
           <p role="alert" className="fp-alert">

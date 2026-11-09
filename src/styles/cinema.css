@@ -84,3 +84,30 @@
 .fb-legal h2 { font-size: 1.25rem; letter-spacing: -.02em; margin: 40px 0 12px; padding-top: 24px; border-top: 1px solid var(--fb-border); color: rgb(var(--c-cream-soft)); }
 .fb-legal p { font-size: 1rem; line-height: 1.75; color: rgb(var(--c-gray-300)); margin-bottom: 14px; }
 .fb-legal a { color: rgb(var(--c-sage)); text-decoration: underline; text-underline-offset: 3px; }
+
+/* One navigation bar for every page (components/layout/SiteNav). */
+.fb-site-nav { position: relative; z-index: 40; pointer-events: none; }
+.fb-site-nav > * { pointer-events: auto; }
+.fb-site-nav .fb-nav-pill { position: absolute; left: 50%; top: 0; transform: translateX(-50%); z-index: 2; }
+.fb-site-nav-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 0; }
+.fb-site-nav.is-bar { position: sticky; top: 0; height: 64px; background: linear-gradient(to bottom, var(--fb-surface) 60%, transparent); }
+.fb-site-nav.is-overlay { position: absolute; inset: 0 0 auto 0; }
+.fb-nav-logo { display: inline-flex; align-items: center; padding: 7px 12px; border-radius: 999px; background: rgba(0, 0, 0, .55); backdrop-filter: blur(12px); }
+.fb-nav-actions { display: flex; align-items: center; gap: 8px; }
+.fb-nav-round { position: relative; display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .06); color: #e7ecde; backdrop-filter: blur(12px); transition: background .25s ease; }
+.fb-nav-round:hover { background: rgba(255, 255, 255, .14); }
+.fb-nav-badge { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: #f3b27a; color: #050806; font-size: 10px; font-weight: 700; display: grid; place-items: center; }
+.fb-nav-signin { padding: 7px 16px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); color: #f8f9f3; font-size: 14px; backdrop-filter: blur(12px); transition: background .25s ease; }
+.fb-nav-signin:hover { background: rgba(255, 255, 255, .1); }
+.fb-nav-pill .cinema-link.is-current { color: #f8f9f3; }
+.fb-nav-pill .cinema-link.is-current::after { transform: scaleX(1); }
+/* Phone: the pill hangs from the top, logo and actions sit on a row beneath it. */
+@media (max-width: 767px) {
+  .fb-site-nav-row { padding-top: 46px; }
+  .fb-site-nav.is-bar { height: 96px; }
+  .fb-nav-signin { padding: 6px 12px; font-size: 13px; }
+  .fb-site-nav .fb-nav-pill-app { display: none; }
+  .fb-site-nav:has(.fb-nav-pill-app) .fb-site-nav-row { padding-top: 12px; }
+  .fb-site-nav.is-bar:has(.fb-nav-pill-app) { height: 64px; }
+}
+@media (min-width: 768px) { .fb-site-nav-row { padding: 14px 24px 0; } }
