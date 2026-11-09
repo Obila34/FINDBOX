@@ -20,3 +20,5 @@
 .cx-access label{display:grid;gap:6px;font-size:12px;font-weight:600}
 .cx-access input,.cx-access select{border:1px solid rgba(148,184,156,0.28);border-radius:9px;padding:10px;font:inherit;font-weight:400;background:#0e1410;min-width:0}
 .cx-access button{justify-self:start;padding:10px 14px;border-radius:9px;background:#e7ecde;color:#050806;font-size:12px;font-weight:700}
+.cx-assistant-tab{position:relative}
+.cx-new-pill{margin-left:auto;padding:2px 7px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:.08em;background:#f39a5b;color:#1a0b03}

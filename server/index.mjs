@@ -20,6 +20,8 @@ const config = {
   paystackKey: process.env.PAYSTACK_SECRET_KEY,
   resendKey: process.env.RESEND_API_KEY,
   mailFrom: process.env.MAIL_FROM,
+  ollamaUrl: process.env.OLLAMA_URL || "",
+  assistantModel: process.env.ASSISTANT_MODEL || "gemma4:e2b-it-qat",
   companyEmailEnabled: process.env.COMPANY_EMAIL_CODES === 'true',
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT || 465),

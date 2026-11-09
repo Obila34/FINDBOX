@@ -63,6 +63,8 @@ services:
       DARAJA_SANDBOX_CONSUMER_SECRET: ${DARAJA_SANDBOX_CONSUMER_SECRET:-}
       DARAJA_SANDBOX_SHORTCODE: ${DARAJA_SANDBOX_SHORTCODE:-}
       DARAJA_SANDBOX_PASSKEY: ${DARAJA_SANDBOX_PASSKEY:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-gemma4:e2b-it-qat}
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -78,6 +80,21 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+  # Self-hosted AI model for the company assistant. Private to the API: no published ports.
+  # The API downloads the model on first start; the memory cap keeps FindBox itself safe.
+  ollama:
+    logging: *default-logging
+    image: ollama/ollama:${OLLAMA_VERSION:-0.40.11}
+    environment:
+      OLLAMA_KEEP_ALIVE: 24h
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+    volumes:
+      - ollama_models:/root/.ollama
+    mem_limit: ${OLLAMA_MEMORY:-6g}
+    cpus: ${OLLAMA_CPUS:-5}
+    restart: unless-stopped
   web:
     logging: *default-logging
     build:
@@ -106,6 +123,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 volumes:
+  ollama_models:
   print_exports:
   postgres:
   caddy_data:

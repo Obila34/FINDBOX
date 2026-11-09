@@ -9,6 +9,12 @@
 }
 
 (spa) {
+  # Assistant replies stream token by token; pass each piece straight through.
+  handle /api/company/assistant/chat {
+    reverse_proxy api:3001 {
+      flush_interval -1
+    }
+  }
   handle /api/* {
     reverse_proxy api:3001
   }
