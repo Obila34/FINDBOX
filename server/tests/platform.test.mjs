@@ -1401,3 +1401,89 @@ test("profiles save a name, tagline, accent, emoji and a real photo, and reject 
   assert.equal((await call("POST", "/api/account/profile", { avatar: null, name: before.name }, parent)).json().avatar, null);
   assert.equal((await call("GET", "/api/account/profile")).statusCode, 401);
 });
+test("assistant routes questions to role-scoped tools, proposes changes for confirmation and works offline", async () => {
+  const http = await import("node:http");
+  // Stand-in for Ollama: tool choice = first allowed option, no extracted fields, a one-line streamed answer.
+  const seen = [];
+  const fake = http.createServer((req, res) => {
+    let body = ""; req.on("data", (c) => (body += c)); req.on("end", () => {
+      if (req.url === "/api/tags") { res.end(JSON.stringify({ models: [{ name: "fake-model" }] })); return; }
+      const b = JSON.parse(body || "{}"); seen.push(b);
+      if (b.format) { const p = b.format.properties || {}; const out = {}; for (const [k, d] of Object.entries(p)) out[k] = d.enum ? d.enum[0] : ""; res.end(JSON.stringify({ message: { content: JSON.stringify(out) } })); return; }
+      res.write(JSON.stringify({ message: { content: "Here is " } }) + "\n"); res.end(JSON.stringify({ message: { content: "the answer." }, done: true }) + "\n");
+    });
+  });
+  await new Promise((r) => fake.listen(0, "127.0.0.1", r));
+  const ollamaUrl = "http://127.0.0.1:" + fake.address().port;
+  const smart = await createApp({ pool, config: { origin: "http://localhost:5173", ollamaUrl, assistantModel: "fake-model", disableAssistantWarmup: true } });
+  const offline = await createApp({ pool, config: { origin: "http://localhost:5173" } });
+  const pw = await passwordHash("assistant-fixture-123");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,verified,mfa_secret) VALUES('ai-dev','ai-dev@test.com','AI Dev',$1,'parent',true,'enrolled'),('ai-admin','ai-admin@test.com','AI Admin',$1,'parent',true,'enrolled'),('ai-target','ai-target@test.com','Target Parent',$1,'parent',true,NULL) ON CONFLICT DO NOTHING", [pw]);
+  await pool.query("INSERT INTO company_access(user_id,role) VALUES('ai-dev','developer'),('ai-admin','admin') ON CONFLICT(user_id) DO UPDATE SET role=EXCLUDED.role");
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const dev = await token("ai-dev"), admin = await token("ai-admin"), family = await token("ai-target");
+  const req = (a, method, url, payload, cookie) => a.inject({ method, url, payload, headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  const chat = async (a, cookie, message, conversationId) => {
+    const r = await req(a, "POST", "/api/company/assistant/chat", { message, ...(conversationId ? { conversationId } : {}) }, cookie);
+    const events = r.body.split("\n\n").filter(Boolean).map((blk) => { const [ev, da] = blk.split("\n"); return { event: ev.slice(7), data: JSON.parse(da.slice(6)) }; });
+    const get = (n) => events.filter((e) => e.event === n).map((e) => e.data);
+    return { status: r.statusCode, events, get, text: get("token").map((t) => t.text).join("") };
+  };
+  try {
+    // Families cannot reach the assistant; operators see their role's tools and suggestions.
+    assert.ok([401, 403].includes((await req(smart, "GET", "/api/company/assistant", undefined, family)).statusCode));
+    const metaRes = await req(smart, "GET", "/api/company/assistant", undefined, dev); const meta = metaRes.json();
+    assert.equal(meta.role, "developer"); assert.equal(meta.ready, true);
+    assert.ok(meta.tools.some((t) => t.name === "system_health") && !meta.tools.some((t) => t.name === "find_orders"));
+    const adminMeta = (await req(smart, "GET", "/api/company/assistant", undefined, admin)).json();
+    assert.ok(adminMeta.tools.some((t) => t.name === "find_orders") && !adminMeta.tools.some((t) => t.name === "disable_user"));
+
+    // A clear question routes by rules to the right tool and streams an answer.
+    const count = await chat(smart, dev, "How many users do we have?");
+    assert.equal(count.status, 200);
+    assert.equal(count.get("result")[0].tool, "platform_stats");
+    assert.ok(count.get("result")[0].rows.some((r) => /User accounts/.test(r.metric)));
+    assert.equal(count.text, "Here is the answer.");
+    const signedIn = await chat(smart, dev, "Who is signed in right now?");
+    assert.equal(signedIn.get("result")[0].tool, "who_is_signed_in");
+
+    // Admins never get developer tools, even when they ask for them.
+    const adminSessions = await chat(smart, admin, "Who is signed in right now?");
+    assert.notEqual(adminSessions.get("result")[0]?.tool, "who_is_signed_in");
+    const orders = await chat(smart, admin, "Show the latest orders");
+    assert.equal(orders.get("result")[0].tool, "find_orders");
+
+    // Changes become proposals; nothing happens until the same person confirms.
+    const proposal = await chat(smart, dev, "Disable ai-target@test.com");
+    const card = proposal.get("proposal")[0];
+    assert.ok(card && /Disable Target Parent/.test(card.summary));
+    assert.equal((await pool.query("SELECT disabled_at FROM users WHERE id='ai-target'")).rows[0].disabled_at, null);
+    assert.equal((await req(smart, "POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, admin)).statusCode, 409);
+    const done = await req(smart, "POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, dev);
+    assert.equal(done.statusCode, 200, done.body);
+    assert.ok((await pool.query("SELECT disabled_at FROM users WHERE id='ai-target'")).rows[0].disabled_at);
+    assert.ok((await pool.query("SELECT 1 FROM operation_audit WHERE entity_id='ai-target' AND reason LIKE 'FindBox assistant:%'")).rowCount);
+    assert.equal((await req(smart, "POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, dev)).statusCode, 409);
+
+    // Follow-ups resolve "them" from the previous answer's people.
+    const list = await chat(smart, dev, "Find users called ai-target@test.com");
+    const again = await chat(smart, dev, "Enable them again", list.get("conversation")[0].id);
+    assert.ok(/Re-enable Target Parent/.test(again.get("proposal")[0]?.summary || ""), JSON.stringify(again.events));
+
+    // Missing details are asked for, not guessed.
+    const vague = await chat(smart, dev, "Disable the account");
+    assert.equal(vague.get("proposal").length, 0);
+    assert.match(vague.text, /need/i);
+
+    // Conversations are private to their owner.
+    const cid = count.get("conversation")[0].id;
+    assert.equal((await req(smart, "GET", `/api/company/assistant/conversations/${cid}`, undefined, dev)).statusCode, 200);
+    assert.equal((await req(smart, "GET", `/api/company/assistant/conversations/${cid}`, undefined, admin)).statusCode, 404);
+
+    // With no model at all, rules still answer.
+    const plain = await chat(offline, dev, "How many users do we have?");
+    assert.equal(plain.get("result")[0].tool, "platform_stats");
+    assert.match(plain.text, /platform numbers/i);
+    assert.ok(seen.length > 0);
+  } finally { fake.close(); await smart.close(); await offline.close(); }
+});

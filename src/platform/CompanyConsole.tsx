@@ -1,10 +1,11 @@
+import { Assistant } from './assistant/Assistant'
 import {OperationsPanel} from './OperationsPanel'
 
 import {SchoolAccessConsole} from './SchoolWorkspace'
 
 import { Fragment,useEffect,useRef,useState,type ReactNode,type FormEvent } from 'react'
 
-import { LayoutDashboard,Users,FileText,ShoppingBag,School,MessageSquare,Bell,Settings,Code2,Package,Mail,History,Search,Plus,Download,LoaderCircle,X,Check,ChevronLeft,ChevronRight,LogOut,RefreshCw,ShieldCheck } from 'lucide-react'
+import { Sparkles,LayoutDashboard,Users,FileText,ShoppingBag,School,MessageSquare,Bell,Settings,Code2,Package,Mail,History,Search,Plus,Download,LoaderCircle,X,Check,ChevronLeft,ChevronRight,LogOut,RefreshCw,ShieldCheck } from 'lucide-react'
 
 import { api,ApiError,money } from './api'
 
@@ -44,7 +45,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
 
  const viewRef=useRef(''),loadEpoch=useRef(0);viewRef.current=tab+'|'+q+'|'+page
  async function load(background=false){
-  const view=tab+'|'+q+'|'+page;if(tab==='overview'||view!==viewRef.current)return
+  const view=tab+'|'+q+'|'+page;if(tab==='overview'||tab==='assistant'||view!==viewRef.current)return
   const epoch=++loadEpoch.current,current=()=>epoch===loadEpoch.current&&view===viewRef.current
   setLoading(!background)
   try{
@@ -59,7 +60,7 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
  }
  useEffect(()=>{setRows([]);void load()},[tab,q,page])
 
- useEffect(()=>{const t=setInterval(()=>{if(!document.hidden&&!form&&!['overview','settings','announcements'].includes(tab))void load(true)},30000);return()=>clearInterval(t)},[tab,q,page,form])
+ useEffect(()=>{const t=setInterval(()=>{if(!document.hidden&&!form&&!['overview','settings','announcements','assistant'].includes(tab))void load(true)},30000);return()=>clearInterval(t)},[tab,q,page,form])
 
  function open(kind:string,row:Row={}){setError('');setMessage('');setForm({kind,row});setLines([{description:'',quantity:'1',price:''}]);setRequestKey(crypto.randomUUID())}
 
@@ -117,9 +118,9 @@ export function CompanyConsole({access,children,onLogout}:{access:{role:string;n
 
  function summary(r:Row){if(tab==='invoices')return [r.number||'Draft '+r.id.slice(0,8),r.customer?.name,money(r.total_minor),r.status];if(tab==='orders')return [r.id.slice(0,8),r.customer,money(r.amount_minor),r.status];if(tab==='audit')return [r.action,r.actor,r.reason,new Date(r.created_at).toLocaleString('en-KE')];if(tab==='mail')return [r.subject,r.sent_at?'Accepted by mail provider':r.attempts>=8?'Retries exhausted':'Queued',r.attempts+' attempts'];if(tab==='support')return [r.subject,r.name,r.status];if(tab==='schools')return [r.name,r.collection_days+' collection days'];if(tab==='items')return [r.name,r.category,r.school,r.status];return [r.name,r.email,r.disabled_at?'Disabled':r.verified?'Verified':'Unverified',r.role||'Client',...(r.last_sign_in?['Sign-in activity: '+new Date(r.last_sign_in).toLocaleString('en-KE')]:[])]}
 
- return <div className="cx-layout"><aside className="cx-sidebar"><div className="cx-workspace"><span><ShieldCheck size={22}/></span><strong>{isAdmin?'Company admin':'Developer studio'}</strong><small>{access.name}</small></div><button className={tab==='overview'?'active':''} onClick={()=>{setTab('overview');setPage(0)}}><LayoutDashboard size={18}/> Overview</button>{tabs.map(([id,label,Icon,group],i)=><Fragment key={id}>{(i===0||tabs[i-1][3]!==group)&&<p>{group}</p>}<button className={tab===id?'active':''} onClick={()=>{setTab(id);setPage(0);setSearch('');setError('');setMessage('')}}><Icon size={18}/>{label}</button></Fragment>)}<p>ACCOUNTABILITY</p><button className={tab==='audit'?'active':''} onClick={()=>{setTab('audit');setPage(0);setSearch('')}}><History size={18}/> Audit history</button><a href="/company"><Code2 size={18}/> Switch account</a><button onClick={onLogout}><LogOut size={18}/> Log out</button><div className="cx-sidebar-note">Every change has an owner.<br/>Sensitive actions require a recent sign-in.</div></aside>
+ return <div className="cx-layout"><aside className="cx-sidebar"><div className="cx-workspace"><span><ShieldCheck size={22}/></span><strong>{isAdmin?'Company admin':'Developer studio'}</strong><small>{access.name}</small></div><button className={tab==='overview'?'active':''} onClick={()=>{setTab('overview');setPage(0)}}><LayoutDashboard size={18}/> Overview</button><button className={'cx-assistant-tab '+(tab==='assistant'?'active':'')} onClick={()=>{setTab('assistant');setPage(0)}}><Sparkles size={18}/> Assistant<span className="cx-new-pill">AI</span></button>{tabs.map(([id,label,Icon,group],i)=><Fragment key={id}>{(i===0||tabs[i-1][3]!==group)&&<p>{group}</p>}<button className={tab===id?'active':''} onClick={()=>{setTab(id);setPage(0);setSearch('');setError('');setMessage('')}}><Icon size={18}/>{label}</button></Fragment>)}<p>ACCOUNTABILITY</p><button className={tab==='audit'?'active':''} onClick={()=>{setTab('audit');setPage(0);setSearch('')}}><History size={18}/> Audit history</button><a href="/company"><Code2 size={18}/> Switch account</a><button onClick={onLogout}><LogOut size={18}/> Log out</button><div className="cx-sidebar-note">Every change has an owner.<br/>Sensitive actions require a recent sign-in.</div></aside>
 
- <div className="cx-content">{tab==='overview'?<>{children}</>:<div className="cx-section"><header className="cx-section-header"><div><p className="co-eyebrow">{isAdmin?'FINDBOX OPERATIONS':'DEVELOPER WORKSPACE'}</p><h1>{labels[tab]}</h1><p>{tab==='invoices'?'Branded PDFs, clear records and deliberate delivery.':tab==='users'?'Correct accounts without exposing passwords or bypassing verification.':'Search records, inspect details and take accountable action.'}</p></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={17}/> Refresh</button></header>
+ <div className="cx-content">{tab==='assistant'?<Assistant/>:tab==='overview'?<>{children}</>:<div className="cx-section"><header className="cx-section-header"><div><p className="co-eyebrow">{isAdmin?'FINDBOX OPERATIONS':'DEVELOPER WORKSPACE'}</p><h1>{labels[tab]}</h1><p>{tab==='invoices'?'Branded PDFs, clear records and deliberate delivery.':tab==='users'?'Correct accounts without exposing passwords or bypassing verification.':'Search records, inspect details and take accountable action.'}</p></div><button onClick={()=>void load()} disabled={loading}><RefreshCw size={17}/> Refresh</button></header>
 
  {['ledger','privacy','reports'].includes(tab)?<OperationsPanel kind={tab as 'ledger'|'privacy'|'reports'}/>:tab==='settings'?<section className="co-panel"><h2>Business identity</h2><p>{profile?.data?.legalName}</p><p>{profile?.data?.email}</p><p>{profile?.data?.address||'Billing address pending'}</p><p>{profile?.data?.issuerConfirmed?'Issuing details confirmed':'Draft/pro forma invoices only until billing details are confirmed.'}</p><button className="co-button" onClick={()=>open('profile',profile?.data||{})}>Edit business profile</button></section>:tab==='announcements'?<section className="cx-banner"><div><p className="co-eyebrow">KEEP EVERYONE INFORMED</p><h2>A clear update goes a long way.</h2><p>Publish an in-app notification for everyone, your company team or a single school. Messages expire automatically.</p><button className="co-button" onClick={()=>open('announcement')}>Create announcement <Plus size={17}/></button></div><img src="/media/brand-v2/role-parent.webp" alt=""/></section>:<><div className="cx-toolbar"><label><Search size={17}/><input aria-label="Search workspace records" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search this section…"/></label>{tab==='clients'&&<button className="co-button" onClick={()=>open('invite')}>Invite client <Plus size={16}/></button>}{tab==='invoices'&&<button className="co-button" onClick={()=>open('invoice')}>New invoice <Plus size={16}/></button>}{tab==='schools'&&!isAdmin&&<button className="co-button" onClick={()=>open('school-new')}>Onboard school <Plus size={16}/></button>}</div>{loading?<p role="status">Loading records…</p>:<div className="cx-records">{visibleRows.map(r=><article className="cx-record" key={r.id}><div className="cx-record-icon">{tab==='invoices'?<FileText/>:tab==='schools'?<School/>:tab==='items'?<Package/>:tab==='mail'?<Mail/>:<Users/>}</div><div className="cx-record-data">{summary(r).map((v,i)=>i===0?<h2 key={i}>{String(v??'')}</h2>:<span key={i}>{String(v??'')}</span>)}</div><div className="cx-record-actions">
 
