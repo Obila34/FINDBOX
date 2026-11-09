@@ -7,11 +7,13 @@ import { LandingAuthGate } from '@/components/ui/landing-auth-gate'
 import { WordsPullUp, WordsPullUpMultiStyle, ScrollRevealText } from '@/components/ui/pull-up-text'
 import { Logo } from '@/components/brand/Logo'
 import { useInstallPrompt } from '@/lib/hooks'
+import { imagery } from '@/data/imagery'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
 const cardEase = [0.22, 1, 0.36, 1] as const
-const TEXT = '#f8f9f3'
+const TEXT = 'rgb(var(--c-cream-soft))'
 
 const nav = [
   { label: 'Our story', to: '/#about' },
@@ -23,15 +25,15 @@ const nav = [
 
 const features = [
   {
-    n: '01', title: 'Label & connect.', image: '/media/editorial/connect.webp', to: '/shop/catalog',
-    points: ['Durable QR labels for uniforms, bottles, books and bags', 'Each label is linked to its owner’s account', 'Activate a whole pack with one code', 'No private details printed on the tag'],
+    n: '01', title: 'Label & connect.', image: imagery.features.label.src, to: '/shop/catalog',
+    points: ['QR stickers for bottles, lunchboxes, books and gadgets', 'Woven fabric tags at the collar of shirts, sweaters and blazers', 'Activate a whole pack with one code', 'No private details printed on any tag'],
   },
   {
-    n: '02', title: 'Record & notify.', image: '/media/editorial/collection.webp', to: '/schools',
+    n: '02', title: 'Record & notify.', image: imagery.features.record.src, to: '/schools',
     points: ['Staff scan a tag or log an unlabelled find', 'The owner hears as soon as the school confirms receipt', 'Unclaimed items wait in a shared gallery'],
   },
   {
-    n: '03', title: 'Verified collection.', image: '/media/editorial/reunion.webp', to: '/#how-it-works',
+    n: '03', title: 'Verified collection.', image: imagery.features.collect.src, to: '/#how-it-works',
     points: ['Staff check ownership before every handover', 'Collection points with clear opening hours', 'A full history of every return'],
   },
 ]
@@ -44,12 +46,7 @@ const questions = [
   ['Are personal details visible when someone scans a label?', 'The public return page gives hand-in instructions without displaying the owner’s private contact details. School staff confirm receipt before collection updates are sent.'],
 ]
 
-const scenes = [
-  { src: '/media/editorial/reunion.webp', alt: 'A student collecting her water bottle from the school office' },
-  { src: '/media/editorial/journey-hero.webp', alt: 'A school backpack with a FindBox tag on a sunlit bench' },
-  { src: '/media/editorial/school-hero.webp', alt: 'Neatly stored bags in a school collection point' },
-  { src: '/media/editorial/collection.webp', alt: 'A student and staff member at the library collection desk' },
-]
+const scenes = imagery.hero
 
 function Hero() {
   const ref = useRef<HTMLElement>(null)
@@ -74,7 +71,7 @@ function Hero() {
   }
 
   return <section ref={ref} className="h-[100svh] p-4 md:p-6" id="top">
-    <div className="relative h-full overflow-hidden rounded-2xl md:rounded-[2rem]" onMouseMove={follow} onMouseLeave={() => setTilt({ x: 0, y: 0 })}>
+    <div className="fb-dark-scope relative h-full overflow-hidden rounded-2xl md:rounded-[2rem]" onMouseMove={follow} onMouseLeave={() => setTilt({ x: 0, y: 0 })}>
       <motion.div className="absolute inset-0" animate={{ x: tilt.x * -18, y: tilt.y * -12 }} transition={{ type: 'spring', stiffness: 40, damping: 20 }}>
         <AnimatePresence initial={false}>
           <motion.img key={scene} src={scenes[scene].src} alt={scenes[scene].alt} fetchPriority={scene === 0 ? 'high' : undefined}
@@ -84,23 +81,23 @@ function Hero() {
         </AnimatePresence>
       </motion.div>
       <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.7] mix-blend-overlay" />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/85" />
 
-      <Link to="/" aria-label="FindBox home" className="absolute left-5 top-4 z-10 hidden md:block lg:left-8 lg:top-5"><Logo height={22} variant="inverted" /></Link>
+      <Link to="/" aria-label="FindBox home" className="absolute left-4 top-3 z-10 hidden rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-md md:block lg:left-6 lg:top-4"><Logo height={20} /></Link>
       <nav aria-label="Main" className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-black px-4 py-2 md:rounded-b-3xl md:px-8 md:py-3">
         <ul className="flex items-center gap-3 whitespace-nowrap text-[10px] sm:gap-6 sm:text-xs md:gap-10 md:text-sm lg:gap-14">
           {nav.map(n => <li key={n.label}><Link to={n.to} className="cinema-link">{n.label}</Link></li>)}
         </ul>
       </nav>
-      <Link to="/app/sign-in" data-auth-bypass className="absolute right-5 top-4 z-10 hidden rounded-full border border-white/25 px-4 py-1.5 text-sm text-cream-soft backdrop-blur-md transition hover:bg-white/10 md:block lg:right-8 lg:top-5">Sign in</Link>
+      <div className="absolute right-3 top-2 z-10 flex items-center gap-2 md:right-5 md:top-4 lg:right-8 lg:top-5"><ThemeToggle className="h-8 w-8 md:h-9 md:w-9" /><Link to="/app/sign-in" data-auth-bypass className="hidden rounded-full border border-white/25 px-4 py-1.5 text-sm text-cream-soft backdrop-blur-md transition hover:bg-white/10 md:block">Sign in</Link></div>
 
       <motion.div style={still ? undefined : { y: lift, opacity: fade }} className="absolute bottom-0 left-0 right-0 grid grid-cols-12 items-end gap-4 px-5 pb-6 md:px-8 md:pb-8 lg:px-10">
-        <h1 className="col-span-12 font-medium leading-[0.85] tracking-[-0.07em] text-[22vw] sm:text-[21vw] lg:col-span-8 lg:text-[14.5vw] xl:text-[14vw]" style={{ color: TEXT }}>
-          <WordsPullUp text="FindBox" mark="®" />
+        <h1 className="col-span-12 max-w-[14ch] font-medium leading-[0.95] tracking-[-0.045em] text-[12vw] sm:text-[9vw] lg:col-span-8 lg:text-[6.4vw] [text-shadow:0_2px_30px_rgba(0,0,0,.45)]" style={{ color: TEXT }}>
+          <WordsPullUp text="Every lost item finds its way back home." />
         </h1>
         <div className="col-span-12 flex flex-col items-start gap-5 pb-2 lg:col-span-4 lg:pb-[2vw]">
-          <motion.p className="max-w-md text-xs text-primary/70 sm:text-sm md:text-base" style={{ lineHeight: 1.25 }} initial={still ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.5, ease }}>
-            Every lost item finds its way back home. FindBox is a digital lost-and-found platform that helps schools record belongings, notify owners and manage safe collection.
+          <motion.p className="max-w-md text-sm text-cream-soft sm:text-base md:text-lg [text-shadow:0_1px_18px_rgba(0,0,0,.6)]" style={{ lineHeight: 1.35 }} initial={still ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.5, ease }}>
+            FindBox helps schools record belongings, notify owners and hand things back safely, with QR stickers for belongings and fabric tags for uniforms.
           </motion.p>
           <motion.div className="flex flex-wrap items-center gap-3" initial={still ? false : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, delay: 0.7, ease }}>
             <Link to="/contact" className="group inline-flex items-center gap-2 rounded-full bg-primary py-1.5 pl-5 pr-1.5 text-sm font-medium text-black transition-all duration-300 hover:gap-3 sm:text-base">
@@ -166,10 +163,10 @@ function Features() {
         <WordsPullUpMultiStyle segments={[{ text: 'Built for real schools. Designed for every family.', className: 'text-gray-500' }]} />
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:gap-2 md:grid-cols-2 md:gap-1 lg:h-[500px] lg:grid-cols-4">
-        <FeatureCard index={0} className="group relative min-h-[380px] overflow-hidden rounded-2xl lg:min-h-0">
-          <img className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1.6s] ease-out group-hover:scale-110" src="/media/editorial/home-teaser.webp" alt="A parent attaching a FindBox label to a child’s lunchbox" loading="lazy" />
+        <FeatureCard index={0} className="fb-dark-scope group relative min-h-[380px] overflow-hidden rounded-2xl lg:min-h-0">
+          <img className="absolute inset-0 h-full w-full object-cover transition-transform duration-[1.6s] ease-out group-hover:scale-110" src={imagery.features.film.src} alt={imagery.features.film.alt} loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <p className="absolute bottom-6 left-6 right-6 text-xl tracking-[-0.02em] md:text-2xl" style={{ color: TEXT }}>Every belonging, connected.</p>
+          <p className="absolute bottom-6 left-6 right-6 text-xl tracking-[-0.02em] md:text-2xl" style={{ color: TEXT }}>QR stickers for belongings. Fabric tags for uniforms.</p>
         </FeatureCard>
         {features.map((f, i) => <FeatureCard key={f.n} index={i + 1} className="spotlight flex min-h-[380px] flex-col rounded-2xl bg-night-tile p-6 lg:min-h-0">
           <img src={f.image} alt="" className="h-10 w-10 rounded-lg object-cover sm:h-12 sm:w-12" loading="lazy" />

@@ -1,0 +1,102 @@
+/* Light mode for the parts written for the dark theme (app shell, landing, streaks, profile).
+   Older screens get their original light colours back from light-generated.css. */
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="light"], html[data-theme="light"] body { background: #f5f6f0 !important; color: #16231b; }
+html[data-theme="light"] body { scrollbar-color: #c8d4b8 #f5f6f0; }
+html[data-theme="light"] ::selection { background: #c8d4b8; color: #0f1a14; }
+html[data-theme="light"] :focus-visible { outline-color: #657b56 !important; }
+
+/* Primary actions: forest pill with cream text. */
+html[data-theme="light"] body .fp-primary, html[data-theme="light"] body .fb-btn-primary, html[data-theme="light"] body .sa-btn:not(.is-ghost),
+html[data-theme="light"] body .co-button, html[data-theme="light"] body .fs-primary, html[data-theme="light"] body .fl-button, html[data-theme="light"] body .fb-black-link,
+html[data-theme="light"] body .cx-access button, html[data-theme="light"] body .db-attention li > button, html[data-theme="light"] body .sa-setup li > button {
+  background: #174c39 !important; color: #f8f9f3 !important;
+}
+html[data-theme="light"] body .fp-primary:hover, html[data-theme="light"] body .fb-btn-primary:hover, html[data-theme="light"] body .sa-btn:not(.is-ghost):hover, html[data-theme="light"] body .co-button:hover {
+  background: #2e5540 !important; box-shadow: 0 12px 30px -14px rgba(23, 76, 57, .5);
+}
+html[data-theme="light"] body .fp-primary svg, html[data-theme="light"] body .fb-btn-primary svg, html[data-theme="light"] body .sa-btn:not(.is-ghost) svg { color: #f8f9f3 !important; }
+
+/* Fields */
+html[data-theme="light"] .fb-unified-app input:not([type=checkbox]):not([type=radio]):not([type=range]), html[data-theme="light"] .fb-unified-app select, html[data-theme="light"] .fb-unified-app textarea,
+html[data-theme="light"] .sa-root input:not([type=checkbox]):not([type=radio]), html[data-theme="light"] .sa-root select, html[data-theme="light"] .sa-root textarea,
+html[data-theme="light"] .cx-layout input:not([type=checkbox]):not([type=radio]), html[data-theme="light"] .cx-layout select, html[data-theme="light"] .cx-layout textarea,
+html[data-theme="light"] .fb-input, html[data-theme="light"] .fc-root input, html[data-theme="light"] .fc-root select, html[data-theme="light"] .fc-root textarea,
+html[data-theme="light"] .fb-support input, html[data-theme="light"] .fb-support select, html[data-theme="light"] .fb-support textarea, html[data-theme="light"] .ps-fields input {
+  background: #ffffff !important; color: #16231b !important; border-color: #d6dece !important;
+}
+html[data-theme="light"] input::placeholder, html[data-theme="light"] textarea::placeholder { color: rgba(22, 35, 27, .4) !important; }
+html[data-theme="light"] select option { background: #fff; color: #16231b; }
+
+/* App shell */
+html[data-theme="light"] .fb-simple-dock { background: rgba(255, 255, 255, .82) !important; border-color: rgba(23, 76, 57, .1) !important; box-shadow: 0 24px 50px -24px rgba(23, 76, 57, .35) !important; }
+html[data-theme="light"] .fb-simple-dock a { color: #5f6b5a !important; }
+html[data-theme="light"] .fb-simple-dock a.is-active { color: #f8f9f3 !important; }
+html[data-theme="light"] .fb-dock-pill { background: #174c39; }
+html[data-theme="light"] .fp-header, html[data-theme="light"] .fb-workspace-header { background: rgba(245, 246, 240, .8) !important; border-bottom-color: rgba(23, 76, 57, .08) !important; }
+html[data-theme="light"] .fb-profile-toggle { background: #fff; border-color: #dfe5d7; color: #16231b; }
+html[data-theme="light"] .fb-profile-hero { background: linear-gradient(135deg, #eef2e8, #fff); border-color: #e1e8d6; color: #16231b; }
+html[data-theme="light"] .fb-profile-hero small { color: #5f6b5a; }
+@media (hover: hover) {
+  html[data-theme="light"] .fp-card:hover, html[data-theme="light"] .db-kpi:hover, html[data-theme="light"] .sa-card:hover, html[data-theme="light"] .fp-kpi:hover { box-shadow: 0 24px 40px -28px rgba(23, 76, 57, .35); border-color: rgba(101, 123, 86, .35); }
+}
+
+/* Landing and shared cinema pieces outside photos */
+html[data-theme="light"] .cinema-root { background: #f5f6f0; color: #16231b; }
+html[data-theme="light"] .cinema-link { color: rgba(22, 35, 27, .75); }
+html[data-theme="light"] .cinema-link:hover, html[data-theme="light"] .cinema-link:focus-visible { color: #0f1a14; }
+html[data-theme="light"] .fb-dark-scope .cinema-link { color: rgba(231, 236, 222, .85); }
+html[data-theme="light"] .fb-dark-scope .cinema-link:hover { color: #f8f9f3; }
+html[data-theme="light"] .spotlight::before { background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(101, 123, 86, .12), transparent 60%); }
+html[data-theme="light"] .cinema-root .bg-primary:not(.fb-dark-scope *) { color: #f8f9f3 !important; }
+html[data-theme="light"] .cinema-root .bg-primary:not(.fb-dark-scope *) .bg-black { background: #f8f9f3 !important; }
+html[data-theme="light"] .cinema-root .bg-primary:not(.fb-dark-scope *) .bg-black svg { color: #174c39 !important; }
+html[data-theme="light"] .bg-noise { opacity: .06 !important; }
+
+/* Streaks */
+html[data-theme="light"] .sq { color: #16231b; }
+html[data-theme="light"] .sq-hero { background: radial-gradient(120% 80% at 50% 0%, rgba(243, 178, 122, .25), transparent 60%), linear-gradient(180deg, #ffffff, #f3f5ee); border-color: #e1e8d6; }
+html[data-theme="light"] .sq-count span, html[data-theme="light"] .sq-level small, html[data-theme="light"] .sq-day, html[data-theme="light"] .sq-head span, html[data-theme="light"] .sq-stats span { color: #5f6b5a; }
+html[data-theme="light"] .sq-level-top { color: #2e5540; }
+html[data-theme="light"] .sq-bar, html[data-theme="light"] .sq-grid i { background: #e6ebdf; }
+html[data-theme="light"] .sq-grid i.is-on { background: linear-gradient(135deg, #8fa77c, #657b56); }
+html[data-theme="light"] .sq-grid i.is-today { box-shadow: inset 0 0 0 2px #174c39; }
+html[data-theme="light"] .sq-day i { background: #eef1e8; border-color: #e1e8d6; }
+html[data-theme="light"] .sq-day.is-today i { box-shadow: 0 0 0 2px #fff, 0 0 0 3px #657b56; }
+html[data-theme="light"] .sq-mission, html[data-theme="light"] .sq-panel, html[data-theme="light"] .sq-stats div { background: #fff; border-color: #e1e8d6; }
+html[data-theme="light"] .sq-stats strong { color: #0f1a14; }
+html[data-theme="light"] .sq-stats div { color: #657b56; }
+html[data-theme="light"] .sq-mission li button { color: #16231b; background: #f5f6f0; border-color: #e1e8d6; }
+html[data-theme="light"] .sq-mission li button.is-on { background: #e8efe0; border-color: #aebe9e; }
+html[data-theme="light"] .sq-tick { background: #e6ebdf; color: #657b56; }
+html[data-theme="light"] .is-on > .sq-tick { background: #657b56; color: #fff; }
+html[data-theme="light"] .sq-badge { background: #fafbf7; border-color: #d6dece; color: #9da59a; }
+html[data-theme="light"] .sq-badge span { background: #eef1e8; }
+html[data-theme="light"] .sq-badge strong { color: #5f6b5a; }
+html[data-theme="light"] .sq-badge.is-won { background: linear-gradient(160deg, #fdf1e6, #f1f5ea); border-color: #f0c9a4; color: #5f6b5a; }
+html[data-theme="light"] .sq-badge.is-won strong { color: #0f1a14; }
+
+/* Profile studio */
+html[data-theme="light"] .ps-card { color: #16231b; }
+html[data-theme="light"] .ps-preview { background: radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--ps-accent, #aebe9e) 40%, transparent), transparent 60%), linear-gradient(180deg, #ffffff, #f3f5ee); border-color: #e1e8d6; }
+html[data-theme="light"] .ps-kicker, html[data-theme="light"] .ps-icon-group > p { color: #5f6b5a; }
+html[data-theme="light"] .ps-tagline, html[data-theme="light"] .ps-section h3, html[data-theme="light"] .ps-fields label { color: #3d4a40; }
+html[data-theme="light"] .ps-camera, html[data-theme="light"] .ps-upload, html[data-theme="light"] .ps-emojis button, html[data-theme="light"] .ps-suggest button, html[data-theme="light"] .ps-initials { background: #fff; border-color: #dfe5d7; color: #3d4a40; }
+html[data-theme="light"] .ps-emojis button:hover { color: #0f1a14; background: #f3f5ee; }
+html[data-theme="light"] .ps-emojis button.is-on { color: #fff; }
+html[data-theme="light"] .ps-initials.is-on { background: #174c39; color: #f8f9f3; }
+html[data-theme="light"] .ps-ghost { color: #5f6b5a; }
+html[data-theme="light"] .ps-save { background: rgba(255, 255, 255, .9); border-color: #dfe5d7; }
+html[data-theme="light"] .ps-save > span { color: #3d4a40; }
+html[data-theme="light"] .ps-accents button[aria-checked=true] { border-color: #fff; box-shadow: 0 0 0 2px #174c39; }
+
+/* The theme switch itself */
+.fb-theme-toggle { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .06); color: #e7ecde; backdrop-filter: blur(12px); transition: background .25s ease, transform .25s ease; overflow: hidden; }
+.fb-theme-toggle:hover { background: rgba(255, 255, 255, .14); transform: rotate(-8deg); }
+html[data-theme="light"] .fb-theme-toggle:not(.fb-dark-scope *) { border-color: #dfe5d7; background: #fff; color: #174c39; }
+html[data-theme="light"] .fb-theme-toggle:not(.fb-dark-scope *):hover { background: #eef1e8; }
+.fb-theme-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--fb-border); background: color-mix(in srgb, var(--fb-card) 70%, transparent); color: var(--fb-text); font-size: 14px; }
+.fb-theme-row small { display: block; font-size: 12px; color: var(--fb-muted); }
+.fb-theme-seg { display: inline-flex; padding: 3px; border-radius: 99px; background: color-mix(in srgb, var(--fb-text) 8%, transparent); }
+.fb-theme-seg button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 99px; font-size: 12px; color: var(--fb-muted); }
+.fb-theme-seg button[aria-pressed=true] { background: var(--fb-text); color: var(--fb-surface); }

@@ -5,6 +5,7 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
 import FooterBlock from '@/components/ui/footer-3'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -37,7 +38,7 @@ export interface SignIn1Props {
  * sign in and sign up slides the form sideways and resizes the card smoothly.
  * Used by the family and school sign-in, account security and the company workspace.
  */
-export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', label: 'Back to FindBox' }, image = '/media/editorial/auth-signin.webp', wide, children, footer, siteFooter = true }: SignIn1Props) {
+export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', label: 'Back to FindBox' }, image = '/media/catalog/everyday-qr-960.webp', wide, children, footer, siteFooter = true }: SignIn1Props) {
   const still = useReducedMotion()
   const direction = tabs?.mode === 'sign-up' ? 1 : -1
   const slide = {
@@ -50,7 +51,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
     : <Link to={back.to} className="cinema-link inline-flex items-center gap-1.5 text-xs sm:text-sm"><ArrowLeft size={14} />{back.label}</Link>
 
   return <div className="cinema-root min-h-[100svh] p-3 sm:p-4 md:p-6">
-    <div className="relative flex min-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-2xl sm:min-h-[calc(100svh-2rem)] md:min-h-[calc(100svh-3rem)] md:rounded-[2rem]">
+    <div className="fb-dark-scope relative flex min-h-[calc(100svh-1.5rem)] flex-col overflow-hidden rounded-2xl sm:min-h-[calc(100svh-2rem)] md:min-h-[calc(100svh-3rem)] md:rounded-[2rem]">
       <AnimatePresence initial={false}>
         <motion.img key={image} src={image} alt="" aria-hidden="true" className="absolute inset-0 h-full w-full object-cover"
           initial={{ opacity: 0, scale: 1.08 }} animate={{ opacity: 1, scale: 1.02 }} exit={{ opacity: 0 }} transition={{ duration: 1.1, ease }} />
@@ -60,7 +61,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
 
       <header className="relative z-10 flex items-center justify-between px-5 pt-4 md:px-8 md:pt-6">
         <Link to="/" aria-label="FindBox home"><Logo height={22} variant="inverted" /></Link>
-        {backLink}
+        <div className="flex items-center gap-3">{backLink}<ThemeToggle className="h-8 w-8" /></div>
       </header>
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10">

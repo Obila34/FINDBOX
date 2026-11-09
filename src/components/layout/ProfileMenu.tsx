@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ArrowUpRight } from "lucide-react";
 import { ProfileAvatar, useProfile } from "@/platform/profile";
+import { ThemeChoice } from "@/components/ui/ThemeToggle";
 import { Sheet } from "@/components/ui/Sheet";
 import "./app-navigation.css";
 export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?: string; role?: string }) {
@@ -28,6 +29,7 @@ export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?:
         description="Your profile, preferences and a little help."
       >
         <Link to="/app/account" onClick={close} className="fb-profile-hero"><ProfileAvatar profile={profile} name={name} size={56} /><span><strong>{profile?.name || name}</strong><small>{profile?.tagline || "Personalise your profile"}</small></span><ArrowUpRight size={18} /></Link>
+        <ThemeChoice />
         <nav className="fb-profile-menu" aria-label="Profile menu">
           {[
             ...(role === "manager" ? [["/app/school-admin", "School workspace", "Students, teachers, setup and parent links"]] : []),

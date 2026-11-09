@@ -7,6 +7,7 @@ import { AppDock } from '@/components/layout/AppDock'
 import { ProfileStudio } from "./ProfileStudio";
 import { MyAvatar } from "./profile";
 import { Logo } from "@/components/brand/Logo";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -297,7 +298,7 @@ export function Platform() {
     <div className="fp-root">
       <header className="fp-header">
         <Link to="/" aria-label="FindBox home"><Logo height={24} /></Link>
-        {user ? <ProfileMenu name={user.name} role={user.role}/> : <Link to="/app/sign-in">Sign in</Link>}
+        <span className="flex items-center gap-2"><ThemeToggle />{user ? <ProfileMenu name={user.name} role={user.role}/> : <Link to="/app/sign-in">Sign in</Link>}</span>
       </header>
       <main className="fp-main fb-route-enter" key={path}>
         {error && (
