@@ -8,8 +8,8 @@ export function AppDock({ unread: supplied, role = "parent" }: { unread?: number
   return (
     <nav className="fb-simple-dock" aria-label="Mobile primary">
       {(role === "student"
-        ? [["/app/home", "Home", House], ["/app/items", "My items", Boxes], ["/app/found", "I found it", ScanLine], ["/app/houses", "Houses", Trophy], ["/app/inbox", "Inbox", Inbox]]
-        : [["/app/home", "Home", House], ["/app/items", "Items", Boxes], ["/app/found", "I found it", ScanLine], ["/app/shop", "Shop", ShoppingBag], ["/app/inbox", "Inbox", Inbox]]
+        ? [["/app/home", "Home", House], ["/app/items", "My items", Boxes], ["/app/scan", "Scan", ScanLine], ["/app/houses", "Houses", Trophy], ["/app/inbox", "Inbox", Inbox]]
+        : [["/app/home", "Home", House], ["/app/items", "Items", Boxes], ["/app/scan", "Scan", ScanLine], ["/app/shop", "Shop", ShoppingBag], ["/app/inbox", "Inbox", Inbox]]
       ).map(([to, label, Icon]) => {
         const I = Icon as typeof House;
         return (

@@ -39,12 +39,12 @@ function FamilyHome({ user, workspace }: { user: User; workspace: Workspace }) {
       </div>
       <PromoCarousel slides={slides} />
       <Shortcuts items={student ? [
-        { label: "I found it", to: "/app/found", Icon: ScanLine },
+        { label: "Scan", to: "/app/scan", Icon: ScanLine },
         { label: "Houses", to: "/app/houses", Icon: Trophy },
         { label: "Streaks", to: "/app/streaks", Icon: Flame },
         { label: "Collect", to: "/app/cases", Icon: MapPinned, badge: waiting.length },
       ] : [
-        { label: "I found it", to: "/app/found", Icon: ScanLine },
+        { label: "Scan", to: "/app/scan", Icon: ScanLine },
         { label: "Children & QR", to: "/app/children", Icon: QrCode },
         { label: "Houses", to: "/app/houses", Icon: Trophy },
         { label: "Collect", to: "/app/cases", Icon: MapPinned, badge: waiting.length },
@@ -96,7 +96,7 @@ export function HomeDashboard({ user, workspace, staff }: { user: User; workspac
                               {user.role === "manager" && <Link to="/app/school-admin"><School size={17} />School workspace</Link>}
                               <Link to="/app/houses"><Trophy size={17} />Houses</Link>
                             </> : <>
-                              <Link to="/app/found"><PackageCheck size={17} />I found it</Link>
+                              <Link to="/app/scan"><PackageCheck size={17} />Scan</Link>
                             </>}
                           </div>
                         </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCode } from '@/components/ui/qr-code'
-import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Printer, QrCode, RefreshCw, ScanLine, School, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, Camera, Check, Clock, GraduationCap, KeyRound, Printer, QrCode, RefreshCw, School, UserPlus, X } from 'lucide-react'
+import './houses.css'
 import { HousePicker, type HouseId } from './Houses'
 import { NamedQR } from './NamedQR'
 import { api } from './api'
@@ -88,7 +89,8 @@ export function FamilyChildren() {
               </div>
               <h3 className="fm-sub">Belongings</h3>
               {child.items.length ? <ul className="fm-items">{child.items.map(i => <li key={i.id}><span>{i.name}</span><small>{CATEGORIES.find(c => c[0] === i.category)?.[1] || 'Other'}</small></li>)}</ul> : <p className="sa-note">Nothing listed yet.</p>}
-              <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link>{child.labels.remaining > 0 && <Link className="sa-btn" to="/app/found"><ScanLine size={16} />Scan a label</Link>}</div>
+              {child.labels.remaining > 0 && <Link className="fs-start fm-scan" to={`/app/scan?mode=add&child=${encodeURIComponent(child.name.split(' ')[0]!)}`}><span><Camera size={26} /></span>Scan a label to add a belonging</Link>}
+              <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link></div>
             </div></div>
           </aside>
         </div>
