@@ -1,8 +1,13 @@
 import type { ItemCategory } from '@/domain/types'
 import { CATEGORY } from '@/domain/labels'
 import { cx } from '@/lib/util'
+import { imagery } from '@/data/imagery'
+import { KeyRound, Laptop } from 'lucide-react'
 interface ItemArtProps { category: ItemCategory; photo?: string; size?: number | string; className?: string; alt?: string; muted?: boolean }
 export function ItemArt({ category, photo, size = 64, className, alt, muted }: ItemArtProps) {
+ const branded = imagery.catalog[category as keyof typeof imagery.catalog]
+ if (!photo?.startsWith('data:') && branded) return <img src={branded.src} alt={alt ?? branded.alt} width={size} height={size} loading="lazy" decoding="async" className={cx('fb-catalog-photo h-full w-full object-cover', muted && 'opacity-60 grayscale', className)} />
+ if (!photo?.startsWith('data:') && ['keys', 'electronics'].includes(category)) { const Icon = category === 'keys' ? KeyRound : Laptop; return <Icon aria-label={alt ?? CATEGORY[category].label} size={size} className={cx('fb-item-art', muted && 'opacity-60 grayscale', className)} /> }
  const uploaded = photo?.startsWith('data:'); const asset = ['keys','electronics'].includes(category) ? 'airtag' : category
  const catalog = ['clothing', 'book', 'lunchbox'].includes(category)
  const product = ['bottle', 'airtag'].includes(asset)

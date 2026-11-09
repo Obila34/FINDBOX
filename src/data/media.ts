@@ -18,9 +18,9 @@ const u = (id: string, w = 1600, h?: number) => `https://images.unsplash.com/pho
 
 export const IMG = {
   appleBooks: u('1503676260728-1c00da094a0b'),
-  bookStack: '/media/books.jpg',
+  bookStack: '/media/brand-v2/catalog-book.webp',
   libraryCurve: u('1524995997946-a1c2e315a42f'),
-  classroomTeacher: '/media/classroom.jpg',
+  classroomTeacher: '/media/brand-v2/hero-belongings.webp',
   libraryAisle: u('1427504494785-3a9ca7044f45'),
   emptyClassroom: '/media/school.jpg',
   loveToLearn: u('1546410531-bb4caa6b424d'),
