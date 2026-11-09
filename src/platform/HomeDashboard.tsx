@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Flame, MapPinned } from "lucide-react";
 import { api, type User, type Workspace } from "./api";
 import { HouseDot, type HouseId } from "./Houses";
+import { MyAvatar } from "./profile";
 import { imagery } from "@/data/imagery";
 import { ItemCard, PromoCarousel, SectionHead, Shortcuts, type Slide } from "./AppKit";
 
@@ -31,7 +32,10 @@ function FamilyHome({ user, workspace }: { user: User; workspace: Workspace }) {
           <p className="pa-hello">{hello},</p>
           <h1 className="pa-name">{user.name.split(" ")[0]}</h1>
         </div>
-        {myHouse && <Link to="/app/houses" className="pa-house-chip"><HouseDot house={myHouse} size={10} />{myHouse[0]!.toUpperCase() + myHouse.slice(1)}{rank ? ` · #${rank}` : ""}</Link>}
+        <div className="pa-home-actions">
+          {myHouse && <Link to="/app/houses" className="pa-house-chip"><HouseDot house={myHouse} size={10} />{myHouse[0]!.toUpperCase() + myHouse.slice(1)}{rank ? ` · #${rank}` : ""}</Link>}
+          <Link to="/app/account" aria-label="Your account and settings"><MyAvatar name={user.name} size={38} /></Link>
+        </div>
       </div>
       <PromoCarousel slides={slides} />
       <Shortcuts items={student ? [

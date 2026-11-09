@@ -1,3 +1,4 @@
+import { isInstalledApp } from '@/lib/standalone'
 import {PrivacyNotice} from './platform/PrivacyNotice'
 import {useSearchMetadata} from './lib/useSearchMetadata'
 import {SchoolInvitation,OwnershipTransfers} from './platform/SchoolWorkspace'
@@ -49,6 +50,8 @@ export function App() {
     return Company?<LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>:null
   }
   if(OPS_URL&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <MovedTo url={OPS_URL}/>
+  // The installed family app has no marketing pages: it opens on sign in, and signed-in people go on to their home.
+  if(isInstalledApp()&&!/^\/(app|manage|t|shop|school|privacy)(\/|$)/.test(platformLocation.pathname)) return <Navigate to="/app/sign-in" replace/>
   if(SCHOOL_URL&&location.origin!==SCHOOL_URL&&SCHOOL_PATHS.test(platformLocation.pathname)) return <MovedTo url={SCHOOL_URL+here}/>
   if(SCHOOL_URL&&location.origin===SCHOOL_URL&&!SCHOOL_PATHS.test(platformLocation.pathname)&&!/^\/(app\/(security|help|feedback|inbox|boxes|forgot|reset|verify)|privacy)/.test(platformLocation.pathname)) return <Navigate to="/school/sign-in" replace/>
   if(['/privacy','/privacy/children'].includes(platformLocation.pathname)) return <PrivacyNotice/>

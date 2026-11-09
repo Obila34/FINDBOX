@@ -5,7 +5,7 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { SwirlMark } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
 import FooterBlock from '@/components/ui/footer-3'
-import { SiteNav } from '@/components/layout/SiteNav'
+import { isInstalledApp } from '@/lib/standalone'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -59,9 +59,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
       <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.6] mix-blend-overlay" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/85" />
 
-      <SiteNav overlay />
-
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-10 pt-32 md:pt-24">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-10 pt-12 md:pt-16">
         <motion.section layout={!still} transition={{ layout: { duration: 0.5, ease } }}
           className={cx('fa-card w-full rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.12] via-white/[0.05] to-black/40 p-7 shadow-2xl backdrop-blur-xl sm:p-8', wide ? 'max-w-xl' : 'max-w-sm')}
           initial={still ? false : { opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
@@ -102,11 +100,11 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
         <motion.div className="mt-8 flex flex-col items-center gap-4 text-center" initial={still ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease }}>
           <p className="inline-flex items-center gap-2 text-xs text-gray-300 sm:text-sm"><ShieldCheck size={16} className="text-sage" />Private details. School-verified returns.</p>
           {footer}
-          {backLink}
+          {!(isInstalledApp() && back.to === "/") && backLink}
         </motion.div>
       </main>
     </div>
-    {siteFooter && <div className="mt-3 sm:mt-4 md:mt-6"><FooterBlock onInstall={() => window.location.assign('/app/sign-in')} /></div>}
+    {siteFooter && !isInstalledApp() && <div className="mt-3 sm:mt-4 md:mt-6"><FooterBlock onInstall={() => window.location.assign('/app/sign-in')} /></div>}
   </div>
 }
 
