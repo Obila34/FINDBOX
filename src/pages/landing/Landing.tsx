@@ -83,7 +83,7 @@ function Hero() {
       <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.7] mix-blend-overlay" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/85" />
 
-      <Link to="/" aria-label="FindBox home" className="absolute left-4 top-3 z-10 hidden rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-md md:block lg:left-6 lg:top-4"><Logo height={20} /></Link>
+      <Link to="/" aria-label="FindBox home" className="absolute left-3 top-14 z-10 rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-md md:left-4 md:top-3 lg:left-6 lg:top-4"><span className="md:hidden"><Logo height={16} /></span><span className="hidden md:inline"><Logo height={20} /></span></Link>
       <nav aria-label="Main" className="absolute left-1/2 top-0 z-10 -translate-x-1/2 rounded-b-2xl bg-black px-4 py-2 md:rounded-b-3xl md:px-8 md:py-3">
         <ul className="flex items-center gap-3 whitespace-nowrap text-[10px] sm:gap-6 sm:text-xs md:gap-10 md:text-sm lg:gap-14">
           {nav.map(n => <li key={n.label}><Link to={n.to} className="cinema-link">{n.label}</Link></li>)}

@@ -6,6 +6,7 @@ import './school-admin.css'
 import { AppDock } from '@/components/layout/AppDock'
 import { ProfileStudio } from "./ProfileStudio";
 import { MyAvatar } from "./profile";
+import { imagery } from "@/data/imagery";
 import { Logo } from "@/components/brand/Logo";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
@@ -46,11 +47,7 @@ const categories = [
   "other",
 ];
 const picture = (category: string) =>
-  "/media/catalog/" +
-  (["bottle", "book", "clothing", "lunchbox"].includes(category)
-    ? category
-    : "book") +
-  "-480.webp";
+  (imagery.catalog[category as keyof typeof imagery.catalog] ?? imagery.catalog.book).src;
 const label = (s: string) => s.replaceAll("_", " ");
 function Field({
   name,
@@ -483,7 +480,6 @@ export function Platform() {
                     FindBox pack. Choose a category, add a name, and you’re
                     done.
                   </p>
-                  <img src="/media/vector/smart-tag.svg" alt="NFC tag" />
                 </div>
                 <form
                   className="fp-panel"

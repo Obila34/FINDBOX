@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { QRCode } from '@/components/ui/qr-code'
+import { imagery } from '@/data/imagery'
 import { ThemeChoice } from '@/components/ui/ThemeToggle'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
@@ -500,7 +501,7 @@ function MiniStat({ icon, label, value, action, cta }: { icon: ReactNode; label:
   return <section className="db-card sa-mini"><span className="db-kpi-icon">{icon}</span><div><small>{label}</small><strong>{value}</strong></div><button type="button" className="db-link" onClick={action}>{cta}<ArrowRight size={14} /></button></section>
 }
 
-const picture = (c: string) => ['bottle', 'book', 'clothing', 'lunchbox'].includes(c) ? `/media/catalog/${c}-480.webp` : `/media/products/${['sports', 'stationery'].includes(c) ? c : 'other'}-1024.webp`
+const picture = (c: string) => c in imagery.catalog ? imagery.catalog[c as keyof typeof imagery.catalog].src : `/media/products/${['sports', 'stationery'].includes(c) ? c : 'other'}-1024.webp`
 
 function CaseList({ cases, now, empty }: { cases: Case[]; now: number; empty: string }) {
   if (!cases.length) return <div className="sa-empty is-small"><CheckCircle2 size={30} /><p>{empty}</p></div>

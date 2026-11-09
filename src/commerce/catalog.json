@@ -117,7 +117,7 @@
     ],
     "color": "#e4eadc",
     "stockFormat": "nfc",
-    "available": true
+    "available": false
   },
   {
     "id": "complete",
@@ -125,15 +125,15 @@
     "name": "The complete kit",
     "subtitle": "One pack. Every kind of day.",
     "price": 2999,
-    "count": 41,
+    "count": 38,
     "format": "All-in-one pack",
     "category": "Bundles",
     "image": "/media/catalog/complete-qr-960.webp",
-    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers, 2 engraved tags and 3 NFC + QR tags. 41 unique item identities in one account.",
+    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers and 2 engraved tags. 38 unique item identities in one account.",
     "uses": [
       "Clothes & everyday essentials",
       "Cables, chargers, bags & keys",
-      "3 premium NFC tags included"
+      "QR stickers and fabric labels together"
     ],
     "color": "#e4eadc",
     "stockFormat": "mixed",

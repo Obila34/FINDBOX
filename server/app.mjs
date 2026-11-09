@@ -631,7 +631,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
       ).rows[0];
       for (const line of lines) {
         const reserved = [];
-        const parts = line.productId === 'complete-41' ? [['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2],['nfc',3]] : [[null,line.tagCount]];
+        const parts = line.productId === 'complete-41' ? [['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2]] : [[null,line.tagCount]];
         for (const [format,count] of parts) {
           const rows=(await db.query("SELECT id FROM tags WHERE product_id=$1 AND status='stock' AND ($3::text IS NULL OR format=$3) ORDER BY created_at,id LIMIT $2 FOR UPDATE SKIP LOCKED",[line.productId,count*line.quantity,format])).rows;
           requireThat(rows.length===count*line.quantity,409,'This pack is currently out of stock');

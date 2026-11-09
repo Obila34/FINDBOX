@@ -47,7 +47,7 @@ export function renderEmail({ subject, text, origin = "https://findbox.africa", 
   <tr><td style="background:${NIGHT};border-radius:22px 22px 0 0;padding:24px 30px">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td><a href="${base}/" style="text-decoration:none"><img src="${base}/icons/icon-192.png" width="34" height="34" alt="" style="vertical-align:middle;border-radius:8px;border:0">
-        <span style="vertical-align:middle;margin-left:10px;font:700 24px/1 ${FONT};letter-spacing:-1.6px;color:${GREEN}">FINDBOX</span></a></td>
+        <span style="vertical-align:middle;margin-left:12px;font:300 24px/1 ${FONT};letter-spacing:3px;color:${GREEN}">FIND<b style="font-weight:700">BOX</b></span></a></td>
       <td align="right" style="font:11px/1 ${FONT};letter-spacing:2px;text-transform:uppercase;color:#9da59a">School lost &amp; found</td>
     </tr></table>
   </td></tr>
@@ -64,7 +64,7 @@ export function renderEmail({ subject, text, origin = "https://findbox.africa", 
       <td valign="top" style="padding-right:12px">${link("/app/sign-in", "Log in")}<br>${link("/contact", "Contact us")}<br>${link("/privacy", "Privacy")}</td>
       <td valign="top"><a href="mailto:hello@findbox.africa" style="color:${CREAM};text-decoration:none;font:13px/1.9 ${FONT}">hello@findbox.africa</a></td>
     </tr></table>
-    <p style="margin:22px 0 0;font:700 44px/1 ${FONT};letter-spacing:-3px;color:${GREEN}">FINDBOX<sup style="font-size:14px;letter-spacing:0">&reg;</sup></p>
+    <p style="margin:22px 0 0;font:300 44px/1 ${FONT};letter-spacing:5px;color:${GREEN}">FIND<b style="font-weight:700">BOX</b><sup style="font-size:14px;letter-spacing:0">&reg;</sup></p>
     <p style="margin:12px 0 0;font:11px/1.6 ${FONT};color:#78806f">&copy; ${year} FindBox. Built for school communities. You are receiving this because of your FindBox account or your school's use of FindBox.</p>
   </td></tr>
 </table></td></tr></table></body></html>`;

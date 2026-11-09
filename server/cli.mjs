@@ -120,7 +120,7 @@ try {
     ).rows[0];
     requireThat(product, 404, "Product not found");
     requireThat(product.format !== "mixed" || count % 41 === 0, 400, "Complete kits must be generated in multiples of 41 tags");
-    const kitFormats=[...Array(12).fill("sticker"),...Array(12).fill("fabric"),...Array(6).fill("wrap"),...Array(6).fill("compact"),...Array(2).fill("engraved"),...Array(3).fill("nfc")];
+    const kitFormats=[...Array(12).fill("sticker"),...Array(12).fill("fabric"),...Array(6).fill("wrap"),...Array(6).fill("compact"),...Array(2).fill("engraved")];
     const codes = [];
     await transaction(pool, async (db) => {
       for (let i = 0; i < count; i++) {

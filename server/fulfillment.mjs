@@ -15,7 +15,7 @@ export async function fulfill(pool, orderId, { after } = {}) {
       "Only paid orders may be fulfilled",
     );
     for (const line of order.lines) {
-      const parts=line.productId==='complete-41'?[['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2],['nfc',3]]:[[null,line.tagCount]];
+      const parts=line.productId==='complete-41'?[['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2]]:[[null,line.tagCount]];
       for(const [format,n] of parts){
         const count=n*line.quantity;
         const held=(await db.query("SELECT id FROM tags WHERE order_id=$1 AND product_id=$2 AND status='reserved' AND ($3::text IS NULL OR format=$3) FOR UPDATE",[order.id,line.productId,format])).rows;

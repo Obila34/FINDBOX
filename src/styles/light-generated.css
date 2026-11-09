@@ -223,7 +223,7 @@ html[data-theme="light"] .fc-app-story {
     background: radial-gradient(at right bottom,#92a577,#173d30 75%)
 }
 html[data-theme="light"] .fc-app-story .fp-primary {
-    background: #eef2e5;
+    background: #eef2e5 !important;
     color: #173d30 !important
 }
 html[data-theme="light"] .fc-service-row svg {

@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
-import { Logo } from '@/components/brand/Logo'
+import { Logo, SwirlMark } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
 import FooterBlock from '@/components/ui/footer-3'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -69,8 +69,8 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
           className={cx('fa-card w-full rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.12] via-white/[0.05] to-black/40 p-7 shadow-2xl backdrop-blur-xl sm:p-8', wide ? 'max-w-xl' : 'max-w-sm')}
           initial={still ? false : { opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
           <motion.div layout="position" className="mb-6 flex flex-col items-center text-center">
-            <span className="mb-5 grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-white/15 shadow-lg ring-1 ring-white/20">
-              <img src="/icons/icon-512.png" alt="" className="h-full w-full object-cover" />
+            <span className="mb-5 grid h-14 w-14 place-items-center rounded-full bg-black/40 text-[#8fa77c] shadow-lg ring-1 ring-white/15">
+              <SwirlMark size={40} />
             </span>
             {kicker && <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-sage sm:text-xs">{kicker}</p>}
             <AnimatePresence mode="wait" initial={false}>
