@@ -6,6 +6,7 @@ import {
   Share2,
   LifeBuoy,
   CheckCircle2,
+  ArrowLeft,
 } from "lucide-react";
 import { api, ApiError, type User } from "@/platform/api";
 import { SiteNav } from "@/components/layout/SiteNav";
@@ -214,7 +215,7 @@ export function Support() {
   }
   return (
     <>
-    <SiteNav />
+    {inApp ? <div className="fb-support-back"><Link to="/app/account"><ArrowLeft size={16} />Back</Link></div> : <SiteNav />}
     <div className="fb-support">
       <main>
         <span className="fb-kicker">CONTACT & SUPPORT</span>
@@ -435,9 +436,9 @@ export function Support() {
                 Keep your request reference so we can follow up. Signed-in users
                 can read their replies here.
               </p>
-              <Link to="/shop/help">
+              {!inApp && <Link to="/shop/help">
                 Browse common questions <ArrowUpRight size={16} />
-              </Link>
+              </Link>}
               <Link to="/app/inbox">
                 Collection notifications <ArrowUpRight size={16} />
               </Link>
@@ -530,11 +531,10 @@ export function Support() {
           </section>
         )}
       </main>
-      <footer>
+      {!inApp && <footer>
         <StudioBrand />
-        <p>A little less lost. A little more connected.</p>
         <Link to="/shop">Explore the tag store</Link>
-      </footer>
+      </footer>}
     </div>
     </>
   );

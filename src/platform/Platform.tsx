@@ -10,7 +10,7 @@ import { ProfileStudio } from "./ProfileStudio";
 import { MyAvatar } from "./profile";
 import { imagery } from "@/data/imagery";
 import { SiteNav } from "@/components/layout/SiteNav";
-import { isInstalledApp } from "@/lib/standalone";
+import { isAppPage } from "@/lib/standalone";
 import { ThemeChoice } from "@/components/ui/ThemeToggle";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
@@ -300,7 +300,7 @@ export function Platform() {
     );
   return (
     <div className="fp-root">
-      {!(isInstalledApp() && !staff) && <SiteNav user={user ? { name: user.name, role: user.role } : null} cart={!user || user.role === "parent"} />}
+      {!(isAppPage(path) && !staff) && <SiteNav user={user ? { name: user.name, role: user.role } : null} cart={!user || user.role === "parent"} />}
       <main className="fp-main fb-route-enter" key={path}>
         {error && (
           <div role="alert" className="fp-alert">
@@ -832,7 +832,7 @@ export function Platform() {
           ))}
         </nav>
       )}
-      {!(isInstalledApp() && !staff) && <footer className="fp-footer">
+      {!(isAppPage(path) && !staff) && <footer className="fp-footer">
         <span className="fb-wordmark">FINDBOX</span>
         <Link to="/app/boxes">Collection boxes</Link>
         <Link to="/shop">Find your tags</Link>
