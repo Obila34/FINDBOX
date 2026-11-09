@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { QRCode } from '@/components/ui/qr-code'
 import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Printer, QrCode, RefreshCw, ScanLine, School, UserPlus, X } from 'lucide-react'
 import { HousePicker, type HouseId } from './Houses'
+import { NamedQR } from './NamedQR'
 import { api } from './api'
 import { notify } from './feedback'
 import './dashboard.css'
@@ -76,18 +77,15 @@ export function FamilyChildren() {
       {open && (() => {
         const child = qrs.find(q => q.id === open)
         if (!child) return null
-        const first = child.name.split(' ')[0]
         return <div className="sa-panel-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(null) }}>
           <aside className="sa-panel" role="dialog" aria-modal="true" aria-label={`${child.name}'s QR`}>
             <header><div><p>LABELS &amp; BELONGINGS</p><h2>{child.name}</h2></div><button type="button" className="sa-panel-close" aria-label="Close" onClick={() => setOpen(null)}><X size={18} /></button></header>
             <div className="sa-panel-body"><div className="sa-form">
+              {child.code && <div className="fm-qr fm-no-print" onContextMenu={e => e.preventDefault()}><NamedQR code={child.code} name={child.name} size={170} reveal /></div>}
               <div className="fm-labels">
                 <strong>{child.labels.remaining}</strong>
-                <span>{child.labels.delivered ? `of ${child.labels.delivered} delivered labels left` : "No labels delivered yet"}</span>
+                <span>{child.labels.delivered ? `label${child.labels.remaining === 1 ? "" : "s"} left of ${child.labels.delivered}` : "labels yet. Order labels to start."}</span>
               </div>
-              <p className="sa-note">{child.labels.delivered
-                ? `To add a belonging, stick one of ${first}'s labels on it, then scan it with I found it. Every label carries the same QR with ${first}'s name.`
-                : `Order labels for ${first}. Once FindBox marks them delivered, scan a label to add each belonging.`}</p>
               <h3 className="fm-sub">Belongings</h3>
               {child.items.length ? <ul className="fm-items">{child.items.map(i => <li key={i.id}><span>{i.name}</span><small>{CATEGORIES.find(c => c[0] === i.category)?.[1] || 'Other'}</small></li>)}</ul> : <p className="sa-note">Nothing listed yet.</p>}
               <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link>{child.labels.remaining > 0 && <Link className="sa-btn" to="/app/found"><ScanLine size={16} />Scan a label</Link>}</div>
