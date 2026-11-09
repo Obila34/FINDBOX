@@ -146,3 +146,6 @@ html body .pa-section-head h2 { font-size: 20px !important; margin: 0 !important
 /* Home header with the house chip */
 .pa-home-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .pa-house-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--pa-line); background: var(--pa-surface); color: var(--pa-text); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.pa-home-actions { display: flex; align-items: center; gap: 8px; }
+.fp-account-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+.fp-signout { padding: 10px 18px; border-radius: 999px; border: 1px solid var(--pa-line); background: transparent; color: var(--pa-alert); font-weight: 600; cursor: pointer; }

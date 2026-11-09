@@ -10,6 +10,8 @@ import { ProfileStudio } from "./ProfileStudio";
 import { MyAvatar } from "./profile";
 import { imagery } from "@/data/imagery";
 import { SiteNav } from "@/components/layout/SiteNav";
+import { isInstalledApp } from "@/lib/standalone";
+import { ThemeChoice } from "@/components/ui/ThemeToggle";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
@@ -294,7 +296,7 @@ export function Platform() {
     );
   return (
     <div className="fp-root">
-      <SiteNav user={user ? { name: user.name, role: user.role } : null} cart={!user || user.role === "parent"} />
+      {!(isInstalledApp() && !staff) && <SiteNav user={user ? { name: user.name, role: user.role } : null} cart={!user || user.role === "parent"} />}
       <main className="fp-main fb-route-enter" key={path}>
         {error && (
           <div role="alert" className="fp-alert">
@@ -714,6 +716,7 @@ export function Platform() {
             {path === "/app/account" && (
               <section className="fp-panel">
                 <ProfileStudio role={user.role} school={workspace.school?.name}/><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
+                <div className="fp-account-row"><ThemeChoice /><button type="button" className="fp-signout" disabled={busy} onClick={() => run(async () => { await api("/auth/logout", {}); setUser(null); setWorkspace(null); navigate("/app/sign-in", { replace: true }); })}>Sign out</button></div>
                 <p>{user.email}</p>
                 <p>
                   {label(user.role)} · {workspace.school?.name}
@@ -922,11 +925,11 @@ export function Platform() {
           ))}
         </nav>
       )}
-      <footer className="fp-footer">
+      {!(isInstalledApp() && !staff) && <footer className="fp-footer">
         <span className="fb-wordmark">FINDBOX</span>
         <Link to="/app/boxes">Collection boxes</Link>
         <Link to="/shop">Find your tags</Link>
-      </footer>
+      </footer>}
 
     </div>
   );
