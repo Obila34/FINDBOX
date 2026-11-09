@@ -6,6 +6,7 @@ import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { api, ApiError } from './api'
 import './company.css'
 import { SignIn1 } from '@/components/ui/modern-stunning-sign-in'
+import { Logo } from '@/components/brand/Logo'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { CompanyDashboard, type Overview, type Health } from './CompanyDashboard'
 import { notify } from './feedback'
@@ -73,7 +74,7 @@ export function Company() {
       {(challenge||emailChallenge)&&<button type="button" onClick={()=>{setChallenge(false);setEmailChallenge(false)}}>Use a different account</button>}</form>}
       {denied&&<Link to="/app/security">Manage two-factor authentication</Link>}
     </div></SignIn1>
-  return <div className="co-root"><header className="co-header"><Link to="/" className="co-brand">FINDBOX <span>Company</span></Link><span className="flex items-center gap-3"><span><ShieldCheck size={16}/> Restricted workspace</span><ThemeToggle /></span></header>
+  return <div className="co-root"><header className="co-header"><Link to="/" className="co-brand"><Logo height={22} /> <span>Company</span></Link><span className="flex items-center gap-3"><span><ShieldCheck size={16}/> Restricted workspace</span><ThemeToggle /></span></header>
     {loading?<main className="co-login" role="status">Checking access…</main>:access&&<CompanyConsole access={access} onLogout={()=>void logout()}><CompanyDashboard role={access.role} name={access.name} overview={overview} health={health} busy={busy} onRefresh={()=>void load()} onLogout={()=>void logout()} security={emailEnabled?<button type="button" onClick={()=>setSecurityInfo(v=>!v)} aria-expanded={securityInfo}><ShieldCheck size={16}/> Security</button>:<Link to="/app/security"><ShieldCheck size={16}/> Security</Link>}>
     {error&&<p className="co-error" role="alert">{error}</p>}
     {securityInfo&&<section className="co-panel"><h2>Password + email verification</h2><p>Every sign-in requires your website password and a single-use six-digit email code. Codes expire after 60 seconds; resends are available after 60 seconds. Five incorrect attempts block that code. Company sessions expire after eight hours.</p></section>}

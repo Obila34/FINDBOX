@@ -8,6 +8,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { api, ApiError, type User } from "@/platform/api";
+import { SiteNav } from "@/components/layout/SiteNav";
 import { StudioBrand } from "@/components/brand/StudioBrand";
 import { usePerson } from "@/store/useStore";
 import "./support.css";
@@ -212,14 +213,9 @@ export function Support() {
     }
   }
   return (
+    <>
+    <SiteNav />
     <div className="fb-support">
-      <header>
-        <StudioBrand />
-        <Link to={inApp ? "/app/account" : "/"}>
-          {inApp ? "Back to account" : "Back to FindBox"}{" "}
-          <ArrowUpRight size={16} />
-        </Link>
-      </header>
       <main>
         <span className="fb-kicker">CONTACT & SUPPORT</span>
         <h1>
@@ -540,5 +536,6 @@ export function Support() {
         <Link to="/shop">Explore the tag store</Link>
       </footer>
     </div>
+    </>
   );
 }

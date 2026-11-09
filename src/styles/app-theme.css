@@ -79,3 +79,22 @@ input[type=checkbox], input[type=radio], input[type=range] { accent-color: #8fa7
 @media (display-mode: standalone) {
   .fp-header, .fb-workspace-header { padding-top: calc(env(safe-area-inset-top) + 10px) !important; }
 }
+
+/* Wordmark: FIND light, BOX bold, generous tracking, then the turning swirl. */
+.fb-wordmark { display: inline-flex !important; align-items: center; gap: .32em !important; letter-spacing: .08em !important; line-height: 1; white-space: nowrap; font-family: var(--fb-font); }
+.fb-wordmark-text { display: inline-flex; align-items: baseline; }
+.fb-word-find { font-weight: 300; }
+.fb-word-box { font-weight: 700; letter-spacing: .04em; }
+.fb-swirl { flex-shrink: 0; overflow: visible; }
+.fb-swirl-rings { transform-origin: 50px 50px; transform-box: view-box; }
+.fb-swirl.is-turning .fb-swirl-rings { animation: fb-swirl-turn 14s linear infinite; }
+a:hover .fb-swirl.is-turning .fb-swirl-rings, .fb-wordmark:hover .fb-swirl.is-turning .fb-swirl-rings { animation-duration: 3.5s; }
+@keyframes fb-swirl-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .fb-swirl.is-turning .fb-swirl-rings { animation: none; } }
+.fb-footer-logo { display: flex; align-items: center; gap: .08em; letter-spacing: .06em; color: #657b56 !important; }
+.fb-footer-logo .fb-footer-swirl { width: .78em; height: .78em; margin-left: .14em; }
+.fb-footer-logo .fb-footer-reg { font-size: .18em; align-self: flex-start; margin-top: .4em; font-weight: 400; }
+.co-brand { display: inline-flex; align-items: center; gap: 10px; }
+.fb-footer-logo .fb-word-find, .fb-footer-logo .fb-word-box { font-size: 1em !important; padding-top: 0 !important; letter-spacing: .06em !important; }
+.fb-footer-logo .fb-word-box { letter-spacing: .03em !important; }
+.fb-footer-logo .fb-footer-reg { font-size: .14em !important; padding-top: 0 !important; }

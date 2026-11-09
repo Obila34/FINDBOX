@@ -1,7 +1,7 @@
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import catalog from './catalog.json';
 import { isShopBrowsePath } from './access';
-import { LabelJourney, LabelDetails } from './LabelJourney';
+import { LabelDetails } from './LabelJourney';
 import { useState, useEffect, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -177,7 +177,7 @@ export function ServerStorefront() {
   if ((!loaded || !user) && !isShopBrowsePath(path)) return <div className="fc-root fb-landing"><MarketHeader/><main className="fc-main">{error&&<p role="alert" className="fp-alert">{error}</p>}{loaded?signIn:<p role="status">Checking your account…</p>}</main><FooterBlock onInstall={()=>nav('/app/sign-in')}/></div>;
   const cards = (
     <div className="fc-products">
-      {products.map((p) => (
+      {products.filter((p) => p.format !== "nfc").map((p) => (
         <article key={p.id} className="fc-product">
           <Link
             to={base + "/products/" + p.id}
@@ -201,7 +201,7 @@ export function ServerStorefront() {
   );
   return (
     <div className={"fc-root fb-landing" + (inApp ? " fc-in-app" : "")}>
-      <MarketHeader />
+      <MarketHeader user={user ? { name: user.name, role: user.role } : null} />
       <main className="fc-main" id="main">
         {error && (
           <p role="alert" className="fp-alert">
@@ -217,59 +217,7 @@ export function ServerStorefront() {
           </div>
         )}
         {!loaded && <p role="status">Opening the store…</p>}
-        {path === "/shop" && !inApp && (
-          <>
-            <section className="fp-shop-hero">
-              <div>
-                <span className="fp-kicker">THE FINDBOX COLLECTION</span>
-                <h1>
-                  School labels.
-                  <br />
-                  <em>Identify and manage school belongings.</em>
-                </h1>
-                <p>
-                  For the things that go everywhere. Shop your tags, connect
-                  your belongings and find your way back.
-                </p>
-                <Link className="fp-primary" to={base + "/catalog"}>
-                  Find your tags <ArrowUpRight size={18} />
-                </Link>
-              </div>
-              <div className="fp-shop-art">
-                <span className="fp-orbit" />
-                <img
-                  src="/media/objects/bottle-1280.webp"
-                  alt="A bottle with a FindBox label"
-                />
-                <img src="/media/vector/smart-tag.svg" alt="NFC tag" />
-              </div>
-            </section>
-            <LabelJourney />
-            <section className="fc-app-story">
-              <div>
-                <span className="fp-kicker">A TAG IS JUST THE BEGINNING</span>
-                <h2>
-                  One connected
-                  <br />
-                  school day.
-                </h2>
-                <p>
-                  The same account. Your orders, belongings and school
-                  collections.
-                </p>
-                <Link className="fp-primary" to="/app/home">
-                  Open your FindBox <ArrowUpRight size={18} />
-                </Link>
-              </div>
-              <img
-                src="/media/vector/phone.svg"
-                alt="FindBox explorer"
-                loading="lazy"
-              />
-            </section>
-          </>
-        )}
-        {(path === "/shop/catalog" || inApp && path === "/shop") && (
+        {(path === "/shop/catalog" || path === "/shop") && (
           <>
             <div className="fc-page-heading">
               <span className="fp-kicker">SMALL THINGS, SORTED</span>
@@ -299,8 +247,8 @@ export function ServerStorefront() {
                   {product.available===false?'Coming soon':'Add to bag'} <Plus size={18} />
                 </button>
                 <p>
-                  QR and NFC identify belongings when scanned. They do not
-                  provide live GPS tracking.
+                  QR stickers and fabric tags identify belongings when
+                  scanned. They do not provide live GPS tracking.
                 </p>
               </div>
             </section>

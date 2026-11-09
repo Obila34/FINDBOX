@@ -1,13 +1,12 @@
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
-import { ProfileMenu } from '@/components/layout/ProfileMenu'
 import { HomeDashboard } from './HomeDashboard'
 import './dashboard.css'
 import './school-admin.css'
 import { AppDock } from '@/components/layout/AppDock'
 import { ProfileStudio } from "./ProfileStudio";
 import { MyAvatar } from "./profile";
-import { Logo } from "@/components/brand/Logo";
-import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { imagery } from "@/data/imagery";
+import { SiteNav } from "@/components/layout/SiteNav";
 import { ServerStreaks } from "@/pages/student/ServerStreaks";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -46,11 +45,7 @@ const categories = [
   "other",
 ];
 const picture = (category: string) =>
-  "/media/catalog/" +
-  (["bottle", "book", "clothing", "lunchbox"].includes(category)
-    ? category
-    : "book") +
-  "-480.webp";
+  (imagery.catalog[category as keyof typeof imagery.catalog] ?? imagery.catalog.book).src;
 const label = (s: string) => s.replaceAll("_", " ");
 function Field({
   name,
@@ -296,10 +291,7 @@ export function Platform() {
     );
   return (
     <div className="fp-root">
-      <header className="fp-header">
-        <Link to="/" aria-label="FindBox home"><Logo height={24} /></Link>
-        <span className="flex items-center gap-2"><ThemeToggle />{user ? <ProfileMenu name={user.name} role={user.role}/> : <Link to="/app/sign-in">Sign in</Link>}</span>
-      </header>
+      <SiteNav user={user ? { name: user.name, role: user.role } : null} cart={!user || user.role === "parent"} />
       <main className="fp-main fb-route-enter" key={path}>
         {error && (
           <div role="alert" className="fp-alert">
@@ -483,7 +475,6 @@ export function Platform() {
                     FindBox pack. Choose a category, add a name, and you’re
                     done.
                   </p>
-                  <img src="/media/vector/smart-tag.svg" alt="NFC tag" />
                 </div>
                 <form
                   className="fp-panel"

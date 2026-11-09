@@ -2,10 +2,10 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
-import { Logo } from '@/components/brand/Logo'
+import { SwirlMark } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
 import FooterBlock from '@/components/ui/footer-3'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { SiteNav } from '@/components/layout/SiteNav'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -59,18 +59,15 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
       <div className="noise-overlay pointer-events-none absolute inset-0 opacity-[0.6] mix-blend-overlay" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/85" />
 
-      <header className="relative z-10 flex items-center justify-between px-5 pt-4 md:px-8 md:pt-6">
-        <Link to="/" aria-label="FindBox home"><Logo height={22} variant="inverted" /></Link>
-        <div className="flex items-center gap-3">{backLink}<ThemeToggle className="h-8 w-8" /></div>
-      </header>
+      <SiteNav overlay />
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-10">
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-10 pt-32 md:pt-24">
         <motion.section layout={!still} transition={{ layout: { duration: 0.5, ease } }}
           className={cx('fa-card w-full rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.12] via-white/[0.05] to-black/40 p-7 shadow-2xl backdrop-blur-xl sm:p-8', wide ? 'max-w-xl' : 'max-w-sm')}
           initial={still ? false : { opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}>
           <motion.div layout="position" className="mb-6 flex flex-col items-center text-center">
-            <span className="mb-5 grid h-12 w-12 place-items-center overflow-hidden rounded-full bg-white/15 shadow-lg ring-1 ring-white/20">
-              <img src="/icons/icon-512.png" alt="" className="h-full w-full object-cover" />
+            <span className="mb-5 grid h-14 w-14 place-items-center rounded-full bg-black/40 text-[#8fa77c] shadow-lg ring-1 ring-white/15">
+              <SwirlMark size={40} />
             </span>
             {kicker && <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-sage sm:text-xs">{kicker}</p>}
             <AnimatePresence mode="wait" initial={false}>
@@ -105,6 +102,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
         <motion.div className="mt-8 flex flex-col items-center gap-4 text-center" initial={still ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.3, ease }}>
           <p className="inline-flex items-center gap-2 text-xs text-gray-300 sm:text-sm"><ShieldCheck size={16} className="text-sage" />Private details. School-verified returns.</p>
           {footer}
+          {backLink}
         </motion.div>
       </main>
     </div>
