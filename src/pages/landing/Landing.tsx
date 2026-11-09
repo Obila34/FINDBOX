@@ -111,7 +111,7 @@ function Hero() {
 function About() {
   return <section id="about" className="scroll-mt-6 bg-night px-4 py-16 md:px-6 md:py-24">
     <div className="mx-auto max-w-6xl rounded-2xl bg-night-card px-6 py-16 text-center md:rounded-[2rem] md:px-12 md:py-24">
-      <p className="mb-8 text-[10px] uppercase tracking-[0.2em] text-primary sm:text-xs">Made in Kenya · Built by parents</p>
+      <p className="mb-8 text-[10px] uppercase tracking-[0.2em] text-primary sm:text-xs">Less waste. Fewer replacements.</p>
       <h2 className="mx-auto max-w-3xl text-3xl leading-[0.95] tracking-[-0.03em] sm:text-4xl sm:leading-[0.9] md:text-5xl lg:text-6xl xl:text-7xl" style={{ color: TEXT }}>
         <WordsPullUpMultiStyle segments={[
           { text: 'Lost items cost families money', className: 'font-normal' },
@@ -145,7 +145,6 @@ function Features() {
     <div className="relative mx-auto max-w-[1440px]">
       <h2 className="mb-12 flex flex-col gap-1 text-center text-xl font-normal tracking-[-0.02em] sm:text-2xl md:mb-16 md:text-3xl lg:text-4xl">
         <WordsPullUpMultiStyle segments={[{ text: 'Four steps from a labelled belonging to a recorded handover.', className: 'text-cream-soft' }]} />
-        <WordsPullUpMultiStyle segments={[{ text: 'Built for real schools. Designed for every family.', className: 'text-gray-500' }]} />
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:gap-2 md:grid-cols-2 md:gap-1 lg:h-[500px] lg:grid-cols-4">
         <FeatureCard index={0} className="fb-dark-scope group relative min-h-[380px] overflow-hidden rounded-2xl lg:min-h-0">

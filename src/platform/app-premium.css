@@ -142,3 +142,7 @@ html body .pa-section-head h2 { font-size: 20px !important; margin: 0 !important
 .pa-section-head a { white-space: nowrap; }
 /* Phones: the Inbox tab carries notifications, so the floating bell steps aside. */
 @media (max-width: 1023px) { body:has(.fb-simple-dock) .fb-notification-bell { display: none !important; } }
+
+/* Home header with the house chip */
+.pa-home-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.pa-house-chip { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px; border: 1px solid var(--pa-line); background: var(--pa-surface); color: var(--pa-text); font-size: 13px; font-weight: 600; white-space: nowrap; }

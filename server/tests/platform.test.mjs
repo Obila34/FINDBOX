@@ -291,18 +291,8 @@ test("public scan exposes box directions but no owner identity", async () => {
 test("receipt starts countdown, enforces school access and collection state", async () => {
   const item = (await call("GET", "/api/workspace", null, parent)).json()
     .items[0];
-  assert.equal(
-    (await call("POST", "/api/items/" + item.id + "/lost", {}, other))
-      .statusCode,
-    404,
-  );
-  const lost = await call(
-    "POST",
-    "/api/items/" + item.id + "/lost",
-    {},
-    parent,
-  );
-  assert.equal(lost.statusCode, 200, lost.body);
+  assert.ok(item);
+  assert.equal((await call("POST", "/api/items/" + item.id + "/lost", {}, parent)).statusCode, 404);
   const found = await call(
     "POST",
     "/api/found",
@@ -1230,7 +1220,6 @@ test('complimentary demo tags enforce owner, school, expiry and private activati
  const activated=await call('POST','/api/tags/activate',payload,owner);assert.equal(activated.statusCode,200,activated.body);
  assert.equal((await call('POST','/api/tags/activate',payload,owner)).statusCode,409);
  const scan=await call('GET','/api/tags/FB-demo-main');assert.equal(scan.statusCode,200);assert(!scan.body.includes('demo-owner@test.com'));assert(!scan.body.includes('demo-private'));
- const lost=await call('POST','/api/items/'+activated.json().id+'/lost',{},owner);assert.equal(lost.statusCode,200,lost.body);
  const found=await call('POST','/api/found',{code:payload.code,boxId:'box-a'},operator);assert.equal(found.statusCode,200,found.body);
  const caseId=found.json().id;
  const receipt=await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator);assert.equal(receipt.statusCode,200,receipt.body);
@@ -1360,6 +1349,59 @@ test("school administrators invite and remove teachers, and approve parents' chi
   assert.ok((await call("GET", "/api/family/roster", null, parent)).json().rows.some((s) => s.name === "Ama Kids"));
   assert.equal((await call("GET", "/api/family/children/requests", null, parent)).json().rows[0].status, "approved");
   await mailApp.close();
+});
+
+test("one QR per child carries every belonging, scans link items to their family, and houses earn Ubuntu stars", async () => {
+  const admin = await login("kids-admin@test.com"), parent = await login("kids-parent@test.com");
+  let r = await call("POST", "/api/family/children/request", { name: "Baraka Kids", className: "Grade 3", house: "blue" }, parent);
+  assert.equal(r.statusCode, 200, r.body);
+  const req = (await call("GET", "/api/school/child-requests", null, admin)).json().rows.find((x) => x.name === "Baraka Kids");
+  assert.equal((await call("POST", "/api/school/child-requests/" + req.id + "/approve", {}, admin)).statusCode, 200);
+  const child = (await pool.query("SELECT id,house FROM students WHERE school_id='kids' AND name='Baraka Kids'")).rows[0];
+  assert.equal(child.house, "blue");
+  const a = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Blue sweater", category: "clothing" }, parent);
+  const b = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Lunchbox", category: "lunchbox" }, parent);
+  assert.equal(a.statusCode, 200, a.body);
+  assert.equal(a.json().code, b.json().code, "every belonging shares the child's one code");
+  const code = a.json().code;
+  const qr = (await call("GET", "/api/family/qr", null, parent)).json().children.find((c) => c.id === child.id);
+  assert.equal(qr.code, code);
+  assert.equal(qr.items.length, 2);
+  assert.equal((await call("POST", "/api/family/children/" + child.id + "/items", { name: "X" }, admin)).statusCode, 404);
+  // A student in the red house finds the sweater.
+  const pw = await passwordHash("testing-password-123");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified,house) VALUES('kids-finder','kids-finder@test.com','Wanjiru Finder',$1,'student','kids',true,NULL)", [pw]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('kids-finder','kids','student') ON CONFLICT DO NOTHING");
+  const finder = await login("kids-finder@test.com");
+  assert.equal((await call("POST", "/api/account/house", { house: "red" }, finder)).statusCode, 200);
+  assert.equal((await call("POST", "/api/account/house", { house: "green" }, finder)).statusCode, 409);
+  const scan = (await call("GET", "/api/scan/" + code, null, finder)).json();
+  assert.equal(scan.mine, false);
+  assert.equal(scan.child, "Baraka");
+  assert.equal(scan.items.length, 2);
+  assert.equal((await call("POST", "/api/found", { code }, finder)).statusCode, 400);
+  const sweater = scan.items.find((i) => i.name === "Blue sweater");
+  r = await call("POST", "/api/found", { code, itemId: sweater.id }, finder);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().mine, false);
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='kids-parent' AND message LIKE 'Good news: Blue sweater%'")).rowCount);
+  // Back home: the parent scans it, the case closes and the finder's house earns a star.
+  r = await call("POST", "/api/found", { code, itemId: sweater.id }, parent);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().mine, true);
+  assert.equal((await pool.query("SELECT status FROM items WHERE id=$1", [sweater.id])).rows[0].status, "with_owner");
+  assert.equal((await pool.query("SELECT house FROM house_stars WHERE user_id='kids-finder'")).rows[0].house, "red");
+  const houses = (await call("GET", "/api/houses", null, admin)).json();
+  assert.equal(houses.standings.length, 4);
+  assert.equal(houses.standings.find((h) => h.house === "red").returns, 1);
+  assert.equal(houses.standings.find((h) => h.house === "blue").lost, 1);
+  assert.ok(houses.members.some((m) => m.name === "Baraka Kids" && m.house === "blue"));
+  assert.equal((await call("POST", "/api/school/houses/" + child.id, { house: "green" }, admin)).statusCode, 200);
+  assert.equal((await call("POST", "/api/family/children/" + child.id + "/house", { house: "yellow" }, parent)).statusCode, 200);
+  assert.equal((await call("POST", "/api/family/children/" + child.id + "/house", { house: "red" }, finder)).statusCode, 403);
+  const familyView = (await call("GET", "/api/houses", null, parent)).json();
+  assert.equal(familyView.staff, false);
+  assert.ok(familyView.members.every((m) => m.name !== "Wanjiru Finder"));
 });
 
 test("passkey endpoints issue single-use challenges and reject unknown or forged passkeys", async () => {

@@ -8,6 +8,7 @@ import { accountRoutes } from "./account.mjs";
 import { passkeyRoutes } from "./passkeys.mjs";
 import { profileRoutes } from "./profile.mjs";
 import { assistantRoutes } from "./assistant/index.mjs";
+import { houseRoutes, awardStar } from "./houses.mjs";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -287,6 +288,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   await passkeyRoutes(app, { pool, cfg, user, session });
   await profileRoutes(app, { pool, user });
   await assistantRoutes(app, { pool, cfg, user });
+  await houseRoutes(app, { pool, user });
   await supportRoutes(app, { pool, cfg, user });
   await companyEmailRoutes(app,{pool,cfg,mailer});
   await companyRoutes(app, { pool, cfg, user, daraja });
@@ -543,6 +545,9 @@ If this was you, there is nothing to do. If not, change your password and sign o
       z.object({
         requestKey: z.string().uuid(),
         paymentMethod: z.enum(["mpesa"]).default("mpesa"),
+        delivery: z.enum(["school", "home"]).default("school"),
+        deliveryAddress: z.string().trim().max(300).default(""),
+        childId: z.string().max(100).default(""),
         lines: z
           .array(
             z.object({
@@ -560,6 +565,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
       400,
       "Duplicate products",
     );
+    requireThat(d.delivery === "school" || d.deliveryAddress.length >= 8, 400, "Add your home delivery address");
+    if (d.childId)
+      requireThat(
+        (await pool.query("SELECT 1 FROM students WHERE id=$1 AND guardian_id=$2 AND status='active'", [d.childId, u.id])).rowCount,
+        403,
+        "This child is not linked to your account",
+      );
     const order = await transaction(pool, async (db) => {
       await db.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [u.id]);
       const existing = (
@@ -618,7 +630,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
       }
       const result = (
         await db.query(
-          "INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,payment_reference,payment_method) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+          "INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,payment_reference,payment_method,delivery,delivery_address,student_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *",
           [
             id(),
             u.id,
@@ -628,6 +640,9 @@ If this was you, there is nothing to do. If not, change your password and sign o
             u.school_id,
             "fb_" + secret().slice(0, 28),
             d.paymentMethod,
+            d.delivery,
+            d.delivery === "home" ? d.deliveryAddress : "",
+            d.childId || null,
           ],
         )
       ).rows[0];
@@ -851,7 +866,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   app.get("/api/tags/:code", async (req) => {
     const tag = (
       await pool.query(
-        "SELECT t.code,s.name AS school_name,s.id AS school_id FROM tags t JOIN items i ON i.tag_id=t.id JOIN schools s ON s.id=i.school_id WHERE t.code=$1 AND t.status='active'",
+        "SELECT t.code,t.id,s.name AS school_name,s.id AS school_id,COALESCE(st.name,i.child_name) AS child FROM tags t JOIN items i ON i.tag_id=t.id JOIN schools s ON s.id=i.school_id LEFT JOIN students st ON st.id=t.student_id WHERE t.code=$1 AND t.status='active' LIMIT 1",
         [req.params.code],
       )
     ).rows[0];
@@ -866,99 +881,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
         [tag.school_id],
       )
     ).rows;
-    return { code: tag.code, school: tag.school_name, boxes };
-  });
-  app.post("/api/items/:id/lost", async (req) => {
-    const u = await verified(req);
-    return transaction(pool, async (db) => {
-      const item = (
-        await db.query(
-          "SELECT * FROM items WHERE id=$1 AND (owner_id=$2 OR owner_id IN (SELECT id FROM users WHERE guardian_id=$2)) FOR UPDATE",
-          [req.params.id, u.id],
-        )
-      ).rows[0];
-      requireThat(item, 404, "Item not found");
-      const existing = (
-        await db.query(
-          "SELECT id FROM cases WHERE item_id=$1 AND status NOT IN ('returned','closed')",
-          [item.id],
-        )
-      ).rows[0];
-      requireThat(
-        !existing,
-        409,
-        "This item already has an open recovery case",
-      );
-      const caseId = id();
-      await db.query(
-        "INSERT INTO cases(id,school_id,item_id,title,category,status) VALUES($1,$2,$3,$4,$5,'reported_lost')",
-        [caseId, item.school_id, item.id, item.name, item.category],
-      );
-      await db.query("UPDATE items SET status='reported_lost' WHERE id=$1", [
-        item.id,
-      ]);
-      await event(db, caseId, u.id, "reported_lost");
-      return { id: caseId };
-    });
-  });
-  app.post("/api/found", async (req) => {
-    const u = await verified(req);
-    const d = clean(z.object({ code: text(100), boxId: text(100) }), req.body);
-    return transaction(pool, async (db) => {
-      const item = (
-        await db.query(
-          "SELECT i.* FROM items i JOIN tags t ON t.id=i.tag_id WHERE t.code=$1 AND t.status='active' FOR UPDATE OF i",
-          [d.code],
-        )
-      ).rows[0];
-      requireThat(
-        item && item.school_id === u.school_id,
-        404,
-        "Tag not found in your school",
-      );
-      const box = (
-        await db.query(
-          "SELECT * FROM boxes WHERE id=$1 AND school_id=$2 AND active=true",
-          [d.boxId, u.school_id],
-        )
-      ).rows[0];
-      requireThat(box, 400, "Box is not available");
-      let c = (
-        await db.query(
-          "SELECT * FROM cases WHERE item_id=$1 AND status NOT IN ('returned','closed') FOR UPDATE",
-          [item.id],
-        )
-      ).rows[0];
-      requireThat(
-        !c || c.status === "reported_lost",
-        409,
-        "This item already has a deposit or collection in progress",
-      );
-      if (c)
-        await db.query(
-          "UPDATE cases SET status='awaiting_deposit',box_id=$1 WHERE id=$2",
-          [box.id, c.id],
-        );
-      else
-        c = (
-          await db.query(
-            "INSERT INTO cases(id,school_id,item_id,box_id,title,category,status) VALUES($1,$2,$3,$4,$5,$6,'awaiting_deposit') RETURNING *",
-            [id(), u.school_id, item.id, box.id, item.name, item.category],
-          )
-        ).rows[0];
-      await event(
-        db,
-        c.id,
-        u.id,
-        "deposit_reported",
-        "Staff confirmation required",
-      );
-      return {
-        id: c.id,
-        message:
-          "Thank you. Hand the item to the box custodian. Staff will confirm receipt.",
-      };
-    });
+    return { code: tag.code, school: tag.school_name, child: (tag.child || "").trim().split(/\s+/)[0] || "", boxes };
   });
   app.post("/api/staff/unclaimed", async (req) => {
     const u = await staff(req);
@@ -1102,6 +1025,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
         await db.query("SELECT owner_id FROM items WHERE id=$1", [c.item_id])
       ).rows[0];
       await event(db, c.id, u.id, "received", box.name);
+      await awardStar(db, c.id);
       await notify(
         db,
         item.owner_id,

@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { QRCode } from '@/components/ui/qr-code'
-import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Printer, RefreshCw, School, UserPlus, X } from 'lucide-react'
+import { ArrowLeft, Check, Clock, GraduationCap, KeyRound, Plus, Printer, QrCode, RefreshCw, School, UserPlus, X } from 'lucide-react'
+import { HousePicker, type HouseId } from './Houses'
+import { NamedQR } from './NamedQR'
 import { api } from './api'
 import { notify } from './feedback'
 import './dashboard.css'
@@ -9,6 +11,8 @@ import './school-admin.css'
 import './family.css'
 
 type Row = Record<string, any>
+type ChildQr = { id: string; name: string; house: HouseId | null; code: string | null; items: { id: string; name: string; category: string; status: string }[] }
+const CATEGORIES: [string, string][] = [['clothing', 'Clothing'], ['bottle', 'Bottle'], ['lunchbox', 'Lunchbox'], ['book', 'Book'], ['sports', 'Sports kit'], ['electronics', 'Gadget'], ['keys', 'Keys'], ['other', 'Other']]
 const WORDS = ['mango', 'tiger', 'river', 'sunny', 'zebra', 'pencil', 'rocket', 'banana', 'cloud', 'forest', 'lemon', 'panda', 'comet', 'garden', 'violet', 'maple', 'ocean', 'pepper', 'robin', 'tulip', 'cobalt', 'falcon', 'meadow', 'rainbow', 'savanna', 'acacia', 'baobab', 'kestrel', 'safari', 'jungle', 'lagoon', 'orbit']
 const shortLogin = (login = '') => login.replace('@students.findbox.invalid', '')
 const pick = (n: number) => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]! % n }
@@ -18,15 +22,16 @@ const passphrase = () => [WORDS[pick(WORDS.length)], WORDS[pick(WORDS.length)], 
 export function FamilyChildren() {
   const [roster, setRoster] = useState<Row[]>([]), [requests, setRequests] = useState<Row[]>([]), [hasSchool, setHasSchool] = useState(true)
   const [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false), [card, setCard] = useState<{ child: Row; login?: string; password: string; qr?: string } | null>(null)
+  const [qrs, setQrs] = useState<ChildQr[]>([]), [open, setOpen] = useState<string | null>(null), [house, setHouse] = useState<HouseId | null>(null)
   async function load() {
-    const [r, q] = await Promise.all([api<{ rows: Row[] }>('/family/roster').catch(() => ({ rows: [] })), api<{ rows: Row[]; school: boolean }>('/family/children/requests')])
-    setRoster(r.rows); setRequests(q.rows.filter(x => x.status !== 'approved')); setHasSchool(q.school); setLoaded(true)
+    const [r, q, c] = await Promise.all([api<{ rows: Row[] }>('/family/roster').catch(() => ({ rows: [] })), api<{ rows: Row[]; school: boolean }>('/family/children/requests'), api<{ children: ChildQr[] }>('/family/qr').catch(() => ({ children: [] }))])
+    setRoster(r.rows); setQrs(c.children); setRequests(q.rows.filter(x => x.status !== 'approved')); setHasSchool(q.school); setLoaded(true)
   }
   useEffect(() => { load().catch(e => { notify((e as Error).message, 'error'); setLoaded(true) }) }, [])
   async function run(fn: () => Promise<void>) { setBusy(true); try { await fn(); await load() } catch { /* toast already shown */ } finally { setBusy(false) } }
   function ask(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>
-    void run(async () => { await api('/family/children/request', d); notify(`Sent to your school. You'll see ${d.name} here once they approve.`); form.reset() })
+    void run(async () => { await api('/family/children/request', { ...d, ...(house ? { house } : {}) }); notify(`Sent to your school. You'll see ${d.name} here once they approve.`); form.reset(); setHouse(null) })
   }
   async function enableLogin() {
     if (!card) return
@@ -46,6 +51,7 @@ export function FamilyChildren() {
             <form className="fm-add" onSubmit={ask}><fieldset disabled={busy}>
               <label className="sa-field"><span>Child's full name</span><input name="name" required maxLength={100} placeholder="As the school knows them" /></label>
               <label className="sa-field"><span>Class</span><input name="className" required maxLength={80} placeholder="e.g. Grade 4 East" /></label>
+              <div className="sa-field"><span>House</span><HousePicker value={house} onPick={setHouse} name="Child's house" /></div>
               <button className="sa-btn"><UserPlus size={16} />Send to school</button>
             </fieldset></form>
             <p className="sa-note">Your school checks this against their records before linking your child to your account.</p>
@@ -57,8 +63,10 @@ export function FamilyChildren() {
           {roster.map(c => <article key={c.id} className="db-card fm-child">
             <span className="fm-child-icon"><GraduationCap size={22} /></span>
             <h3>{c.name}</h3><p>{c.school} · {c.class_name}</p>
+            {c.status === 'active' && <div className="fm-house"><HousePicker value={qrs.find(q => q.id === c.id)?.house} disabled={busy} name={`${c.name}'s house`} onPick={h => void run(async () => { await api('/family/children/' + c.id + '/house', { house: h }); notify(`${c.name} is in ${h[0]!.toUpperCase() + h.slice(1)} house.`) })} /></div>}
             <p className="fm-login">{c.user_id ? <><Check size={14} />Can sign in as <strong>{shortLogin(c.login)}</strong></> : 'No login. Most children do not need one.'}</p>
             <footer>
+              {c.status === 'active' && <button type="button" className="sa-btn" onClick={() => setOpen(c.id)}><QrCode size={15} />QR &amp; belongings ({qrs.find(q => q.id === c.id)?.items.length || 0})</button>}
               {c.status === 'active' && <button type="button" className="sa-btn is-ghost" onClick={() => setCard({ child: c, password: passphrase() })}><KeyRound size={15} />{c.user_id ? 'New password & card' : 'Create login card'}</button>}
               {c.user_id && <button type="button" className="fm-link" disabled={busy} onClick={() => void run(async () => { await api('/family/roster/' + c.id + '/disable-login', {}); notify(`${c.name}'s login is turned off.`) })}>Turn off login</button>}
             </footer>
@@ -66,6 +74,34 @@ export function FamilyChildren() {
           {!roster.length && <div className="sa-empty is-small"><GraduationCap size={30} /><p>No children linked yet. Add your child above, or accept the invitation your school emailed you.</p></div>}
         </section>
       </>}
+      {open && (() => {
+        const child = qrs.find(q => q.id === open)
+        if (!child) return null
+        const first = child.name.split(' ')[0]
+        const add = (e: FormEvent<HTMLFormElement>) => {
+          e.preventDefault(); const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>
+          void run(async () => { await api('/family/children/' + child.id + '/items', d); notify(`${d.name} added under ${first}'s QR.`); form.reset() })
+        }
+        return <div className="sa-panel-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setOpen(null) }}>
+          <aside className="sa-panel" role="dialog" aria-modal="true" aria-label={`${child.name}'s QR`}>
+            <header><div><p>ONE QR FOR EVERYTHING</p><h2>{child.name}</h2></div><button type="button" className="sa-panel-close" aria-label="Close" onClick={() => setOpen(null)}><X size={18} /></button></header>
+            <div className="sa-panel-body"><div className="sa-form">
+              {child.code
+                ? <div className="fm-qr" id="fm-labels"><NamedQR code={child.code} name={child.name} size={170} reveal /><div className="nq-sheet fm-print-only">{Array.from({ length: 12 }, (_, i) => <NamedQR key={i} code={child.code!} name={child.name} size={110} />)}</div></div>
+                : <p className="sa-note">{first}'s QR is created when you add their first belonging.</p>}
+              <p className="sa-note">The same QR goes on every sticker and fabric label. Whoever scans it sees {first}'s first name and picks which belonging they found.</p>
+              <h3 className="fm-sub">Belongings</h3>
+              {child.items.length ? <ul className="fm-items">{child.items.map(i => <li key={i.id}><span>{i.name}</span><small>{CATEGORIES.find(c => c[0] === i.category)?.[1] || 'Other'}</small></li>)}</ul> : <p className="sa-note">Nothing listed yet.</p>}
+              <form className="fm-add-item" onSubmit={add}><fieldset disabled={busy}>
+                <input name="name" required maxLength={100} placeholder="e.g. Navy sweater" aria-label="Belonging name" />
+                <select name="category" aria-label="Kind of belonging" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+                <button className="sa-btn"><Plus size={15} />Add</button>
+              </fieldset></form>
+              {child.code && <div className="sa-form-actions"><Link className="sa-btn is-ghost" to="/app/shop">Order labels</Link><button type="button" className="sa-btn" onClick={() => window.print()}><Printer size={16} />Print labels</button></div>}
+            </div></div>
+          </aside>
+        </div>
+      })()}
       {card && <div className="sa-panel-backdrop" onMouseDown={e => { if (e.target === e.currentTarget && !busy) setCard(null) }}>
         <aside className="sa-panel" role="dialog" aria-modal="true" aria-label="Login card">
           <header><div><p>LOGIN CARD</p><h2>{card.child.name}</h2></div><button type="button" className="sa-panel-close" aria-label="Close" onClick={() => setCard(null)}><X size={18} /></button></header>

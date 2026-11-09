@@ -33,7 +33,9 @@ export async function fulfill(pool, orderId, { after } = {}) {
     await notify(
       db,
       order.user_id,
-      "Your FindBox tags are ready for collection through your school. Activate them using the private codes inside your pack.",
+      order.delivery === "home"
+        ? "Your FindBox labels are on their way to your home address. Each one carries your child's name and QR."
+        : "Your FindBox labels are ready for collection at your school. Each one carries your child's name and QR.",
     );
     if(after)await after(db,order);
     return { id: order.id, status: "fulfilled" };

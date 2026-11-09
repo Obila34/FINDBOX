@@ -13,6 +13,8 @@ import {
   ShieldCheck,
   Package,
   Smartphone,
+  School as SchoolIcon,
+  House as HomeIcon,
   CreditCard,
 } from "lucide-react";
 import {
@@ -46,6 +48,14 @@ export function ServerStorefront() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [code, setCode] = useState("");
+  const [delivery, setDelivery] = useState<"school" | "home">("school"),
+    [address, setAddress] = useState(""),
+    [children, setChildren] = useState<{ id: string; name: string }[]>([]),
+    [childId, setChildId] = useState("");
+  useEffect(() => {
+    if (!user || user.role === "student") return;
+    api<{ children: { id: string; name: string }[] }>("/family/qr").then((r) => { setChildren(r.children); setChildId((c) => c || r.children[0]?.id || ""); }).catch(() => {});
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const markRefreshed=useBackgroundRefresh(async()=>{const p=await api<{products:Product[];checkoutEnabled:boolean}>('/products');let changed=JSON.stringify(p.products)!==JSON.stringify(products);setProducts(p.products);setCheckoutEnabled(p.checkoutEnabled);if(user){try{const w=await api<Workspace>('/workspace');changed=changed||JSON.stringify(w)!==JSON.stringify(workspace);setWorkspace(w)}catch(e){if(e instanceof ApiError&&[401,403].includes(e.status)){setUser(null);setWorkspace(null)}throw e}}return changed},loaded&&!busy,path,()=>setNotice('Shop records updated in the background.'))
   async function reload() {
     setWorkspace(await api<Workspace>("/workspace"));
@@ -135,6 +145,9 @@ export function ServerStorefront() {
       const r = await api<{ url: string; orderId: string }>("/orders", {
         requestKey: cart.key,
         paymentMethod: cart.method,
+        delivery,
+        ...(delivery === "home" ? { deliveryAddress: address } : {}),
+        ...(childId ? { childId } : {}),
         lines: lines.map((p) => ({
           productId: p.id,
           quantity: cart.lines[p.id],
@@ -159,11 +172,7 @@ export function ServerStorefront() {
   }
   const signIn = (
     <div className="fc-empty">
-      <h1>
-        All yours.
-        <br />
-        All connected.
-      </h1>
+      <h1>Sign in to shop</h1>
       <p>Browse every product freely. Sign in or create an account to use your bag, place orders and connect labels.</p><Link className="fp-primary" to="/app/sign-up" state={{from:location.pathname}}>Create your FindBox account</Link>
       <button
         className="fp-primary"
@@ -222,8 +231,7 @@ export function ServerStorefront() {
           <>
             {inApp ? <AppShop products={products} base={base} /> : <>
             <div className="fc-page-heading">
-              <span className="fp-kicker">SMALL THINGS, SORTED</span>
-              <h1>A place for every tag.</h1>
+              <h1>Shop labels</h1>
             </div>
             {cards}
             </>}
@@ -318,17 +326,41 @@ export function ServerStorefront() {
           (user ? (
             <>
               <div className="fc-page-heading">
-                <h1>Make it yours.</h1>
+                <h1>Checkout</h1>
               </div>
               <form className="fc-checkout-grid" onSubmit={checkout}>
                 <section className="fc-checkout-sections">
                   <section>
-                    <h3>{user.name}</h3>
-                    <p>
-                      {workspace?.school?.name ||
-                        "Join a school in account security to choose a collection point."}
-                    </p>
-                    <Link to="/app/security">Manage schools and security</Link>
+                    <h3>Where should your labels go?</h3>
+                    <div className="fc-payment-options">
+                      {(["school", "home"] as const).map((m) => (
+                        <label key={m} className={delivery === m ? "active" : ""}>
+                          <input type="radio" name="delivery" checked={delivery === m} onChange={() => setDelivery(m)} />
+                          {m === "school" ? <SchoolIcon /> : <HomeIcon />}
+                          <strong>{m === "school" ? "Pick up at school" : "Deliver home"}</strong>
+                        </label>
+                      ))}
+                    </div>
+                    {delivery === "school" ? (
+                      <p>
+                        {workspace?.school?.name
+                          ? `Collect from ${workspace.school.name}. We'll tell you when it's there.`
+                          : "Join a school in account security to pick up there."}
+                      </p>
+                    ) : (
+                      <label className="fp-field">
+                        <span>Home delivery address</span>
+                        <textarea name="deliveryAddress" required minLength={8} maxLength={300} rows={2} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="House, street, area and town" />
+                      </label>
+                    )}
+                    {children.length > 0 && (
+                      <label className="fp-field">
+                        <span>Whose name and QR go on the labels?</span>
+                        <select value={childId} onChange={(e) => setChildId(e.target.value)}>
+                          {children.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </label>
+                    )}
                   </section>
                   <section>
                     <h3>Your way to pay.</h3>
@@ -589,7 +621,7 @@ export function ServerStorefront() {
               >
                 ×
               </button>
-              <h2 id="activate-title">Make it yours.</h2>
+              <h2 id="activate-title">Activate your pack</h2>
               <form className="fs-form" onSubmit={activate}>
                 <label>
                   Private activation code

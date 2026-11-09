@@ -172,3 +172,24 @@ CREATE INDEX IF NOT EXISTS assistant_conversations_user ON assistant_conversatio
 CREATE TABLE IF NOT EXISTS assistant_messages(id text PRIMARY KEY,conversation_id text NOT NULL REFERENCES assistant_conversations(id) ON DELETE CASCADE,role text NOT NULL CHECK(role IN ('user','assistant')),content text NOT NULL,data jsonb NOT NULL DEFAULT '{}',created_at timestamptz NOT NULL DEFAULT clock_timestamp());
 CREATE INDEX IF NOT EXISTS assistant_messages_conversation ON assistant_messages(conversation_id,created_at);
 CREATE TABLE IF NOT EXISTS assistant_actions(id text PRIMARY KEY,conversation_id text NOT NULL REFERENCES assistant_conversations(id) ON DELETE CASCADE,user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,tool text NOT NULL,summary text NOT NULL,details jsonb NOT NULL DEFAULT '[]',request jsonb NOT NULL,status text NOT NULL CHECK(status IN ('pending','done','cancelled','failed')),result jsonb,error text,created_at timestamptz NOT NULL DEFAULT now(),decided_at timestamptz);
+-- One QR per child: the child's code is printed on every label, and each item of that child hangs off it.
+ALTER TABLE items DROP CONSTRAINT IF EXISTS items_tag_id_key;
+CREATE INDEX IF NOT EXISTS items_tag_idx ON items(tag_id);
+ALTER TABLE items ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);
+ALTER TABLE tags ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);
+ALTER TABLE tags ALTER COLUMN product_id DROP NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS tags_one_child_code ON tags(student_id) WHERE student_id IS NOT NULL AND status='active';
+-- Link existing family items to the child they were named for, and adopt that child's first tag as their code.
+UPDATE items i SET student_id=s.id FROM students s WHERE i.student_id IS NULL AND s.guardian_id=i.owner_id AND i.child_name<>'' AND lower(s.name)=lower(i.child_name);
+UPDATE tags t SET student_id=x.sid FROM (SELECT DISTINCT ON (i.student_id) i.student_id AS sid,i.tag_id FROM items i JOIN tags tt ON tt.id=i.tag_id AND tt.status='active' WHERE i.student_id IS NOT NULL ORDER BY i.student_id,i.created_at) x WHERE t.id=x.tag_id AND t.student_id IS NULL AND NOT EXISTS(SELECT 1 FROM tags t2 WHERE t2.student_id=x.sid AND t2.status='active');
+-- Houses: green, red, blue and yellow. Parents choose when adding a child; students can choose once after signing up.
+ALTER TABLE students ADD COLUMN IF NOT EXISTS house text CHECK(house IN ('green','red','blue','yellow'));
+ALTER TABLE users ADD COLUMN IF NOT EXISTS house text CHECK(house IN ('green','red','blue','yellow'));
+ALTER TABLE child_requests ADD COLUMN IF NOT EXISTS house text CHECK(house IN ('green','red','blue','yellow'));
+-- Ubuntu stars: one per item a student returned to someone else, earned once the item is safely back.
+CREATE TABLE IF NOT EXISTS house_stars(id text PRIMARY KEY,school_id text NOT NULL REFERENCES schools(id),house text NOT NULL CHECK(house IN ('green','red','blue','yellow')),user_id text REFERENCES users(id) ON DELETE SET NULL,case_id text UNIQUE REFERENCES cases(id),reason text NOT NULL,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS house_stars_school_idx ON house_stars(school_id,created_at);
+-- Kit orders: where the parcel goes, and which child's QR the labels carry.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery text NOT NULL DEFAULT 'school' CHECK(delivery IN ('school','home'));
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address text NOT NULL DEFAULT '';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);

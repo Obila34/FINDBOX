@@ -1,78 +1,55 @@
 import { Link } from "react-router-dom";
-import { AlertTriangle, ArrowUpRight, Check, CheckCircle2, Clock, House, MapPin, Package, PackageCheck, ScanLine, School } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Check, CheckCircle2, Clock, House, MapPin, Package, PackageCheck, QrCode, ScanLine, School, Trophy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Flame, MapPinned, Search, ShoppingBag, Sparkles, Users } from "lucide-react";
-import { api, type Product, type User, type Workspace } from "./api";
+import { Flame, MapPinned } from "lucide-react";
+import { api, type User, type Workspace } from "./api";
+import { HouseDot, type HouseId } from "./Houses";
 import { imagery } from "@/data/imagery";
-import { catalog } from "@/commerce/store";
-import { Chips, ItemCard, ProductCard, PromoCarousel, SectionHead, Shortcuts, StatStrip, type Slide } from "./AppKit";
+import { ItemCard, PromoCarousel, SectionHead, Shortcuts, type Slide } from "./AppKit";
 
 const itemPicture = (category: string) => (imagery.catalog[category as keyof typeof imagery.catalog] ?? imagery.catalog.book).src;
-type Filter = "all" | "with_owner" | "lost" | "waiting";
+type HouseInfo = { standings: { house: HouseId; name: string; rank: number }[]; members: { house: HouseId | null }[] };
 
-/** The family and student home: search, highlights, shortcuts, belongings and shop picks. */
+/** The family and student home, kept calm: one highlight, four shortcuts, a few belongings. */
 function FamilyHome({ user, workspace }: { user: User; workspace: Workspace }) {
-  const nav = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [filter, setFilter] = useState<Filter>("all");
-  useEffect(() => { api<{ products: Product[] }>("/products").then((r) => setProducts(r.products.filter((p) => p.available !== false && p.format !== "nfc"))).catch(() => {}); }, []);
+  const [houses, setHouses] = useState<HouseInfo | null>(null);
+  useEffect(() => { if (workspace.school) api<HouseInfo>("/houses").then(setHouses).catch(() => {}); }, [workspace.school]);
   const student = user.role === "student";
   const waiting = workspace.cases.filter((c) => c.status === "awaiting_collection");
-  const open = workspace.cases.filter((c) => !["returned", "closed"].includes(c.status));
-  const lostIds = new Set(workspace.cases.filter((c) => !["returned", "closed"].includes(c.status)).map((c) => c.item_id));
-  const statusOf = (i: Workspace["items"][number]) => waiting.some((c) => c.item_id === i.id) ? "awaiting_collection" : lostIds.has(i.id) || i.status === "lost" ? "lost" : i.status;
+  const statusOf = (i: Workspace["items"][number]) => waiting.some((c) => c.item_id === i.id) ? "awaiting_collection" : i.status;
   const items = workspace.items.map((i) => ({ ...i, shown: statusOf(i) }));
-  const filtered = items.filter((i) => filter === "all" || (filter === "with_owner" ? i.shown === "with_owner" : filter === "lost" ? i.shown === "lost" : i.shown === "awaiting_collection"));
   const hour = new Date().getHours(), hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const slides = useMemo<Slide[]>(() => [
-    ...(waiting.length ? [{ kicker: waiting.length + (waiting.length === 1 ? " item is" : " items are") + " waiting", title: "Ready to", accent: "collect.", body: `At ${waiting[0]!.box_name}. Bring your FindBox confirmation.`, cta: "View", to: "/app/cases", image: imagery.features.collect.src, tone: "pop" as const }] : []),
-    { kicker: "Fabric tags", title: "Every uniform,", accent: "found.", body: "Woven tags that sit in the collar and survive the wash.", cta: "Shop now", to: "/app/shop", image: imagery.hero[2]!.src },
-    student
-      ? { kicker: "Daily streak", title: "Keep the", accent: "flame alive.", body: "Tick today's mission and level up.", cta: "Check in", to: "/app/streaks", image: imagery.hero[1]!.src, tone: "night" as const }
-      : { kicker: "Activate in seconds", title: "One code.", accent: "Whole pack.", body: "Connect every tag in your pack at once.", cta: "Activate", to: "/app/register", image: imagery.journey.connect.src, tone: "night" as const },
-    { kicker: "Lost something?", title: "Report it in", accent: "two taps.", body: "Your school is told straight away.", cta: "Report", to: "/app/report", image: imagery.journey.lose.src },
-  ], [waiting.length, student]);
-  const badge = (id: string) => id === "complete-41" ? "Best value" : id === "uniform-12" ? "New" : id === "everyday-12" ? "Best seller" : undefined;
+  const myHouse = houses?.members.find((m) => m.house)?.house;
+  const rank = myHouse ? houses?.standings.find((s) => s.house === myHouse)?.rank : undefined;
+  const slides = useMemo<Slide[]>(() => waiting.length
+    ? [{ kicker: waiting.length + (waiting.length === 1 ? " item is" : " items are") + " waiting", title: "Ready to", accent: "collect.", body: `At ${waiting[0]!.box_name}. Bring your FindBox confirmation.`, cta: "View", to: "/app/cases", image: imagery.features.collect.src, tone: "pop" as const }]
+    : [{ kicker: "Less waste", title: "Found, not", accent: "replaced.", body: "Every return is one less uniform, bottle or book bought again.", cta: student ? "See houses" : "Label more", to: student ? "/app/houses" : "/app/children", image: imagery.hero[2]!.src, tone: "night" as const }], [waiting.length, student]);
   return (
     <div className="pa-home">
-      <div>
-        <p className="pa-hello">{hello},</p>
-        <h1 className="pa-name">{user.name.split(" ")[0]}</h1>
+      <div className="pa-home-top">
+        <div>
+          <p className="pa-hello">{hello},</p>
+          <h1 className="pa-name">{user.name.split(" ")[0]}</h1>
+        </div>
+        {myHouse && <Link to="/app/houses" className="pa-house-chip"><HouseDot house={myHouse} size={10} />{myHouse[0]!.toUpperCase() + myHouse.slice(1)}{rank ? ` · #${rank}` : ""}</Link>}
       </div>
-      <form className="pa-search" role="search" onSubmit={(e) => { e.preventDefault(); const q = new FormData(e.currentTarget).get("q"); nav("/app/items" + (q ? "?q=" + encodeURIComponent(String(q)) : "")); }}>
-        <Search size={18} /><input name="q" placeholder="Search your belongings" aria-label="Search your belongings" autoComplete="off" />
-      </form>
       <PromoCarousel slides={slides} />
-      <Shortcuts items={[
-        { label: "Activate", to: "/app/register", Icon: ScanLine },
-        { label: "Report lost", to: "/app/report", Icon: AlertTriangle },
-        { label: "I found it", to: "/app/found", Icon: PackageCheck },
+      <Shortcuts items={student ? [
+        { label: "I found it", to: "/app/found", Icon: ScanLine },
+        { label: "Houses", to: "/app/houses", Icon: Trophy },
+        { label: "Streaks", to: "/app/streaks", Icon: Flame },
         { label: "Collect", to: "/app/cases", Icon: MapPinned, badge: waiting.length },
-        student ? { label: "Streaks", to: "/app/streaks", Icon: Flame } : { label: "Children", to: "/app/children", Icon: Users },
-        { label: "Shop", to: "/app/shop", Icon: ShoppingBag },
-      ]} />
-      <StatStrip stats={[
-        { label: "Belongings", value: workspace.items.length, to: "/app/items" },
-        { label: "Waiting for you", value: waiting.length, to: "/app/cases", tone: waiting.length ? "pop" : "calm" },
-        { label: "Being looked for", value: open.length, to: "/app/cases", tone: open.length ? "alert" : "calm" },
-        { label: "Collection points", value: workspace.boxes.length, to: "/app/boxes" },
+      ] : [
+        { label: "I found it", to: "/app/found", Icon: ScanLine },
+        { label: "Children & QR", to: "/app/children", Icon: QrCode },
+        { label: "Houses", to: "/app/houses", Icon: Trophy },
+        { label: "Collect", to: "/app/cases", Icon: MapPinned, badge: waiting.length },
       ]} />
       <section className="pa-home">
-        <SectionHead title={student ? "My belongings" : "Your belongings"} to="/app/items" />
-        <Chips label="Belongings filter" value={filter} onChange={setFilter} options={[
-          { id: "all", label: "All", count: items.length },
-          { id: "with_owner", label: "With you" },
-          { id: "lost", label: "Lost" },
-          { id: "waiting", label: "Ready to collect" },
-        ]} />
-        {filtered.length ? <div className="pa-grid">{filtered.slice(0, 4).map((i, n) => <ItemCard key={i.id} index={n} name={i.name} image={itemPicture(i.category)} status={i.shown} owner={i.child_name || undefined} code={i.code} to="/app/items" />)}</div>
-          : <p className="pa-empty">{items.length ? "Nothing here right now." : <>No belongings yet. <Link to="/app/register">Activate your first tag</Link>.</>}</p>}
+        <SectionHead title={student ? "My belongings" : "Belongings"} to="/app/items" />
+        {items.length ? <div className="pa-grid">{items.slice(0, 4).map((i, n) => <ItemCard key={i.id} index={n} name={i.name} image={itemPicture(i.category)} status={i.shown} owner={i.child_name || undefined} code={i.code} to="/app/items" />)}</div>
+          : <p className="pa-empty">No belongings yet. {student ? "Ask your parent to add them under your QR." : <Link to="/app/children">Add your child's first belonging</Link>}</p>}
       </section>
-      {products.length > 0 && <section className="pa-home">
-        <SectionHead title="Shop picks" to="/app/shop" action="Shop all"><Sparkles size={16} className="pa-spark" /></SectionHead>
-        <div className="pa-rail">{products.map((p, n) => <ProductCard key={p.id} index={n} id={p.id} name={p.name} subtitle={catalog.find((c) => c.serverId === p.id)?.subtitle || p.tag_count + " labels"} priceMinor={p.price_minor} image={p.image} badge={badge(p.id)} to={"/app/shop/products/" + p.id} />)}</div>
-      </section>}
     </div>
   );
 }
@@ -113,10 +90,9 @@ export function HomeDashboard({ user, workspace, staff }: { user: User; workspac
                               <Link to="/manage/log"><ScanLine size={17} />Receive an item</Link>
                               <Link to="/manage/collect"><PackageCheck size={17} />Hand back</Link>
                               {user.role === "manager" && <Link to="/app/school-admin"><School size={17} />School workspace</Link>}
+                              <Link to="/app/houses"><Trophy size={17} />Houses</Link>
                             </> : <>
-                              <Link to="/app/register"><ScanLine size={17} />Activate tags</Link>
-                              <Link to="/app/report"><AlertTriangle size={17} />Report something lost</Link>
-                              <Link to="/app/found"><PackageCheck size={17} />I found something</Link>
+                              <Link to="/app/found"><PackageCheck size={17} />I found it</Link>
                             </>}
                           </div>
                         </div>

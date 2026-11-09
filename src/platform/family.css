@@ -28,3 +28,26 @@
 .fm-card>p:last-child{font-size:12px;color:#5f7468}
 @media(max-width:640px){.fm-add fieldset{grid-template-columns:1fr}}
 @media print{body *{visibility:hidden!important}.fm-card,.fm-card *{visibility:visible!important}.fm-card{position:fixed;inset:40px;background:#fff}}
+
+/* Child QR, house and belongings */
+.fm-house{margin:6px 0 2px}
+.fm-house .hs-pick{padding:6px 11px;font-size:12.5px}
+.fm-qr{display:grid;justify-items:center;gap:12px}
+.fm-sub{font-size:14px;font-weight:700;margin-top:4px}
+.fm-items{display:grid;gap:6px;list-style:none;padding:0;margin:0}
+.fm-items li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--pa-line,rgba(255,255,255,.08))}
+.fm-items small{opacity:.7}
+.fm-add-item fieldset{display:flex;gap:8px;flex-wrap:wrap;border:0;padding:0;margin:0}
+.fm-add-item input{flex:1 1 160px;min-width:0}
+.fm-print-only{display:none}
+@media print{
+  body *{visibility:hidden}
+  #fm-labels,#fm-labels *{visibility:visible}
+  #fm-labels{position:absolute;inset:0;padding:12mm;display:block}
+  #fm-labels>.nq{display:none}
+  #fm-labels .fm-print-only{display:grid;grid-template-columns:repeat(4,1fr);gap:6mm}
+  #fm-labels .nq{border:1px dashed #999}
+}
+
+.fm-add-item input,.fm-add-item select{padding:11px 13px;border-radius:12px;border:1px solid var(--pa-line,rgba(255,255,255,.12));background:transparent;color:inherit;font-size:14px}
+.fm-add-item select{flex:0 0 auto}
