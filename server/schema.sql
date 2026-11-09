@@ -180,7 +180,7 @@ ALTER TABLE tags ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id
 ALTER TABLE tags ALTER COLUMN product_id DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS tags_one_child_code ON tags(student_id) WHERE student_id IS NOT NULL AND status='active';
 -- Link existing family items to the child they were named for, and adopt that child's first tag as their code.
-UPDATE items i SET student_id=s.id FROM students s WHERE i.student_id IS NULL AND s.guardian_id=i.owner_id AND i.child_name<>'' AND lower(s.name)=lower(i.child_name);
+UPDATE items i SET student_id=s.id FROM students s WHERE i.student_id IS NULL AND (s.guardian_id=i.owner_id OR s.user_id=i.owner_id) AND i.child_name<>'' AND lower(s.name)=lower(i.child_name);
 UPDATE tags t SET student_id=x.sid FROM (SELECT DISTINCT ON (i.student_id) i.student_id AS sid,i.tag_id FROM items i JOIN tags tt ON tt.id=i.tag_id AND tt.status='active' WHERE i.student_id IS NOT NULL ORDER BY i.student_id,i.created_at) x WHERE t.id=x.tag_id AND t.student_id IS NULL AND NOT EXISTS(SELECT 1 FROM tags t2 WHERE t2.student_id=x.sid AND t2.status='active');
 -- Houses: green, red, blue and yellow. Parents choose when adding a child; students can choose once after signing up.
 ALTER TABLE students ADD COLUMN IF NOT EXISTS house text CHECK(house IN ('green','red','blue','yellow'));
