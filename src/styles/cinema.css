@@ -75,3 +75,12 @@
 .fa-card :focus-visible { outline: 2px solid #aebe9e; outline-offset: 3px; }
 .fa-card .fs-optional { width: max-content; }
 .fa-card p.co-error, .fa-card p[role=alert] { background: rgba(229,115,95,.16); color: #f6c3b8; border: 0; }
+
+/* Legal and long-read pages */
+.fb-legal-head { display: flex; align-items: center; justify-content: space-between; max-width: 1440px; margin: 0 auto; padding: 22px clamp(16px, 4vw, 48px); }
+.fb-legal { max-width: 760px; margin: 0 auto; padding: clamp(24px, 6vw, 72px) 20px 80px; }
+.fb-legal-kicker { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: rgb(var(--c-sage)); margin-bottom: 14px; }
+.fb-legal h1 { font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 1; letter-spacing: -.04em; margin-bottom: 32px; color: rgb(var(--c-cream-soft)); }
+.fb-legal h2 { font-size: 1.25rem; letter-spacing: -.02em; margin: 40px 0 12px; padding-top: 24px; border-top: 1px solid var(--fb-border); color: rgb(var(--c-cream-soft)); }
+.fb-legal p { font-size: 1rem; line-height: 1.75; color: rgb(var(--c-gray-300)); margin-bottom: 14px; }
+.fb-legal a { color: rgb(var(--c-sage)); text-decoration: underline; text-underline-offset: 3px; }

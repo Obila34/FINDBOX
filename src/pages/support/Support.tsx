@@ -310,7 +310,7 @@ export function Support() {
               </p>
             </div>
             <img
-              src="/media/avatars/findbox-explorer-640.webp"
+              src="/media/catalog/fabric-qr-480.webp"
               alt="The FindBox explorer"
             />
           </section>

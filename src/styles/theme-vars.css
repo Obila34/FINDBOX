@@ -1,0 +1,28 @@
+/* Theme colours as "r g b" triples, read by tailwind.config.ts (v()) so utilities like bg-night or
+   text-primary/70 follow the active theme. Dark (forest night) is the default; html[data-theme=light]
+   switches to the light palette; .fb-dark-scope keeps photo heroes and the sign-in card dark in both. */
+:root, .fb-dark-scope {
+  --c-teal-50: 22 33 26; --c-teal-100: 29 42 34; --c-teal-200: 42 59 47; --c-teal-300: 127 154 108; --c-teal-400: 143 167 124;
+  --c-teal-500: 159 180 140; --c-teal-600: 174 190 158; --c-teal-700: 195 208 180; --c-teal-800: 214 223 202; --c-teal-900: 231 236 222;
+  --c-tile: 26 35 29;
+  --c-ink: 248 249 243; --c-ink-2: 211 217 204; --c-ink-3: 169 177 165; --c-ink-4: 138 146 134;
+  --c-paper: 14 20 16; --c-paper-2: 5 8 6; --c-paper-3: 26 35 29;
+  --c-line: 34 44 37; --c-line-strong: 51 64 58;
+  --c-primary: 231 236 222; --c-cream: 231 236 222; --c-cream-soft: 248 249 243; --c-sage: 174 190 158;
+  --c-night: 5 8 6; --c-night-card: 14 20 16; --c-night-tile: 24 32 26;
+  --c-gray-300: 196 201 192; --c-gray-400: 157 165 154; --c-gray-500: 120 128 111; --c-gray-600: 89 97 84;
+  --fb-surface: #050806; --fb-card: #0e1410; --fb-text: #f8f9f3; --fb-muted: #9da59a; --fb-border: rgba(255, 255, 255, .08);
+}
+html[data-theme="light"] {
+  --c-teal-50: 238 242 232; --c-teal-100: 225 232 214; --c-teal-200: 200 212 184; --c-teal-300: 143 167 124; --c-teal-400: 123 148 104;
+  --c-teal-500: 101 123 86; --c-teal-600: 83 104 72; --c-teal-700: 46 85 64; --c-teal-800: 23 76 57; --c-teal-900: 18 58 46;
+  --c-tile: 232 236 226;
+  --c-ink: 22 35 27; --c-ink-2: 61 74 64; --c-ink-3: 95 107 90; --c-ink-4: 120 128 111;
+  --c-paper: 255 255 255; --c-paper-2: 245 246 240; --c-paper-3: 236 239 230;
+  --c-line: 227 232 220; --c-line-strong: 205 213 195;
+  --c-primary: 23 76 57; --c-cream: 29 42 34; --c-cream-soft: 15 26 20; --c-sage: 101 123 86;
+  --c-night: 245 246 240; --c-night-card: 255 255 255; --c-night-tile: 238 241 232;
+  --c-gray-300: 75 85 72; --c-gray-400: 95 107 90; --c-gray-500: 120 128 111; --c-gray-600: 157 165 154;
+  --fb-surface: #f5f6f0; --fb-card: #ffffff; --fb-text: #0f1a14; --fb-muted: #5f6b5a; --fb-border: rgba(23, 76, 57, .12);
+}
+html[data-theme="light"] .fb-dark-scope { color-scheme: dark; }

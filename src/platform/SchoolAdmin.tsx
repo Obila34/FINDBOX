@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { QRCode } from '@/components/ui/qr-code'
+import { ThemeChoice } from '@/components/ui/ThemeToggle'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle, ArrowRight, Check, CheckCircle2, ClipboardList, Clock, Download, FileUp, GraduationCap, HelpCircle,
@@ -178,6 +179,7 @@ export function SchoolAdmin() {
           ))}
         </nav>
         <div className="sa-sidebar-foot">
+          <ThemeChoice />
           <Link to="/manage"><Inbox size={18} />Recovery queue</Link>
           <Link to="/app/help"><HelpCircle size={18} />Help & support</Link>
           <button type="button" onClick={() => void signOut()}><LogOut size={18} />Sign out</button>

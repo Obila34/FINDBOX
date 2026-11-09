@@ -2,6 +2,9 @@ import type { Config } from 'tailwindcss'
 
 /** Palette values mirror src/styles/tokens.css. They are literal here so Tailwind alpha modifiers
  *  (bg-teal-900/80, from-teal-900/85 …) work; var() colours cannot take an alpha channel. */
+/** A theme-aware colour: the value lives in a CSS variable (see src/styles/theme-vars.css) so light and dark mode can swap it. */
+const v = (name: string) => `rgb(var(--c-${name}) / <alpha-value>)`
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
@@ -11,18 +14,18 @@ export default {
       current: 'currentColor',
       white: '#ffffff',
       black: '#000000',
-      teal: { 50: '#16211a', 100: '#1d2a22', 200: '#2a3b2f', 300: '#7f9a6c', 400: '#8fa77c', 500: '#9fb48c', 600: '#aebe9e', 700: '#c3d0b4', 800: '#d6dfca', 900: '#e7ecde' },
-      tile: '#1a231d',
-      ink: { DEFAULT: '#f8f9f3', 2: '#d3d9cc', 3: '#a9b1a5', 4: '#8a9286' },
-      paper: { DEFAULT: '#0e1410', 2: '#050806', 3: '#1a231d' },
-      line: { DEFAULT: '#222c25', strong: '#33403a' },
+      teal: { 50: v('teal-50'), 100: v('teal-100'), 200: v('teal-200'), 300: v('teal-300'), 400: v('teal-400'), 500: v('teal-500'), 600: v('teal-600'), 700: v('teal-700'), 800: v('teal-800'), 900: v('teal-900') },
+      tile: v('tile'),
+      ink: { DEFAULT: v('ink'), 2: v('ink-2'), 3: v('ink-3'), 4: v('ink-4') },
+      paper: { DEFAULT: v('paper'), 2: v('paper-2'), 3: v('paper-3') },
+      line: { DEFAULT: v('line'), strong: v('line-strong') },
       status: { lost: '#a35d12', match: '#13868e', ready: '#0d6166', done: '#2e7d4f', review: '#6a5aa8', danger: '#b3261e' },
       /* Cinematic surfaces (landing and sign-in), drawn from the FindBox sage and forest palette. */
-      primary: '#e7ecde',
-      cream: { DEFAULT: '#e7ecde', soft: '#f8f9f3' },
-      sage: { DEFAULT: '#aebe9e', deep: '#657b56', forest: '#174c39' },
-      night: { DEFAULT: '#050806', card: '#0e1410', tile: '#18201a' },
-      gray: { 300: '#c4c9c0', 400: '#9da59a', 500: '#78806f', 600: '#596154' },
+      primary: v('primary'),
+      cream: { DEFAULT: v('cream'), soft: v('cream-soft') },
+      sage: { DEFAULT: v('sage'), deep: '#657b56', forest: '#174c39' },
+      night: { DEFAULT: v('night'), card: v('night-card'), tile: v('night-tile') },
+      gray: { 300: v('gray-300'), 400: v('gray-400'), 500: v('gray-500'), 600: v('gray-600') },
     },
     fontFamily: {
       display: ['Arial', 'Helvetica', 'system-ui', 'sans-serif'],
