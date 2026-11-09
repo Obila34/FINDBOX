@@ -23,7 +23,7 @@ async function post(cfg, path, body, signal, timeout = 120000) {
 /** One structured answer, constrained to `schema`. Returns the parsed object. */
 export async function structured(cfg, messages, schema, { signal } = {}) {
   const { model } = llmConfig(cfg)
-  const r = await post(cfg, '/api/chat', { model, messages, stream: false, format: schema, keep_alive: '24h', options: { temperature: 0, num_ctx: 4096, num_predict: 120 } }, signal, 150000)
+  const r = await post(cfg, '/api/chat', { model, messages, stream: false, think: false, format: schema, keep_alive: '24h', options: { temperature: 0, num_ctx: 4096, num_predict: 120 } }, signal, 150000)
   const data = await r.json()
   return JSON.parse(data.message?.content || '{}')
 }
@@ -31,7 +31,7 @@ export async function structured(cfg, messages, schema, { signal } = {}) {
 /** Streams plain text, calling onToken for each piece. Resolves with the full text. */
 export async function stream(cfg, messages, onToken, { signal } = {}) {
   const { model } = llmConfig(cfg)
-  const r = await post(cfg, '/api/chat', { model, messages, stream: true, keep_alive: '24h', options: { temperature: 0.3, num_ctx: 4096, num_predict: 260 } }, signal, 180000)
+  const r = await post(cfg, '/api/chat', { model, messages, stream: true, think: false, keep_alive: '24h', options: { temperature: 0.3, num_ctx: 4096, num_predict: 260 } }, signal, 180000)
   const reader = r.body.getReader(), dec = new TextDecoder()
   let buf = '', full = ''
   for (;;) {
