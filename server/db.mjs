@@ -34,7 +34,7 @@ export const products = catalog.map(p => ({id:p.serverId,name:p.name,description
 export async function seedCatalog(pool) {
   for (const p of products)
     await pool.query(
-      "INSERT INTO products(id,name,description,price_minor,tag_count,format,image,available) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, price_minor=EXCLUDED.price_minor, format=EXCLUDED.format, image=EXCLUDED.image, available=EXCLUDED.available",
+      "INSERT INTO products(id,name,description,price_minor,tag_count,format,image,available) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, price_minor=EXCLUDED.price_minor, tag_count=EXCLUDED.tag_count, format=EXCLUDED.format, image=EXCLUDED.image, available=EXCLUDED.available",
       [p.id, p.name, p.description, p.price, p.count, p.format, p.image, p.available],
     );
 }
