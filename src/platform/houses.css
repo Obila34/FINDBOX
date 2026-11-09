@@ -89,3 +89,6 @@
 .fs-add input, .fs-add select { padding: 11px 13px !important; border-radius: 12px !important; border: 1px solid var(--pa-line, var(--fb-border)) !important; background: transparent !important; color: inherit !important; font-size: 14px !important; height: auto !important; }
 .fs-add select { flex: 0 0 auto; }
 .fs-add button { flex: 0 0 auto; width: auto !important; min-width: 0 !important; }
+
+.fs-add-main { border-top: 0; padding-top: 0; }
+.fs-have p { margin-top: 4px; font-size: 14px; }

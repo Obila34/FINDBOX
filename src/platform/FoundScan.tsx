@@ -20,12 +20,17 @@ export const codeFrom = (text: string) => {
 };
 
 /**
- * "I found it": scan a FindBox QR and it links straight to its owner.
- *  - Your own item (or one you reported by mistake) goes back to "with you".
- *  - Someone else's: their family is told at once; hand it back or drop it at a box.
+ * Scan: one scanner for everything.
+ *  - Your child's label: add a belonging to it, or mark something as back with you.
+ *  - Someone else's label: their family is told at once; hand it back or drop it at a box.
+ *  - "Add a belonging" opens the same scanner with its own wording and goes straight to adding.
  */
 export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boolean; boxes?: Box[]; onDone?: () => void }) {
   const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const [adding, setAdding] = useState(!staff && params.get("mode") === "add");
+  const forChild = params.get("child") || "";
+  const [added, setAdded] = useState<{ name: string; child: string; left: number } | null>(null);
   const [scan, setScan] = useState<Scan | null>(null), [pick, setPick] = useState(""), [box, setBox] = useState(""), [busy, setBusy] = useState(false), [done, setDone] = useState<{ mine: boolean; message: string } | null>(null);
   const [untagged, setUntagged] = useState(false), [photo, setPhoto] = useState<string | null>(null);
   const scanner = useScanner((text) => { scanner.stop(); void open(codeFrom(text)); });
@@ -47,7 +52,7 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
       setDone(r); onDone?.();
     } catch { /* toast shown */ } finally { setBusy(false); }
   }
-  const reset = () => { setScan(null); setDone(null); setPick(""); setUntagged(false); setPhoto(null); };
+  const reset = () => { setScan(null); setDone(null); setPick(""); setUntagged(false); setPhoto(null); setAdded(null); };
   async function handIn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
@@ -64,7 +69,45 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
     if (!scan?.studentId) return;
     const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>;
     setBusy(true);
-    try { await api("/family/children/" + scan.studentId + "/items", { ...d, code: scan.code }); notify(`${d.name} is now on ${scan.child.split(" ")[0]}'s QR.`); form.reset(); await open(scan.code); } catch { /* toast shown */ } finally { setBusy(false); }
+    try {
+      await api("/family/children/" + scan.studentId + "/items", { ...d, code: scan.code });
+      if (adding) setAdded({ name: d.name!, child: scan.child.split(" ")[0]!, left: Math.max(0, (scan.labels?.remaining ?? 1) - 1) });
+      else { notify(`${d.name} is now on ${scan.child.split(" ")[0]}'s QR.`); form.reset(); await open(scan.code); }
+      onDone?.();
+    } catch { /* toast shown */ } finally { setBusy(false); }
+  }
+
+  if (added) return (
+    <section className="hs-card fs-done" role="status">
+      <span><Check size={30} /></span>
+      <h2>{added.name} added</h2>
+      <p>It's on {added.child}'s QR now. {added.left} label{added.left === 1 ? "" : "s"} left.</p>
+      {added.left > 0 ? <button type="button" className="fp-primary" onClick={reset}><ScanLine size={17} />Scan the next label</button> : <Link className="fp-primary" to="/app/shop">Order more labels</Link>}
+    </section>
+  );
+
+  // Adding a belonging: after scanning, go straight to naming it.
+  if (scan && adding) {
+    const left = scan.labels?.remaining ?? 0;
+    return (
+      <section className="hs-card fs-result">
+        {scan.mine && scan.studentId ? <>
+          <div className="fs-who"><div><small className="hs-note">Adding to</small><br /><b>{scan.child}</b></div></div>
+          {left > 0 ? <form className="fs-add fs-add-main" onSubmit={addBelonging}>
+            <label className="fp-field"><span>What is the belonging?</span><input name="name" required maxLength={100} placeholder="e.g. Navy sweater" autoFocus /></label>
+            <label className="fp-field"><span>Kind</span><select name="category" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+            <button className="fp-primary" disabled={busy}><Plus size={17} />Add belonging</button>
+            <p className="hs-note">{left} label{left === 1 ? "" : "s"} left.</p>
+          </form> : <p className="hs-note">{scan.labels?.delivered ? `All ${scan.labels.delivered} labels are in use.` : "Your labels haven't been delivered yet."} <Link to="/app/shop">Order labels</Link> to add more belongings.</p>}
+          {scan.items.length > 0 && <div className="fs-have"><small className="hs-note">Already on this QR</small><p>{scan.items.map((i) => i.name).join(" · ")}</p></div>}
+        </> : <>
+          <div className="fs-who"><div><small className="hs-note">This label belongs to</small><br /><b>{scan.child || "another family"}</b></div></div>
+          <p className="hs-note">It isn't one of your children's labels, so you can't add to it. Did you find this item?</p>
+          <button type="button" className="fp-primary" onClick={() => setAdding(false)}>I found it</button>
+        </>}
+        <button type="button" className="fs-link" onClick={reset}><RotateCcw size={14} />Scan a different label</button>
+      </section>
+    );
   }
 
   if (done) return (
@@ -141,10 +184,10 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
     <div className="fs-result">
       {scanner.state === "scanning" || scanner.state === "requesting"
         ? <div className="fs-camera"><video ref={scanner.videoRef} muted playsInline /></div>
-        : <button type="button" className="fs-start" onClick={() => void scanner.start()} disabled={busy}><span><Camera size={32} /></span>Scan a FindBox QR</button>}
+        : <button type="button" className="fs-start" onClick={() => void scanner.start()} disabled={busy}><span><Camera size={32} /></span>{adding ? (forChild ? `Scan ${forChild}'s label` : "Scan the label") : "Scan a FindBox QR"}</button>}
       {scanner.state === "denied" && <p className="hs-note" role="alert">Camera access is off. Allow the camera for FindBox in your phone settings, then tap Scan again.</p>}
       {scanner.state === "unsupported" && <p className="hs-note" role="alert">This device can't scan here. Open FindBox on a phone with a camera.</p>}
-      <button type="button" className="fs-ghost fs-noqr" onClick={() => { scanner.stop(); setUntagged(true); }}>No QR on it?</button>
+      {!adding && <button type="button" className="fs-ghost fs-noqr" onClick={() => { scanner.stop(); setUntagged(true); }}>Found something with no QR?</button>}
     </div>
   );
 }

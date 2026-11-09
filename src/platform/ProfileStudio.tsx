@@ -49,12 +49,11 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
 
     <div className="ps-section">
       <div className="ps-row"><h3>Picture</h3>{draft.avatar && <button type="button" className="ps-ghost" onClick={() => set({ avatar: null })}><Trash2 size={14} />Remove photo</button>}</div>
-      <button type="button" className={cx('ps-initials', !draft.emoji && !draft.avatar && 'is-on')} aria-pressed={!draft.emoji && !draft.avatar} onClick={() => set({ emoji: '', avatar: null })}>Use my initials</button>
       <details className="ps-more"><summary>Choose an icon<ChevronDown size={15} /></summary>
       {ICON_GROUPS.map(group => <div key={group.title} className="ps-icon-group">
         <p>{group.title}</p>
         <div className="ps-emojis" role="radiogroup" aria-label={group.title}>
-          {group.icons.map(([key, label, Icon]) => { const on = draft.emoji === 'i:' + key && !draft.avatar; return <motion.button whileTap={{ scale: 0.85 }} whileHover={still ? undefined : { y: -2 }} type="button" role="radio" aria-checked={on} aria-label={label} title={label} key={key} className={cx(on && 'is-on')} onClick={() => set({ emoji: 'i:' + key, avatar: null })}>
+          {group.icons.map(([key, label, Icon]) => { const on = draft.emoji === 'i:' + key && !draft.avatar; return <motion.button whileTap={{ scale: 0.85 }} whileHover={still ? undefined : { y: -2 }} type="button" role="radio" aria-checked={on} aria-label={label} title={label} key={key} className={cx(on && 'is-on')} onClick={() => set(on ? { emoji: '' } : { emoji: 'i:' + key, avatar: null })}>
             <Icon size={20} strokeWidth={1.6} />
           </motion.button> })}
         </div>

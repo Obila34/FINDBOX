@@ -149,14 +149,14 @@ export function Platform() {
     ? ([
         ["/app/home", "Home", House],
         ["/app/items", "My items", Package],
-        ["/app/found", "I found it", ScanLine],
+        ["/app/scan", "Scan", ScanLine],
         ["/app/houses", "Houses", Trophy],
         ["/app/inbox", "Inbox", Bell],
       ] as const)
     : ([
         ["/app/home", "Home", House],
         ["/app/items", "Items", Package],
-        ["/app/found", "I found it", ScanLine],
+        ["/app/scan", "Scan", ScanLine],
         ["/app/shop", "Shop", ShoppingBag],
         ["/app/inbox", "Inbox", Bell],
       ] as const);
@@ -338,7 +338,7 @@ export function Platform() {
             </div>
             <Link
               className="fp-primary"
-              to={"/app/found?code=" + encodeURIComponent(publicTag.code)}
+              to={"/app/scan?code=" + encodeURIComponent(publicTag.code)}
             >
               Sign in to return it <ArrowUpRight size={18} />
             </Link>
@@ -346,7 +346,7 @@ export function Platform() {
         )}
         {user && !auth && !shop && !publicScan && workspace && (
           <>
-            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop", "/app/found", "/app/houses", "/app/inbox", "/app/streaks", "/app/account"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
+            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop", "/app/found", "/app/scan", "/app/houses", "/app/inbox", "/app/streaks", "/app/account"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
               <div>
                 <span className="fp-kicker">
                   {workspace.school?.name || "YOUR SCHOOL"}
@@ -499,12 +499,12 @@ export function Platform() {
                 </form>
               </section>
             )}
-            {["/app/found", "/manage/scan", "/manage/log"].includes(path) && (
+            {["/app/scan", "/app/found", "/manage/scan", "/manage/log"].includes(path) && (
               <div className="fs-page">
                 <section>
                   <header className="fs-head">
-                    <h1>{staff ? "Receive a tagged item" : "I found it"}</h1>
-                    <p>{staff ? "Scan the QR. The family is told once you confirm it is in the box." : "Scan any FindBox QR. If it's yours it comes straight home; if not, its family hears at once."}</p>
+                    <h1>{staff ? "Receive a tagged item" : new URLSearchParams(location.search).get("mode") === "add" ? "Add a belonging" : "Scan"}</h1>
+                    <p>{staff ? "Scan the QR. The family is told once you confirm it is in the box." : new URLSearchParams(location.search).get("mode") === "add" ? "Stick a label on the belonging, then scan it." : "Scan a FindBox label: add your child's belongings, or return something you found."}</p>
                   </header>
                   <FoundScan staff={staff} boxes={workspace.boxes} onDone={() => void reload()} />
                 </section>
@@ -670,7 +670,7 @@ export function Platform() {
             )}
             {path === "/app/streaks" && <ServerStreaks personId={user.id}/>}
             {path === "/app/houses" && <Houses />}
-            {(path === "/app/report" || path.startsWith("/app/report/")) && <Navigate to="/app/found" replace />}
+            {(path === "/app/report" || path.startsWith("/app/report/")) && <Navigate to="/app/scan" replace />}
             {path === "/app/account" && (
               <section className="fp-account">
                 <ProfileStudio role={user.role} school={workspace.school?.name}/>
