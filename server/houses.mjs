@@ -2,6 +2,7 @@ import { z } from "zod";
 import { id, secret, hash, requireThat } from "./security.mjs";
 import { transaction } from "./db.mjs";
 import { notify } from "./worker.mjs";
+import { validPhoto } from "./profile.mjs";
 
 // One QR per child, houses and "I found it".
 //  - Every child has one code. It is printed, with their name, on every sticker and fabric label, and each of
@@ -65,7 +66,7 @@ async function houseOf(db, userId) {
 /** Gives the finder's house an Ubuntu star once the item is safely back. One star per case. */
 export async function awardStar(db, caseId) {
   const found = (await db.query(
-    "SELECT e.actor_id,c.school_id,c.title FROM events e JOIN cases c ON c.id=e.case_id WHERE e.case_id=$1 AND e.action IN ('deposit_reported','found_direct') ORDER BY e.created_at LIMIT 1",
+    "SELECT e.actor_id,c.school_id,c.title FROM events e JOIN cases c ON c.id=e.case_id WHERE e.case_id=$1 AND e.action IN ('deposit_reported','found_direct','untagged_handed_in') ORDER BY e.created_at LIMIT 1",
     [caseId],
   )).rows[0];
   if (!found?.actor_id) return null;
@@ -131,7 +132,8 @@ export async function houseRoutes(app, { pool, user }) {
     const children = await myChildren(pool, u);
     const out = [];
     for (const c of children) {
-      const tag = (await pool.query("SELECT code FROM tags WHERE student_id=$1 AND status='active'", [c.id])).rows[0];
+      // Every linked child has a QR from the start, before any belonging or order.
+      const tag = c.guardian_id ? await transaction(pool, (db) => childCode(db, c, c.guardian_id)) : (await pool.query("SELECT code FROM tags WHERE student_id=$1 AND status='active'", [c.id])).rows[0];
       const items = (await pool.query(
         "SELECT i.id,i.name,i.category,i.color,i.status,t.code FROM items i JOIN tags t ON t.id=i.tag_id WHERE i.student_id=$1 ORDER BY i.created_at",
         [c.id],
@@ -241,10 +243,43 @@ export async function houseRoutes(app, { pool, user }) {
     return {
       code: tag.code,
       mine,
+      studentId: mine ? tag.student_id || items[0].student_id || null : null,
       child: mine ? childName : firstName(childName),
       items: items.map((i) => ({ id: i.id, name: i.name, category: i.category, status: i.status, open: i.open_case })),
       boxes,
     };
+  });
+
+  // No QR on it: describe it (and add a photo if you can), then hand it in. The school is told at once.
+  app.post("/api/found/untagged", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (req) => {
+    const u = await verified(req);
+    requireThat(u.school_id, 409, "Join your school first, so we know where the item is.");
+    const d = z.object({
+      title: z.string().trim().min(3).max(100),
+      category: categories.default("other"),
+      where: z.string().trim().max(200).default(""),
+      boxId: z.string().max(100).default(""),
+      photo: z.string().max(240000).nullable().default(null),
+    }).strict().parse(req.body);
+    requireThat(!d.photo || validPhoto(d.photo), 400, "Use a PNG, JPEG or WebP photo under 160 KB");
+    return transaction(pool, async (db) => {
+      let box = null;
+      if (d.boxId) {
+        box = (await db.query("SELECT * FROM boxes WHERE id=$1 AND school_id=$2 AND active=true", [d.boxId, u.school_id])).rows[0];
+        requireThat(box, 400, "Box is not available");
+      }
+      const caseId = id();
+      await db.query(
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo) VALUES($1,$2,$3,$4,$5,$6,'awaiting_deposit',$7)",
+        [caseId, u.school_id, box?.id || null, d.title, d.category, d.where ? "Found at: " + d.where : "", d.photo],
+      );
+      await db.query("INSERT INTO events(id,case_id,actor_id,action,note) VALUES($1,$2,$3,'untagged_handed_in',$4)", [id(), caseId, u.id, box ? box.name : "No box chosen"]);
+      const staffRows = (await db.query("SELECT user_id FROM memberships WHERE school_id=$1 AND role IN ('staff','manager')", [u.school_id])).rows;
+      for (const s of staffRows)
+        await db.query("INSERT INTO notifications(id,user_id,message) VALUES($1,$2,$3)", [id(), s.user_id,
+          `Found item handed in without a QR: ${d.title}${box ? ` (going to ${box.name})` : ""}. Receive it from your queue when it arrives.`]);
+      return { id: caseId, message: box ? `Thank you! Drop it at ${box.name}. The school has been told.` : "Thank you! Hand it to a teacher or the school office. The school has been told." };
+    });
   });
 
   app.post("/api/found", async (req) => {

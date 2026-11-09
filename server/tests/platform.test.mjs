@@ -920,9 +920,9 @@ test('streak check-ins use Nairobi time, survive sessions, preserve long history
 });
 
 
-test('complete kits reserve each label material and roll back incomplete assortments',async()=>{
+test('family packs reserve each label material and roll back incomplete assortments',async()=>{
  const owner=await login('support-parent@test.com','support-testing-123');
- const parts=[['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2]];
+ const parts=[['sticker',20],['fabric',20]];
  for(const [format,n] of parts)for(let i=0;i<n;i++)await pool.query("INSERT INTO tags(id,code,activation_hash,format,product_id) VALUES($1,$1,$2,$3,'complete-41')",['kit-'+format+'-'+i,hash('secret-'+i),format]);
  const payload={requestKey:crypto.randomUUID(),paymentMethod:'mpesa',lines:[{productId:'complete-41',quantity:1}]};
  const result=await call('POST','/api/orders',payload,owner);assert.equal(result.statusCode,201,result.body);assert.equal(paymentAmount,219900);
@@ -935,9 +935,10 @@ test('complete kits reserve each label material and roll back incomplete assortm
 });
 
 
-test('premium finder is hidden and cannot be ordered before hardware launch',async()=>{
+test('trackable tags show as coming soon and cannot be ordered before launch',async()=>{
  const products=(await call('GET','/api/products')).json().products;
- assert.equal(products.some(p=>p.id==='finder-1'),false);
+ assert.equal(products.find(p=>p.id==='finder-1')?.available,false);
+ assert.deepEqual(products.map(p=>p.id).sort(),['cables-6','complete-41','everyday-12','finder-1']);
  const owner=await login('support-parent@test.com','support-testing-123');
  const result=await call('POST','/api/orders',{requestKey:crypto.randomUUID(),paymentMethod:'mpesa',lines:[{productId:'finder-1',quantity:1}]},owner);
  assert.equal(result.statusCode,400,result.body);
@@ -1086,10 +1087,10 @@ test('operational console enforces roles, safe edits, conflicts, invoices, outbo
   await pool.query('UPDATE outbox SET locked_until=NULL WHERE invoice_id=$1',[proId]);
   assert.equal((await request('POST','/api/company/invoices/'+proId+'/action',{revision:3,reason:'Void unsent test pro forma estimate',action:'void'},admin)).statusCode,200);
   assert.equal((await pool.query('SELECT count(*)::int n FROM outbox WHERE invoice_id=$1',[proId])).rows[0].n,0);
-  const oid=crypto.randomUUID();await pool.query("INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,status,payment_reference) VALUES($1,$2,$1,219900,$3,'school-a','paid',$1)",[oid,client.id,JSON.stringify([{productId:'complete-41',quantity:1,tagCount:38,name:'Kit',unitPrice:219900}])]);
-  for(const [format,n] of [['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2]])for(let i=0;i<n;i++)await pool.query("INSERT INTO tags(id,code,activation_hash,format,product_id) VALUES($1,$1,'test-private-hash',$2,'complete-41')",['ops-stock-'+format+'-'+i,format]);
+  const oid=crypto.randomUUID();await pool.query("INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,status,payment_reference) VALUES($1,$2,$1,219900,$3,'school-a','paid',$1)",[oid,client.id,JSON.stringify([{productId:'complete-41',quantity:1,tagCount:40,name:'Family pack',unitPrice:219900}])]);
+  for(const [format,n] of [['sticker',20],['fabric',20]])for(let i=0;i<n;i++)await pool.query("INSERT INTO tags(id,code,activation_hash,format,product_id) VALUES($1,$1,'test-private-hash',$2,'complete-41')",['ops-stock-'+format+'-'+i,format]);
   const fulfilled=await request('POST','/api/company/orders/'+oid+'/fulfill',{reason:'Confirm paid order is ready for collection'},admin);assert.equal(fulfilled.statusCode,200,fulfilled.body);
-  assert.deepEqual(Object.fromEntries((await pool.query("SELECT format,count(*)::int n FROM tags WHERE order_id=$1 AND status='allocated' GROUP BY format",[oid])).rows.map(r=>[r.format,r.n])),{sticker:12,compact:6,fabric:12,wrap:6,engraved:2});
+  assert.deepEqual(Object.fromEntries((await pool.query("SELECT format,count(*)::int n FROM tags WHERE order_id=$1 AND status='allocated' GROUP BY format",[oid])).rows.map(r=>[r.format,r.n])),{sticker:20,fabric:20});
   const ownerCookie=await token(client.id);const disabled=await request('POST','/api/company/users/'+client.id,{...edit,revision:2,disabled:true,reason:'Disable test account access'},dev);assert.equal(disabled.statusCode,200,disabled.body);assert.equal((await request('GET','/api/auth/me',undefined,ownerCookie)).statusCode,401);
   assert.ok((await request('GET','/api/company/records/audit',undefined,admin)).json().rows.length>0);
  }finally{await ops.close()}
@@ -1359,10 +1360,13 @@ test("one QR per child carries every belonging, scans link items to their family
   assert.equal((await call("POST", "/api/school/child-requests/" + req.id + "/approve", {}, admin)).statusCode, 200);
   const child = (await pool.query("SELECT id,house FROM students WHERE school_id='kids' AND name='Baraka Kids'")).rows[0];
   assert.equal(child.house, "blue");
+  const early = (await pool.query("SELECT code FROM tags WHERE student_id=$1 AND status='active'", [child.id])).rows[0];
+  assert.ok(early?.code, "the school's approval gives the child a QR straight away");
   const a = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Blue sweater", category: "clothing" }, parent);
   const b = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Lunchbox", category: "lunchbox" }, parent);
   assert.equal(a.statusCode, 200, a.body);
   assert.equal(a.json().code, b.json().code, "every belonging shares the child's one code");
+  assert.equal(a.json().code, early.code);
   const code = a.json().code;
   const qr = (await call("GET", "/api/family/qr", null, parent)).json().children.find((c) => c.id === child.id);
   assert.equal(qr.code, code);
@@ -1399,6 +1403,14 @@ test("one QR per child carries every belonging, scans link items to their family
   assert.equal((await call("POST", "/api/school/houses/" + child.id, { house: "green" }, admin)).statusCode, 200);
   assert.equal((await call("POST", "/api/family/children/" + child.id + "/house", { house: "yellow" }, parent)).statusCode, 200);
   assert.equal((await call("POST", "/api/family/children/" + child.id + "/house", { house: "red" }, finder)).statusCode, 403);
+  // No QR on it: describe it and hand it in; school staff are told at once.
+  r = await call("POST", "/api/found/untagged", { title: "Green water bottle with stickers", category: "bottle", where: "Library" }, finder);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await pool.query("SELECT status,item_id FROM cases WHERE id=$1", [r.json().id])).rows[0].status, "awaiting_deposit");
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='kids-admin' AND message LIKE 'Found item handed in without a QR: Green water bottle%'")).rowCount);
+  assert.equal((await call("POST", "/api/found/untagged", { title: "Bag", photo: "data:image/png;base64,AAAA" }, finder)).statusCode, 400);
+  // Scanning your own child's QR lets you add belongings to it.
+  assert.equal((await call("GET", "/api/scan/" + code, null, parent)).json().studentId, child.id);
   const familyView = (await call("GET", "/api/houses", null, parent)).json();
   assert.equal(familyView.staff, false);
   assert.ok(familyView.members.every((m) => m.name !== "Wanjiru Finder"));

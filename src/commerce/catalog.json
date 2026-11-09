@@ -1,8 +1,28 @@
 [
   {
+    "id": "complete",
+    "serverId": "complete-41",
+    "name": "Family pack",
+    "subtitle": "Every uniform and every everyday thing.",
+    "price": 2199,
+    "count": 40,
+    "format": "20 fabric + 20 stickers",
+    "category": "Bundles",
+    "image": "/media/catalog/complete-qr-960.webp",
+    "description": "A family pack of 20 fabric labels for uniforms and 20 QR stickers for bottles, lunchboxes, books and bags. Every label carries your child's name and QR.",
+    "uses": [
+      "School uniforms, sweaters and blazers",
+      "Bottles, lunchboxes, books and bags",
+      "Fabric labels and stickers together"
+    ],
+    "color": "#e4eadc",
+    "stockFormat": "mixed",
+    "available": true
+  },
+  {
     "id": "everyday",
     "serverId": "everyday-12",
-    "name": "Everyday labels",
+    "name": "Everyday stickers",
     "subtitle": "Small stickers. A big way back.",
     "price": 499,
     "count": 12,
@@ -17,26 +37,6 @@
     ],
     "color": "#e4eadc",
     "stockFormat": "sticker",
-    "available": true
-  },
-  {
-    "id": "uniform",
-    "serverId": "uniform-12",
-    "name": "Fabric Labels",
-    "subtitle": "Their uniform. Clearly theirs.",
-    "price": 599,
-    "count": 12,
-    "format": "Heat-transfer QR",
-    "category": "Clothing",
-    "image": "/media/catalog/fabric-qr-960.webp",
-    "description": "Heat-transfer QR fabric labels for uniforms, sweaters and PE kits. Apply only to compatible fabrics using the supplied care and temperature instructions.",
-    "uses": [
-      "School uniforms",
-      "PE kits & jackets",
-      "Compatible fabrics"
-    ],
-    "color": "#e4eadc",
-    "stockFormat": "fabric",
     "available": true
   },
   {
@@ -60,100 +60,20 @@
     "available": true
   },
   {
-    "id": "chargers",
-    "serverId": "chargers-6",
-    "name": "Charger labels",
-    "subtitle": "Never mix up your power.",
-    "price": 349,
-    "count": 6,
-    "format": "Compact QR stickers",
-    "category": "Tech",
-    "image": "/media/catalog/tech-qr-960.webp",
-    "description": "Six compact QR stickers for charger bodies, adapters and power banks. Attach to a flat surface, keeping vents, safety markings and electrical contacts clear.",
-    "uses": [
-      "Charger bodies",
-      "Adapters",
-      "Power banks"
-    ],
-    "color": "#e4eadc",
-    "stockFormat": "compact",
-    "available": true
-  },
-  {
-    "id": "adventure",
-    "serverId": "bag-2",
-    "name": "Engraved tags",
-    "subtitle": "Made to stay with you.",
-    "price": 699,
-    "count": 2,
-    "format": "Laser-engraved QR",
-    "category": "Bags & keys",
-    "image": "/media/catalog/engraved-qr-960.webp",
-    "description": "Two engraved QR metal tags with attachment loops for keys, bags and sports kits. The code is marked into a separate tag; we do not engrave powered electronics.",
-    "uses": [
-      "Bags & keys",
-      "Sports kits",
-      "Attachable metal tags"
-    ],
-    "color": "#e4eadc",
-    "stockFormat": "engraved",
-    "available": true
-  },
-  {
-    "id": "tap",
-    "serverId": "tap-3",
-    "name": "Tap & find",
-    "subtitle": "Tap once. Find a way home.",
-    "price": 999,
-    "count": 3,
-    "format": "NFC + QR",
-    "category": "NFC",
-    "image": "/media/catalog/nfc-qr-960.webp",
-    "description": "Three premium NFC tags with a QR fallback. A compatible phone can open the recovery page with a tap, without framing a code in the camera. No battery or charging required.",
-    "uses": [
-      "Compatible NFC phones",
-      "QR fallback included",
-      "No battery required"
-    ],
-    "color": "#e4eadc",
-    "stockFormat": "nfc",
-    "available": false
-  },
-  {
-    "id": "complete",
-    "serverId": "complete-41",
-    "name": "The complete kit",
-    "subtitle": "One pack. Every kind of day.",
-    "price": 2199,
-    "count": 38,
-    "format": "All-in-one pack",
-    "category": "Bundles",
-    "image": "/media/catalog/complete-qr-960.webp",
-    "description": "A complete labelling kit: 12 everyday stickers, 12 fabric labels, 6 cable wraps, 6 charger stickers and 2 engraved tags. 38 unique item identities in one account.",
-    "uses": [
-      "Clothes & everyday essentials",
-      "Cables, chargers, bags & keys",
-      "QR stickers and fabric labels together"
-    ],
-    "color": "#e4eadc",
-    "stockFormat": "mixed",
-    "available": true
-  },
-  {
     "id": "finder",
     "serverId": "finder-1",
-    "name": "Findable Key Card",
-    "subtitle": "Our most premium way to find.",
+    "name": "Trackable tags",
+    "subtitle": "Coming soon.",
     "price": 3499,
     "count": 1,
-    "format": "Premium item finder",
+    "format": "Trackable tag",
     "category": "Finders",
     "image": "/media/catalog/finder-960.webp",
-    "description": "Our planned premium finder for wallets, bags and keys, with a FindBox recovery identity. Target price: KSh 3,499. The hardware model, supported phone network, battery and locating features are being confirmed before orders open. Location finding will use the supported companion app; FindBox will manage the belonging and its return record.",
+    "description": "A trackable tag for bags, keys and wallets, with a FindBox recovery identity. Coming soon: the hardware, battery and locating features are being confirmed before orders open.",
     "uses": [
-      "Wallets, bags & keys",
-      "Companion-app pairing",
-      "Hardware compatibility to be confirmed"
+      "Bags, keys & wallets",
+      "Locate with your phone",
+      "Coming soon"
     ],
     "color": "#e4eadc",
     "stockFormat": "finder",

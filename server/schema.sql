@@ -193,3 +193,5 @@ CREATE INDEX IF NOT EXISTS house_stars_school_idx ON house_stars(school_id,creat
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery text NOT NULL DEFAULT 'school' CHECK(delivery IN ('school','home'));
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address text NOT NULL DEFAULT '';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);
+-- A photo for items handed in without a QR (small, resized in the browser).
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS photo text;

@@ -7,7 +7,7 @@ import { requireThat } from "./security.mjs";
 export const ACCENTS = ["sage", "forest", "cream", "sky", "sunset", "lilac"];
 const MAX_PHOTO = 160 * 1024;
 
-function validPhoto(dataUrl) {
+export function validPhoto(dataUrl) {
   const m = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl);
   if (!m) return false;
   const bytes = Buffer.from(m[2], "base64");

@@ -28,7 +28,7 @@ export function ProfileMenu({ name = "Your FindBox", role = "parent" }: { name?:
         title={name}
         description="Your profile, preferences and a little help."
       >
-        <Link to="/app/account" onClick={close} className="fb-profile-hero"><ProfileAvatar profile={profile} name={name} size={56} /><span><strong>{profile?.name || name}</strong><small>{profile?.tagline || "Personalise your profile"}</small></span><ArrowUpRight size={18} /></Link>
+        <Link to="/app/account" onClick={close} className="fb-profile-hero"><ProfileAvatar profile={profile} name={name} size={56} /><span><strong>{profile?.name || name}</strong><small>Your profile</small></span><ArrowUpRight size={18} /></Link>
         <ThemeChoice />
         <nav className="fb-profile-menu" aria-label="Profile menu">
           {[
