@@ -31,6 +31,27 @@ export async function childCode(db, child, ownerId) {
   )).rows[0];
 }
 
+/**
+ * How many belongings a child can still add. Each delivered label pays for one belonging.
+ * Orders made for a child count for that child; orders made without choosing a child are shared by the family.
+ */
+export async function labelAllowance(db, child) {
+  const guardian = child.guardian_id;
+  if (!guardian) return { delivered: 0, used: 0, remaining: 0 };
+  const orders = (await db.query("SELECT student_id,lines FROM orders WHERE user_id=$1 AND status='fulfilled' AND delivered_at IS NOT NULL", [guardian])).rows;
+  const labels = (lines) => (lines || []).filter((l) => l.productId !== "finder-1").reduce((n, l) => n + Number(l.tagCount || 0) * Number(l.quantity || 1), 0);
+  const kids = (await db.query("SELECT s.id,(SELECT count(*)::int FROM items i WHERE i.student_id=s.id) AS used FROM students s WHERE s.guardian_id=$1 AND s.status='active'", [guardian])).rows;
+  const own = new Map();
+  let shared = 0;
+  for (const o of orders) { const n = labels(o.lines); if (o.student_id) own.set(o.student_id, (own.get(o.student_id) || 0) + n); else shared += n; }
+  const familyShared = shared;
+  for (const k of kids) shared -= Math.max(0, k.used - (own.get(k.id) || 0));
+  const used = kids.find((k) => k.id === child.id)?.used || 0;
+  const mine = own.get(child.id) || 0;
+  const remaining = Math.max(0, mine - used) + Math.max(0, shared);
+  return { delivered: mine + familyShared, used, remaining };
+}
+
 /** Children the signed-in person looks after: a parent's linked children, or a student themself. */
 async function myChildren(db, u) {
   if (u.role === "student") return (await db.query("SELECT * FROM students WHERE user_id=$1 AND status='active'", [u.id])).rows;
@@ -139,7 +160,7 @@ export async function houseRoutes(app, { pool, user }) {
         [c.id],
       )).rows;
       const school = (await pool.query("SELECT name FROM schools WHERE id=$1", [c.school_id])).rows[0]?.name || "";
-      out.push({ id: c.id, name: c.name, className: c.class_name, school, house: c.house, code: tag?.code || null, items });
+      out.push({ id: c.id, name: c.name, className: c.class_name, school, house: c.house, code: tag?.code || null, items, labels: await labelAllowance(pool, c) });
     }
     return { children: out };
   });
@@ -155,13 +176,17 @@ export async function houseRoutes(app, { pool, user }) {
 
   app.post("/api/family/children/:id/items", async (req) => {
     const u = await verified(req);
-    const d = z.object({ name: z.string().trim().min(1).max(100), category: categories.default("other"), color: z.string().trim().max(60).default("") }).strict().parse(req.body);
+    const d = z.object({ code: z.string().trim().min(1).max(100), name: z.string().trim().min(1).max(100), category: categories.default("other"), color: z.string().trim().max(60).default("") }).strict().parse(req.body);
     return transaction(pool, async (db) => {
       const child = await myChild(db, u, req.params.id);
       const owner = child.guardian_id || u.id;
       const tag = await childCode(db, child, owner);
-      const count = (await db.query("SELECT count(*)::int AS n FROM items WHERE student_id=$1", [child.id])).rows[0].n;
-      requireThat(count < 200, 409, "This child already has 200 belongings listed");
+      // Belongings are added by scanning the child's label, never by typing.
+      requireThat(tag.code === d.code, 400, "Scan " + firstName(child.name) + "'s label to add a belonging");
+      await db.query("SELECT id FROM users WHERE id=$1 FOR UPDATE", [owner]);
+      const allowance = await labelAllowance(db, child);
+      requireThat(allowance.delivered > 0, 409, "Order labels first. You can add belongings once they are delivered.");
+      requireThat(allowance.remaining > 0, 409, `All ${allowance.delivered} labels are in use. Order more labels to add another belonging.`);
       const itemId = id();
       await db.query(
         "INSERT INTO items(id,tag_id,owner_id,school_id,name,category,child_name,color,student_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
@@ -244,6 +269,7 @@ export async function houseRoutes(app, { pool, user }) {
       code: tag.code,
       mine,
       studentId: mine ? tag.student_id || items[0].student_id || null : null,
+      labels: mine && tag.student_id ? await labelAllowance(pool, (await pool.query("SELECT * FROM students WHERE id=$1", [tag.student_id])).rows[0]) : null,
       child: mine ? childName : firstName(childName),
       items: items.map((i) => ({ id: i.id, name: i.name, category: i.category, status: i.status, open: i.open_case })),
       boxes,

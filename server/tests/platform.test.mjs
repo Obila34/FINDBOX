@@ -1353,6 +1353,7 @@ test("school administrators invite and remove teachers, and approve parents' chi
 });
 
 test("one QR per child carries every belonging, scans link items to their family, and houses earn Ubuntu stars", async () => {
+  const call = (method, url, b, cookie) => app.inject({ method, url, remoteAddress: "127.0.9.9", headers: { ...(b ? { "x-findbox-request": "1", "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}), origin: "http://localhost:5173" }, payload: b });
   const admin = await login("kids-admin@test.com"), parent = await login("kids-parent@test.com");
   let r = await call("POST", "/api/family/children/request", { name: "Baraka Kids", className: "Grade 3", house: "blue" }, parent);
   assert.equal(r.statusCode, 200, r.body);
@@ -1362,8 +1363,17 @@ test("one QR per child carries every belonging, scans link items to their family
   assert.equal(child.house, "blue");
   const early = (await pool.query("SELECT code FROM tags WHERE student_id=$1 AND status='active'", [child.id])).rows[0];
   assert.ok(early?.code, "the school's approval gives the child a QR straight away");
-  const a = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Blue sweater", category: "clothing" }, parent);
-  const b = await call("POST", "/api/family/children/" + child.id + "/items", { name: "Lunchbox", category: "lunchbox" }, parent);
+  // Belongings need delivered labels and a scanned code.
+  const add = (name, category, extra = {}) => call("POST", "/api/family/children/" + child.id + "/items", { code: early.code, name, category, ...extra }, parent);
+  assert.equal((await add("Blue sweater", "clothing")).statusCode, 409, "no labels delivered yet");
+  const order = crypto.randomUUID();
+  await pool.query("INSERT INTO orders(id,user_id,request_key,amount_minor,lines,school_id,status,payment_reference,student_id) VALUES($1,'kids-parent',$1,49900,$2,'kids','fulfilled',$1,$3)", [order, JSON.stringify([{ productId: "everyday-12", quantity: 1, tagCount: 2, name: "Everyday stickers", unitPrice: 49900 }]), child.id]);
+  assert.equal((await add("Blue sweater", "clothing")).statusCode, 409, "fulfilled but not yet delivered");
+  await pool.query("UPDATE orders SET delivered_at=now() WHERE id=$1", [order]);
+  assert.equal((await add("Blue sweater", "clothing", { code: "FB-typed-wrong" })).statusCode, 400, "must scan the child's own label");
+  const a = await add("Blue sweater", "clothing");
+  const b = await add("Lunchbox", "lunchbox");
+  assert.equal((await add("Third thing", "other")).statusCode, 409, "only as many belongings as labels");
   assert.equal(a.statusCode, 200, a.body);
   assert.equal(a.json().code, b.json().code, "every belonging shares the child's one code");
   assert.equal(a.json().code, early.code);
@@ -1371,7 +1381,8 @@ test("one QR per child carries every belonging, scans link items to their family
   const qr = (await call("GET", "/api/family/qr", null, parent)).json().children.find((c) => c.id === child.id);
   assert.equal(qr.code, code);
   assert.equal(qr.items.length, 2);
-  assert.equal((await call("POST", "/api/family/children/" + child.id + "/items", { name: "X" }, admin)).statusCode, 404);
+  assert.equal((await call("POST", "/api/family/children/" + child.id + "/items", { code: early.code, name: "X" }, admin)).statusCode, 404);
+  assert.deepEqual(qr.labels, { delivered: 2, used: 2, remaining: 0 });
   // A student in the red house finds the sweater.
   const pw = await passwordHash("testing-password-123");
   await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified,house) VALUES('kids-finder','kids-finder@test.com','Wanjiru Finder',$1,'student','kids',true,NULL)", [pw]);
