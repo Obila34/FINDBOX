@@ -20,18 +20,12 @@ const SUGGESTIONS = {
 }
 
 function systemPrompt(access) {
-  return `You are the FindBox assistant, helping ${access.name} (company ${access.role}).
-FindBox is a school lost-and-found platform in Kenya: families label belongings with QR stickers and fabric tags, schools record found items at collection points, and items go home after a verified handover.
-Rules:
-- Answer only from the DATA you are given and the conversation. Never invent names, numbers, ids or events.
-- Lead with the direct answer in one short sentence, then up to five short bullet points if useful.
-- The full table is shown to the person below your answer, so do not repeat every row.
-- Never claim you changed anything. Changes only happen when the person taps Confirm on a card.
-- Money is in Kenya shillings (KSh). Times are Nairobi time.
-- If the data is empty, say so plainly and suggest one next step.`
+  // Kept short on purpose: the server reads about 24 tokens a second, so every word here costs time.
+  return `You are the FindBox assistant for ${access.name} (company ${access.role}). FindBox is a school lost-and-found platform in Kenya.
+Use only the DATA and conversation; never invent names, numbers or events. Start with a one-sentence answer, then at most three short bullets. The table is shown below your answer. Never say you changed anything. Money is KSh; times are Nairobi.`
 }
 
-function compact(result, limit = 14) {
+function compact(result, limit = 10) {
   if (!result) return ''
   const cols = result.columns || []
   const lines = (result.rows || []).slice(0, limit).map(r => cols.map(([k, l]) => `${l}: ${r[k] ?? ''}`).join(' | '))
