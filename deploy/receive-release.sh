@@ -31,6 +31,8 @@ tar -xzf "$archive" -C /opt/findbox
 # Retire the exposed antenna artwork from previous releases.
 rm -f -- public/media/objects/nfc-640.webp public/media/objects/nfc-1280.webp
 if ! (docker compose build web api migrate && docker compose run --rm migrate && docker compose up -d --no-deps --no-build api web); then rollback; exit 1; fi
+# Private AI model service for the company assistant. FindBox keeps working if it cannot start.
+docker compose up -d --no-deps ollama || echo "Assistant model service did not start; the assistant stays in rules mode."
 healthy=false
 for attempt in $(seq 1 40); do
  if docker compose exec -T api node -e "fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then healthy=true; break; fi
