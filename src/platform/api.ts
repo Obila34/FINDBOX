@@ -90,6 +90,7 @@ export type Item = {
   status: string;
 };
 export type Recovery = {
+  photo?: string | null;
   id: string;
   title: string;
   category: string;

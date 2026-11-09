@@ -78,3 +78,14 @@
   .hs-table:not(.is-members) td:not(:first-child), .hs-table:not(.is-members) thead th:nth-child(n+3) { text-align: right; }
   .hs-mine { margin-left: 0; }
 }
+
+.fs-noqr { max-width: 420px; width: 100%; margin: 0 auto; }
+.fs-photo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.fs-photo img { width: 96px; height: 96px; border-radius: 16px; object-fit: cover; }
+.fs-photo label { cursor: pointer; }
+.fs-add { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--pa-line, var(--fb-border)); }
+.fs-add > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.fs-add input { flex: 1 1 150px; min-width: 0; }
+.fs-add input, .fs-add select { padding: 11px 13px !important; border-radius: 12px !important; border: 1px solid var(--pa-line, var(--fb-border)) !important; background: transparent !important; color: inherit !important; font-size: 14px !important; height: auto !important; }
+.fs-add select { flex: 0 0 auto; }
+.fs-add button { flex: 0 0 auto; width: auto !important; min-width: 0 !important; }

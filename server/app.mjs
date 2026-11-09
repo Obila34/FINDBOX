@@ -6,7 +6,7 @@ import { companyRoutes } from './company.mjs';
 import { supportRoutes } from "./support.mjs";
 import { accountRoutes } from "./account.mjs";
 import { passkeyRoutes } from "./passkeys.mjs";
-import { profileRoutes } from "./profile.mjs";
+import { profileRoutes, validPhoto } from "./profile.mjs";
 import { assistantRoutes } from "./assistant/index.mjs";
 import { houseRoutes, awardStar } from "./houses.mjs";
 import Fastify from "fastify";
@@ -300,7 +300,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   app.get("/api/products", async () => ({
     products: (
       await pool.query(
-        "SELECT id,name,description,price_minor,tag_count,format,image,available FROM products WHERE active=true AND id<>'finder-1' ORDER BY price_minor",
+        "SELECT id,name,description,price_minor,tag_count,format,image,available FROM products WHERE active=true ORDER BY available DESC,price_minor DESC",
       )
     ).rows,
     checkoutEnabled: !!cfg.paystackKey,
@@ -648,7 +648,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
       ).rows[0];
       for (const line of lines) {
         const reserved = [];
-        const parts = line.productId === 'complete-41' ? [['sticker',12],['compact',6],['fabric',12],['wrap',6],['engraved',2]] : [[null,line.tagCount]];
+        const parts = line.productId === 'complete-41' ? [['sticker',20],['fabric',20]] : [[null,line.tagCount]];
         for (const [format,count] of parts) {
           const rows=(await db.query("SELECT id FROM tags WHERE product_id=$1 AND status='stock' AND ($3::text IS NULL OR format=$3) ORDER BY created_at,id LIMIT $2 FOR UPDATE SKIP LOCKED",[line.productId,count*line.quantity,format])).rows;
           requireThat(rows.length===count*line.quantity,409,'This pack is currently out of stock');
@@ -891,9 +891,11 @@ If this was you, there is nothing to do. If not, change your password and sign o
         category: categories,
         boxId: text(100),
         privateNote: text(500),
+        photo: z.string().max(240000).nullable().default(null),
       }),
       req.body,
     );
+    requireThat(!d.photo || validPhoto(d.photo), 400, "Use a PNG, JPEG or WebP photo under 160 KB");
     return transaction(pool, async (db) => {
       const box = (
         await db.query(
@@ -904,8 +906,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
       requireThat(box, 400, "Invalid box");
       const caseId = id();
       await db.query(
-        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status) VALUES($1,$2,$3,$4,$5,$6,'unclaimed')",
-        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote],
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7)",
+        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo],
       );
       await event(db, caseId, u.id, "found_unclaimed");
       return { id: caseId };
@@ -916,7 +918,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
     return {
       cases: (
         await pool.query(
-          "SELECT c.id,c.title,c.category,b.name AS box_name,c.created_at FROM cases c LEFT JOIN boxes b ON b.id=c.box_id WHERE c.school_id=$1 AND c.status='unclaimed' ORDER BY c.created_at DESC",
+          "SELECT c.id,c.title,c.category,c.photo,b.name AS box_name,c.created_at FROM cases c LEFT JOIN boxes b ON b.id=c.box_id WHERE c.school_id=$1 AND c.status='unclaimed' ORDER BY c.created_at DESC",
           [u.school_id],
         )
       ).rows,
@@ -996,7 +998,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
     return transaction(pool, async (db) => {
       const c = await getCase(db, req.params.id, u);
       requireThat(
-        ["reported_lost", "awaiting_deposit"].includes(c.status) && c.item_id,
+        ["reported_lost", "awaiting_deposit"].includes(c.status),
         409,
         "Case cannot be received",
       );
@@ -1013,6 +1015,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
         ])
       ).rows[0];
       const due = plusDays(school.collection_days);
+      if (!c.item_id) {
+        // Handed in without a QR: it waits in the school's unclaimed gallery for its owner to claim.
+        await db.query("UPDATE cases SET status='unclaimed',box_id=$1 WHERE id=$2", [box.id, c.id]);
+        await event(db, c.id, u.id, "received", box.name);
+        await awardStar(db, c.id);
+        return { ok: true };
+      }
       await db.query(
         "UPDATE cases SET status='awaiting_collection',due_at=$1,box_id=$2 WHERE id=$3",
         [due, box.id, c.id],

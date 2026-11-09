@@ -1,12 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Camera, Check, Home, MapPin, RotateCcw, ScanLine } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Camera, Check, Home, ImagePlus, MapPin, Plus, RotateCcw, ScanLine, X } from "lucide-react";
+import { squarePhoto } from "./profile";
 import { useScanner } from "@/lib/useScanner";
 import { api } from "./api";
 import { notify } from "./feedback";
 import "./houses.css";
 
-type Scan = { code: string; mine: boolean; child: string; items: { id: string; name: string; category: string; status: string; open: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
+type Box = { id: string; name: string; opening_hours: string };
+type Scan = { code: string; mine: boolean; studentId?: string | null; child: string; items: { id: string; name: string; category: string; status: string; open: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
+
+const CATEGORIES: [string, string][] = [["clothing", "Clothing"], ["bottle", "Bottle"], ["lunchbox", "Lunchbox"], ["book", "Book"], ["sports", "Sports kit"], ["electronics", "Gadget"], ["keys", "Keys"], ["other", "Other"]];
 
 /** QR codes hold a link like https://findbox.africa/t/FB-…; people may also type the code itself. */
 export const codeFrom = (text: string) => {
@@ -20,9 +24,10 @@ export const codeFrom = (text: string) => {
  *  - Your own item (or one you reported by mistake) goes back to "with you".
  *  - Someone else's: their family is told at once; hand it back or drop it at a box.
  */
-export function FoundScan({ staff = false, onDone }: { staff?: boolean; onDone?: () => void }) {
+export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boolean; boxes?: Box[]; onDone?: () => void }) {
   const location = useLocation();
   const [scan, setScan] = useState<Scan | null>(null), [pick, setPick] = useState(""), [box, setBox] = useState(""), [busy, setBusy] = useState(false), [done, setDone] = useState<{ mine: boolean; message: string } | null>(null);
+  const [untagged, setUntagged] = useState(false), [photo, setPhoto] = useState<string | null>(null);
   const scanner = useScanner((text) => { scanner.stop(); void open(codeFrom(text)); });
   async function open(code: string) {
     if (!code) return;
@@ -42,7 +47,25 @@ export function FoundScan({ staff = false, onDone }: { staff?: boolean; onDone?:
       setDone(r); onDone?.();
     } catch { /* toast shown */ } finally { setBusy(false); }
   }
-  const reset = () => { setScan(null); setDone(null); setPick(""); };
+  const reset = () => { setScan(null); setDone(null); setPick(""); setUntagged(false); setPhoto(null); };
+  async function handIn(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    setBusy(true);
+    try {
+      const r = await api<{ message: string }>(staff ? "/staff/unclaimed" : "/found/untagged", staff
+        ? { title: d.title, category: d.category, boxId: d.boxId, privateNote: d.where || "Logged by school staff", photo }
+        : { title: d.title, category: d.category, where: d.where || "", boxId: d.boxId || "", photo });
+      setDone({ mine: false, message: staff ? "Logged in the unclaimed gallery. Families can now claim it." : r.message }); onDone?.();
+    } catch { /* toast shown */ } finally { setBusy(false); }
+  }
+  async function addBelonging(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!scan?.studentId) return;
+    const form = e.currentTarget, d = Object.fromEntries(new FormData(form)) as Record<string, string>;
+    setBusy(true);
+    try { await api("/family/children/" + scan.studentId + "/items", d); notify(`${d.name} is now on ${scan.child.split(" ")[0]}'s QR.`); form.reset(); await open(scan.code); } catch { /* toast shown */ } finally { setBusy(false); }
+  }
   function manual(e: FormEvent<HTMLFormElement>) { e.preventDefault(); void open(codeFrom(String(new FormData(e.currentTarget).get("code") || ""))); }
 
   if (done) return (
@@ -84,11 +107,34 @@ export function FoundScan({ staff = false, onDone }: { staff?: boolean; onDone?:
               {box && <button type="button" className="fs-ghost" disabled={busy || !pick} onClick={() => void submit(box)}><MapPin size={16} />Drop at the box</button>}
             </>
           )}
+          {scan.mine && scan.studentId && <form className="fs-add" onSubmit={addBelonging}>
+            <p className="hs-note">Labelling something new? Add it to this QR.</p>
+            <div><input name="name" required maxLength={100} placeholder="e.g. Navy sweater" aria-label="New belonging" />
+              <select name="category" aria-label="Kind of belonging" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
+              <button className="fs-ghost" disabled={busy}><Plus size={15} />Add</button></div>
+          </form>}
           <button type="button" className="fs-link" onClick={reset}><RotateCcw size={14} />Scan a different code</button>
         </div>
       </section>
     );
   }
+
+  if (untagged) return (
+    <form className="hs-card fs-result" onSubmit={handIn}>
+      <div className="fs-who"><b>{staff ? "Log an item without a QR" : "No QR on it"}</b></div>
+      <p className="hs-note">{staff ? "It goes to your unclaimed gallery for families to claim." : "Describe it so its owner recognises it. The school is told straight away."}</p>
+      <label className="fp-field"><span>What is it?</span><input name="title" required minLength={3} maxLength={100} placeholder="e.g. Blue Grade 4 sweater, size 10" /></label>
+      <label className="fp-field"><span>Kind</span><select name="category" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+      <label className="fp-field"><span>{staff ? "Private detail for ownership checks" : "Where did you find it? (optional)"}</span><input name="where" maxLength={200} required={staff} placeholder={staff ? "e.g. name written inside the collar" : "e.g. Sports field, after PE"} /></label>
+      <div className="fs-photo">
+        {photo ? <><img src={photo} alt="Your photo of the item" /><button type="button" className="fs-link" onClick={() => setPhoto(null)}><X size={14} />Remove photo</button></>
+          : <label className="fs-ghost"><ImagePlus size={16} />Add a photo<input type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; try { setPhoto(await squarePhoto(f, 480)); } catch (err) { notify((err as Error).message, "error"); } }} /></label>}
+      </div>
+      {boxes.length > 0 && <label className="fp-field"><span>{staff ? "Stored in" : "Hand it in at"}</span><select name="boxId" required={staff} defaultValue={staff ? boxes[0]!.id : ""}>{!staff && <option value="">A teacher or the school office</option>}{boxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>}
+      <button className="fp-primary" disabled={busy}><Check size={17} />{staff ? "Log item" : "Hand it in"}</button>
+      <button type="button" className="fs-link" onClick={reset}><RotateCcw size={14} />Back to scanning</button>
+    </form>
+  );
 
   return (
     <div className="fs-result">
@@ -101,7 +147,7 @@ export function FoundScan({ staff = false, onDone }: { staff?: boolean; onDone?:
         <input name="code" aria-label="Code under the QR" placeholder="Or type the code, e.g. FB-…" autoComplete="off" />
         <button className="fp-primary" disabled={busy}>Open</button>
       </form>
-      {!staff && <p className="hs-note" style={{ textAlign: "center" }}>No QR on it? Hand it to your school's <Link to="/app/boxes">collection box</Link>.</p>}
+      <button type="button" className="fs-ghost fs-noqr" onClick={() => { scanner.stop(); setUntagged(true); }}>No QR on it?</button>
     </div>
   );
 }

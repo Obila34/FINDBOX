@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { Camera, Check, Trash2, Sparkles } from 'lucide-react'
+import { Camera, Check, ChevronDown, Trash2 } from 'lucide-react'
 import { ACCENTS, ICON_GROUPS, ProfileAvatar, saveProfile, squarePhoto, useProfile, type Profile } from './profile'
 import { notify } from './feedback'
 import { cx } from '@/lib/util'
 import './profile-studio.css'
 
-const TAGLINES = ['Always packs the night before', 'Bottle back, every day', 'Label everything', 'Lost nothing this term']
-
-/** Personal profile editor: photo, emoji, accent ring, name and tagline, with a live preview. */
+/** Personal profile editor: photo or icon, accent ring and name, with a live preview. */
 export function ProfileStudio({ role, school }: { role: string; school?: string }) {
   const saved = useProfile()
   const [draft, setDraft] = useState<Profile | null>(null)
@@ -29,7 +27,7 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
     if (!draft || !saved) return
     setBusy(true)
     try {
-      const patch: Partial<Profile> = { name: draft.name, tagline: draft.tagline, accent: draft.accent, emoji: draft.emoji }
+      const patch: Partial<Profile> = { name: draft.name, accent: draft.accent, emoji: draft.emoji }
       if (draft.avatar !== saved.avatar) patch.avatar = draft.avatar
       setDraft(await saveProfile(patch))
       notify('Profile saved', 'success')
@@ -44,7 +42,6 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
       <div className="min-w-0">
         <p className="ps-kicker">{role === 'student' ? 'Student' : role === 'parent' ? 'Parent' : role === 'manager' ? 'School admin' : 'Teacher'}{school ? ` · ${school}` : ''}</p>
         <h2 className="truncate">{draft.name || 'Your name'}</h2>
-        <p className="ps-tagline">{draft.tagline || 'Add a short line about you'}</p>
       </div>
       <button type="button" className="ps-camera" onClick={() => file.current?.click()} aria-label="Upload a profile photo"><Camera size={17} /></button>
       <input ref={file} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={e => { void pick(e.target.files?.[0]); e.target.value = '' }} />
@@ -53,6 +50,7 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
     <div className="ps-section">
       <div className="ps-row"><h3>Picture</h3>{draft.avatar && <button type="button" className="ps-ghost" onClick={() => set({ avatar: null })}><Trash2 size={14} />Remove photo</button>}</div>
       <button type="button" className={cx('ps-initials', !draft.emoji && !draft.avatar && 'is-on')} aria-pressed={!draft.emoji && !draft.avatar} onClick={() => set({ emoji: '', avatar: null })}>Use my initials</button>
+      <details className="ps-more"><summary>Choose an icon<ChevronDown size={15} /></summary>
       {ICON_GROUPS.map(group => <div key={group.title} className="ps-icon-group">
         <p>{group.title}</p>
         <div className="ps-emojis" role="radiogroup" aria-label={group.title}>
@@ -61,6 +59,7 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
           </motion.button> })}
         </div>
       </div>)}
+      </details>
       <button type="button" className="ps-upload" onClick={() => file.current?.click()}><Camera size={16} />Upload a photo</button>
     </div>
 
@@ -75,8 +74,6 @@ export function ProfileStudio({ role, school }: { role: string; school?: string 
 
     <div className="ps-section ps-fields">
       <label>Display name<input value={draft.name} maxLength={100} minLength={2} required onChange={e => set({ name: e.target.value })} /></label>
-      <label>Tagline<input value={draft.tagline} maxLength={80} placeholder="Something short about you" onChange={e => set({ tagline: e.target.value })} /></label>
-      <div className="ps-suggest">{TAGLINES.map(t => <button type="button" key={t} onClick={() => set({ tagline: t })}><Sparkles size={12} />{t}</button>)}</div>
     </div>
 
     <AnimatePresence>

@@ -149,3 +149,13 @@ html body .pa-section-head h2 { font-size: 20px !important; margin: 0 !important
 .pa-home-actions { display: flex; align-items: center; gap: 8px; }
 .fp-account-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
 .fp-signout { padding: 10px 18px; border-radius: 999px; border: 1px solid var(--pa-line); background: transparent; color: var(--pa-alert); font-weight: 600; cursor: pointer; }
+
+/* Account: profile, one short menu, appearance and sign out. */
+.fp-account { display: grid; gap: 16px; max-width: 640px; margin: 0 auto; }
+.fp-menu { display: grid; border: 1px solid var(--pa-line); border-radius: 20px; background: var(--pa-surface); overflow: hidden; }
+.fp-menu a { display: flex; align-items: center; gap: 12px; padding: 15px 16px; color: var(--pa-text); font-size: 15px; font-weight: 500; border-bottom: 1px solid var(--pa-line); }
+.fp-menu a:last-child { border-bottom: 0; }
+.fp-menu a span { flex: 1; }
+.fp-menu a svg:last-child { opacity: .5; }
+.fp-menu a:active { background: var(--pa-surface-2); }
+.fp-account-meta { color: var(--pa-muted); font-size: 13px; text-align: center; }

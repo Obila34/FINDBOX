@@ -28,6 +28,10 @@ import {
   School,
   PackageCheck,
   Trophy,
+  ShieldCheck,
+  LifeBuoy,
+  Users,
+  ChevronRight,
 } from "lucide-react";
 import {
   api,
@@ -342,7 +346,7 @@ export function Platform() {
         )}
         {user && !auth && !shop && !publicScan && workspace && (
           <>
-            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop", "/app/found", "/app/houses", "/app/inbox", "/app/streaks"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
+            {!["/app/home", "/manage", "/manage/dashboard", "/app/items", "/app/shop", "/app/found", "/app/houses", "/app/inbox", "/app/streaks", "/app/account"].includes(path) && !path.startsWith("/app/shop/") && <div className="fp-workspace-title">
               <div>
                 <span className="fp-kicker">
                   {workspace.school?.name || "YOUR SCHOOL"}
@@ -496,60 +500,14 @@ export function Platform() {
               </section>
             )}
             {["/app/found", "/manage/scan", "/manage/log"].includes(path) && (
-              <div className={staff ? "fp-two-columns" : "fs-page"}>
-                <section className={staff ? "fp-panel" : ""}>
+              <div className="fs-page">
+                <section>
                   <header className="fs-head">
                     <h1>{staff ? "Receive a tagged item" : "I found it"}</h1>
                     <p>{staff ? "Scan the QR. The family is told once you confirm it is in the box." : "Scan any FindBox QR. If it's yours it comes straight home; if not, its family hears at once."}</p>
                   </header>
-                  <FoundScan staff={staff} onDone={() => void reload()} />
+                  <FoundScan staff={staff} boxes={workspace.boxes} onDone={() => void reload()} />
                 </section>
-                {staff && (
-                  <section className="fp-panel">
-                    <h2>No tag? Still welcome.</h2>
-                    <p>
-                      Add a short description. Keep one identifying detail
-                      private for ownership checks.
-                    </p>
-                    <form
-                      onSubmit={(e) => {
-                        const d = fields(e);
-                        run(async () => {
-                          await api("/staff/unclaimed", d);
-                          await reload();
-                          setNotice(
-                            "Unclaimed item added to your school gallery.",
-                          );
-                        });
-                      }}
-                    >
-                      <Field
-                        name="title"
-                        label="Public description"
-                        maxLength={100}
-                      />
-                      {selectCategory()}
-                      <Field
-                        name="privateNote"
-                        label="Private identifying detail"
-                        maxLength={500}
-                      />
-                      <label className="fp-field">
-                        <span>Stored in</span>
-                        <select name="boxId" required>
-                          {workspace.boxes.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button disabled={busy} className="fp-primary">
-                        Log untagged item
-                      </button>
-                    </form>
-                  </section>
-                )}
               </div>
             )}
             {path === "/app/boxes" && (
@@ -587,8 +545,8 @@ export function Platform() {
                   {gallery.map((c) => (
                     <article key={c.id}>
                       <img
-                        src={picture(c.category)}
-                        alt="Category illustration"
+                        src={c.photo || picture(c.category)}
+                        alt={c.photo ? "Photo of the found item" : "Category illustration"}
                       />
                       <div>
                         <h3>{c.title}</h3>
@@ -714,71 +672,20 @@ export function Platform() {
             {path === "/app/houses" && <Houses />}
             {(path === "/app/report" || path.startsWith("/app/report/")) && <Navigate to="/app/found" replace />}
             {path === "/app/account" && (
-              <section className="fp-panel">
-                <ProfileStudio role={user.role} school={workspace.school?.name}/><p><Link to="/app/security">Profile settings &amp; security <ArrowUpRight size={16}/></Link></p>{user.role==='student'&&<ServerStreaks personId={user.id} embedded/>}<p><Link to="/app/help">Help &amp; Support</Link> · <Link to="/app/feedback">Feedback</Link> · <Link to="/app/refer">Refer FindBox</Link></p>
+              <section className="fp-account">
+                <ProfileStudio role={user.role} school={workspace.school?.name}/>
+                {user.role === "student" && <ServerStreaks personId={user.id} embedded/>}
+                <nav className="fp-menu" aria-label="Account">
+                  {(user.role === "student"
+                    ? [["/app/houses", "Houses", Trophy], ["/app/security", "Settings & security", ShieldCheck], ["/app/help", "Help & support", LifeBuoy]]
+                    : [["/app/children", "Children & QR", Users], ["/app/orders", "Orders & labels", ShoppingBag], ["/app/security", "Settings & security", ShieldCheck], ["/app/help", "Help & support", LifeBuoy]]
+                  ).map(([to, text, Icon]) => {
+                    const I = Icon as typeof Trophy;
+                    return <Link key={String(to)} to={String(to)}><I size={18} /><span>{String(text)}</span><ChevronRight size={16} /></Link>;
+                  })}
+                </nav>
                 <div className="fp-account-row"><ThemeChoice /><button type="button" className="fp-signout" disabled={busy} onClick={() => run(async () => { await api("/auth/logout", {}); setUser(null); setWorkspace(null); navigate("/app/sign-in", { replace: true }); })}>Sign out</button></div>
-                <p>{user.email}</p>
-                <p>
-                  {label(user.role)} · {workspace.school?.name}
-                </p>
-                <p>
-                  Email {user.verified ? "verified" : "awaiting verification"}
-                </p>
-                {user.role === "parent" && (
-                  <>
-                    <h3>Family connections</h3>
-                    <p>
-                      {workspace.children.length
-                        ? workspace.children.map((c) => c.name).join(", ")
-                        : "No student accounts linked yet."}
-                    </p>
-                    <button
-                      disabled={busy}
-                      className="fp-primary"
-                      onClick={() =>
-                        run(async () => {
-                          const r = await api<{ code: string }>(
-                            "/family/invite",
-                            {},
-                          );
-                          setNotice(
-                            "Share this one-use code with your child: " +
-                              r.code +
-                              ". It expires in 24 hours.",
-                          );
-                        })
-                      }
-                    >
-                      Invite your child
-                    </button>
-                  </>
-                )}
-                {user.role === "student" && (
-                  <form
-                    onSubmit={(e) => {
-                      const d = fields(e);
-                      run(async () => {
-                        await api("/family/link", d);
-                        await reload();
-                        setNotice("Parent account linked.");
-                      });
-                    }}
-                  >
-                    <Field
-                      name="code"
-                      label="Private invitation from your parent"
-                    />
-                    <button disabled={busy} className="fp-primary">
-                      Link parent
-                    </button>
-                  </form>
-                )}
-                <Link to="/app/orders">
-                  Orders & tags <ArrowUpRight size={16} />
-                </Link>
-                <Link to="/app/forgot">
-                  Reset password <ArrowUpRight size={16} />
-                </Link>
+                <p className="fp-account-meta">{user.email}{user.verified ? "" : " · check your email to verify"}</p>
               </section>
             )}
             {staff &&

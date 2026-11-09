@@ -37,4 +37,6 @@ export async function seedCatalog(pool) {
       "INSERT INTO products(id,name,description,price_minor,tag_count,format,image,available) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name, description=EXCLUDED.description, price_minor=EXCLUDED.price_minor, tag_count=EXCLUDED.tag_count, format=EXCLUDED.format, image=EXCLUDED.image, available=EXCLUDED.available",
       [p.id, p.name, p.description, p.price, p.count, p.format, p.image, p.available],
     );
+  // Products no longer sold stay in the database for past orders and tags, but leave the shop.
+  await pool.query("UPDATE products SET active=(id = ANY($1::text[]))", [products.map((p) => p.id)]);
 }

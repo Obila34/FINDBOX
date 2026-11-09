@@ -120,7 +120,7 @@ try {
     ).rows[0];
     requireThat(product, 404, "Product not found");
     requireThat(product.format !== "mixed" || count % 41 === 0, 400, "Complete kits must be generated in multiples of 41 tags");
-    const kitFormats=[...Array(12).fill("sticker"),...Array(12).fill("fabric"),...Array(6).fill("wrap"),...Array(6).fill("compact"),...Array(2).fill("engraved")];
+    const kitFormats=[...Array(20).fill("sticker"),...Array(20).fill("fabric")];
     const codes = [];
     await transaction(pool, async (db) => {
       for (let i = 0; i < count; i++) {
@@ -129,10 +129,10 @@ try {
           activationSecret = secret().slice(0, 24);
         await db.query(
           "INSERT INTO tags(id,code,activation_hash,format,product_id) VALUES($1,$2,$3,$4,$5)",
-          [tagId, code, hash(activationSecret), product.format === "mixed" ? kitFormats[i % 41] : product.format, product.id],
+          [tagId, code, hash(activationSecret), product.format === "mixed" ? kitFormats[i % 40] : product.format, product.id],
         );
         codes.push({
-          format: product.format === "mixed" ? kitFormats[i % 41] : product.format,
+          format: product.format === "mixed" ? kitFormats[i % 40] : product.format,
           code,
           activationSecret,
           qrUrl:

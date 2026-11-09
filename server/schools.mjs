@@ -1,3 +1,4 @@
+import { childCode } from './houses.mjs';
 import { z } from 'zod';
 import { id,secret,hash,requireThat,passwordHash } from './security.mjs';
 import { transaction } from './db.mjs';
@@ -51,6 +52,7 @@ export async function schoolRoutes(app,{pool,cfg,user}){
   if(sid)await db.query('UPDATE students SET guardian_id=$1,guardian_email=$2,guardian_verified_at=now(),revision=revision+1 WHERE id=$3',[r.guardian_id,r.guardian_email,sid]);
   else{sid=id();await db.query("INSERT INTO students(id,school_id,school_reference,name,class_name,guardian_email,guardian_id,guardian_verified_at,consent_reference) VALUES($1,$2,$3,$4,$5,$6,$7,now(),'Requested by verified guardian; approved by school administrator')",[sid,u.school_id,'FB-'+sid.slice(0,8).toUpperCase(),r.name,r.class_name,r.guardian_email,r.guardian_id]);}
   if(r.house)await db.query('UPDATE students SET house=COALESCE(house,$1) WHERE id=$2',[r.house,sid]);
+  await childCode(db,{id:sid},r.guardian_id);
   await db.query("UPDATE child_requests SET status='approved',student_id=$1,decided_by=$2,decided_at=now() WHERE id=$3",[sid,u.id,r.id]);await operationAudit(db,u,'child_request_approved',r.id,'School administrator approved a child request',{studentId:sid});return {ok:true,studentId:sid};});});
  app.get('/api/school/join-link',async req=>{const {school}=await manager(req);return {code:school.join_code_sealed?unseal(school.join_code_sealed,cfg):null,live:school.lifecycle==='active',name:school.name};});
  app.post('/api/school/join-link',async req=>{const {u,school}=await manager(req);const code=secret().slice(0,16);await transaction(pool,async db=>{await db.query('UPDATE schools SET join_hash=$1,join_code_sealed=$2,revision=revision+1 WHERE id=$3',[hash(code),sealCode(code,cfg),school.id]);await operationAudit(db,u,'school_code_rotated',school.id,'School administrator created a new parent join link');});return {code};});
