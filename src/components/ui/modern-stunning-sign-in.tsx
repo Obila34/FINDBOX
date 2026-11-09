@@ -5,7 +5,7 @@ import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { SwirlMark } from '@/components/brand/Logo'
 import { cx } from '@/lib/util'
 import FooterBlock from '@/components/ui/footer-3'
-import { isInstalledApp } from '@/lib/standalone'
+import { isAppPage, isInstalledApp } from '@/lib/standalone'
 import '@/styles/cinema.css'
 
 const ease = [0.16, 1, 0.3, 1] as const
@@ -104,7 +104,7 @@ export function SignIn1({ title, lede, kicker, tabs, screen, back = { to: '/', l
         </motion.div>
       </main>
     </div>
-    {siteFooter && !isInstalledApp() && <div className="mt-3 sm:mt-4 md:mt-6"><FooterBlock onInstall={() => window.location.assign('/app/sign-in')} /></div>}
+    {siteFooter && !isAppPage() && <div className="mt-3 sm:mt-4 md:mt-6"><FooterBlock onInstall={() => window.location.assign('/app/sign-in')} /></div>}
   </div>
 }
 

@@ -49,6 +49,15 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
       { replace: true },
     );
   }
+  // This device stays signed in (the session lasts up to 90 days and renews while used),
+  // so opening the app goes straight home instead of asking to sign in again.
+  const [checking, setChecking] = useState(() => (path.endsWith("sign-in") || path.endsWith("sign-up")) && !linkCode && new URLSearchParams(location.search).get("google") === null);
+  useEffect(() => {
+    if (!checking) return;
+    api<AuthResult>("/auth/me")
+      .then((r) => { const sec = r.security || r; if (r.user && !sec.requiresMfa && !sec.mfaSetupRequired) enter(r); else setChecking(false); })
+      .catch(() => setChecking(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     api<{ google: boolean }>("/auth/options")
       .then((r) => setGoogle(r.google))
@@ -130,6 +139,7 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
       setBusy(false);
     }
   }
+  if (checking) return <div className="fb-scene-load" role="status">Opening FindBox…</div>;
   return (
     <AuthFrame
       title={
