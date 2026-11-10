@@ -1,3 +1,4 @@
+import { RevealPassword } from '@/components/ui/RevealPassword';
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthFrame } from "@/pages/auth/AuthFrame";
@@ -216,9 +217,9 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
             {!forgot && !verify && (
               <label>
                 Password
-                <input
+                <RevealPassword
                   name="password"
-                  type="password"
+                  label="Password"
                   autoComplete={
                     signup || reset ? "new-password" : "current-password"
                   }
