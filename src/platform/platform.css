@@ -1123,3 +1123,16 @@
 }
 
 @media(max-width:650px){.fp-header{flex-wrap:wrap;gap:18px}.fp-header nav{width:100%;justify-content:space-between;gap:12px}.fp-header nav a{font-size:12px;white-space:nowrap}}
+
+/* Agreement asked of parents who joined before the Terms existed */
+.fb-consent { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px; background: rgba(5, 8, 6, .62); backdrop-filter: blur(6px); }
+.fb-consent section { display: grid; gap: 16px; width: min(480px, 100%); padding: 26px; border: 1px solid var(--fb-border); border-radius: 20px; background: var(--fb-card); color: var(--fb-text); box-shadow: 0 30px 80px rgba(0, 0, 0, .35); }
+.fb-consent h2 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.fb-consent p { margin: 0; color: var(--fb-muted); font-size: 14px; line-height: 1.5; }
+.fb-consent label { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.45; }
+.fb-consent label input { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.fb-consent a { text-decoration: underline; }
+.fb-consent-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.fb-consent-actions button { padding: 11px 18px; border: 1px solid var(--fb-border); border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.fb-consent-actions button.is-main { border-color: var(--fb-text); background: var(--fb-text); color: var(--fb-card); }
+.fb-consent-actions button:disabled { opacity: .45; cursor: default; }

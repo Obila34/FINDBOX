@@ -9,14 +9,40 @@
 }
 
 (spa) {
+  # Two API instances. Each is checked every few seconds; a failed one is skipped, and a request that
+  # could not be delivered is tried on the other, so one instance can stop or restart without an outage.
   # Assistant replies stream token by token; pass each piece straight through.
   handle /api/company/assistant/chat {
-    reverse_proxy api:3001 {
+    reverse_proxy api:3001 api2:3001 {
       flush_interval -1
+      lb_policy least_conn
+      lb_try_duration 8s
+      lb_try_interval 250ms
+      health_uri /api/health
+      health_interval 5s
+      health_timeout 3s
+      fail_duration 10s
     }
   }
   handle /api/* {
-    reverse_proxy api:3001
+    reverse_proxy api:3001 api2:3001 {
+      lb_policy least_conn
+      lb_try_duration 8s
+      lb_try_interval 250ms
+      health_uri /api/health
+      health_interval 5s
+      health_timeout 3s
+      fail_duration 10s
+    }
+  }
+  # If both instances are briefly away, the app gets a message it can show, not a blank error.
+  handle_errors {
+    @down expression `{err.status_code} in [502, 503, 504]`
+    handle @down {
+      header Content-Type application/json
+      header Retry-After 5
+      respond `{"error":"FindBox is busy for a moment. Please try again."}` {err.status_code}
+    }
   }
   handle {
     root * {args[0]}

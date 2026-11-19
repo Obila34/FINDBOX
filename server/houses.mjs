@@ -257,7 +257,7 @@ export async function houseRoutes(app, { pool, user }) {
     const tag = (await pool.query("SELECT t.*,s.name AS child FROM tags t LEFT JOIN students s ON s.id=t.student_id WHERE t.code=$1 AND t.status='active'", [req.params.code])).rows[0];
     requireThat(tag, 404, "We could not find that FindBox code. Check it and try again.");
     const items = (await pool.query(
-      "SELECT i.*,(SELECT status FROM cases c WHERE c.item_id=i.id AND c.status NOT IN ('returned','closed') LIMIT 1) AS open_case FROM items i WHERE i.tag_id=$1 ORDER BY i.created_at",
+      "SELECT i.*,(SELECT status FROM cases c WHERE c.item_id=i.id AND c.status NOT IN ('returned','closed') LIMIT 1) AS open_case,(SELECT id FROM cases c WHERE c.item_id=i.id AND c.status NOT IN ('returned','closed') LIMIT 1) AS open_case_id FROM items i WHERE i.tag_id=$1 ORDER BY i.created_at",
       [tag.id],
     )).rows;
     requireThat(items.length, 404, "This code has no belongings yet.");
@@ -271,13 +271,14 @@ export async function houseRoutes(app, { pool, user }) {
       studentId: mine ? tag.student_id || items[0].student_id || null : null,
       labels: mine && tag.student_id ? await labelAllowance(pool, (await pool.query("SELECT * FROM students WHERE id=$1", [tag.student_id])).rows[0]) : null,
       child: mine ? childName : firstName(childName),
-      items: items.map((i) => ({ id: i.id, name: i.name, category: i.category, status: i.status, open: i.open_case })),
+      // School staff can jump from a scan straight to the item's record, to hand it back.
+      items: items.map((i) => ({ id: i.id, name: i.name, category: i.category, status: i.status, open: i.open_case, ...(['staff', 'manager'].includes(u.role) && items[0].school_id === u.school_id ? { caseId: i.open_case_id } : {}) })),
       boxes,
     };
   });
 
   // No QR on it: describe it (and add a photo if you can), then hand it in. The school is told at once.
-  app.post("/api/found/untagged", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (req) => {
+  app.post("/api/found/untagged", { bodyLimit: 320000, config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (req) => {
     const u = await verified(req);
     requireThat(u.school_id, 409, "Join your school first, so we know where the item is.");
     const d = z.object({
@@ -296,8 +297,8 @@ export async function houseRoutes(app, { pool, user }) {
       }
       const caseId = id();
       await db.query(
-        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo) VALUES($1,$2,$3,$4,$5,$6,'awaiting_deposit',$7)",
-        [caseId, u.school_id, box?.id || null, d.title, d.category, d.where ? "Found at: " + d.where : "", d.photo],
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo,found_at) VALUES($1,$2,$3,$4,$5,$6,'awaiting_deposit',$7,$8)",
+        [caseId, u.school_id, box?.id || null, d.title, d.category, d.where ? "Found at: " + d.where : "", d.photo, d.where],
       );
       await db.query("INSERT INTO events(id,case_id,actor_id,action,note) VALUES($1,$2,$3,'untagged_handed_in',$4)", [id(), caseId, u.id, box ? box.name : "No box chosen"]);
       const staffRows = (await db.query("SELECT user_id FROM memberships WHERE school_id=$1 AND role IN ('staff','manager')", [u.school_id])).rows;
@@ -363,6 +364,16 @@ export async function houseRoutes(app, { pool, user }) {
         "INSERT INTO cases(id,school_id,item_id,box_id,title,category,status) VALUES($1,$2,$3,$4,$5,$6,'awaiting_deposit') RETURNING *",
         [id(), u.school_id, item.id, box?.id || null, item.name, item.category],
       )).rows[0];
+      // Staff holding the item put it straight into the box: one step, and the family is told it is ready.
+      if (box && ['staff', 'manager'].includes(u.role)) {
+        const daysToCollect = (await db.query('SELECT collection_days FROM schools WHERE id=$1', [u.school_id])).rows[0].collection_days;
+        const due = new Date(Date.now() + daysToCollect * 864e5);
+        await db.query("UPDATE cases SET status='awaiting_collection',due_at=$1,box_id=$2 WHERE id=$3", [due, box.id, c.id]);
+        await db.query("UPDATE items SET status='awaiting_collection',revision=revision+1 WHERE id=$1", [item.id]);
+        await db.query("INSERT INTO events(id,case_id,actor_id,action,note) VALUES($1,$2,$3,'received',$4)", [id(), c.id, u.id, box.name]);
+        await notify(db, item.owner_id, `${item.name} is ready at ${box.name}. Collect by ${due.toISOString().slice(0, 10)}. Opening hours: ${box.opening_hours}.`);
+        return { id: c.id, mine: false, received: true, message: `${item.name} is logged into ${box.name}. The family has been told to collect it.` };
+      }
       await db.query("UPDATE items SET status='found',revision=revision+1 WHERE id=$1", [item.id]);
       await db.query("INSERT INTO events(id,case_id,actor_id,action,note) VALUES($1,$2,$3,$4,$5)", [
         id(), c.id, u.id, box ? "deposit_reported" : "found_direct", box ? "Staff confirmation required" : "Finder will hand it back",

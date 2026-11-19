@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { ArrowRightLeft, CalendarDays, Check, FileText, Mail, MessageSquare, Phone, ShoppingBag, StickyNote, Users, X } from 'lucide-react'
+import { ArrowRightLeft, CalendarDays, Check, Printer, FileText, Mail, MessageSquare, Phone, ShoppingBag, StickyNote, Users, X } from 'lucide-react'
 import { motion } from 'motion/react'
+import { QRCode } from '@/components/ui/qr-code'
 import { api, money } from '../api'
 import { spring } from './fx'
 import { notify } from '../feedback'
@@ -10,6 +11,7 @@ const ICON: Record<string, typeof Mail> = { note: StickyNote, call: Phone, meeti
 const when = (d: string) => new Date(d).toLocaleString('en-KE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 const day = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
 const Fact = ({ label, children }: { label: string; children: React.ReactNode }) => <div><dt>{label}</dt><dd>{children || '—'}</dd></div>
+const labelCount = (o: Row) => Math.min(120, (o.lines || []).reduce((n: number, l: Row) => n + Number(l.tagCount || 0) * Number(l.quantity || 1), 0))
 const PARTS: [string, string, number][] = [['adoption', 'Adoption', 35], ['usage', 'Usage', 30], ['outcomes', 'Outcomes', 15], ['setup', 'Setup', 10], ['support', 'Support', 10]]
 
 /** One customer record with everything linked: facts, health, people, orders, tickets, notes, tasks and a timeline. */
@@ -150,7 +152,10 @@ export function RecordPanel({ target, team, isAdmin, onClose, onOpen, onChanged,
             {r.order.status === 'paid' && <button type="button" className="crm-primary" disabled={busy} onClick={() => void run(() => api('/company/orders/' + r.order.id + '/fulfill', { reason: 'Order fulfilled from the CRM orders board' }), 'Order fulfilled. The family has been told.')}>Fulfil order</button>}
             {r.order.status === 'fulfilled' && !r.order.delivered_at && <button type="button" className="crm-primary" disabled={busy} onClick={() => void run(() => api('/company/orders/' + r.order.id + '/delivered', { reason: 'Labels delivered; marked from the CRM orders board' }), 'Marked delivered. The family can now add belongings.')}>Mark delivered</button>}
             {r.order.delivered_at && <span className="crm-flag t-good">Delivered {day(r.order.delivered_at)}</span>}
+            {r.order.childQr && <button type="button" className="crm-outline" onClick={() => window.print()}><Printer size={15} />Print {labelCount(r.order)} labels for {r.order.child?.split(' ')[0]}</button>}
           </div>
+          {!r.order.childQr && r.order.status !== 'pending' && <p className="crm-quote">No child QR on this order yet. The labels need a child: ask the family to choose one, or the child has not been approved by the school.</p>}
+          {r.order.childQr && <div className="crm-labels" id="crm-labels" aria-hidden="true">{Array.from({ length: labelCount(r.order) }, (_, i) => <figure key={i}><QRCode value={`https://findbox.africa/t/${encodeURIComponent(r.order.childQr)}`} size={92} variant="rounded" errorCorrection="Q" color="#123a2e" /><figcaption>{r.order.child}</figcaption></figure>)}</div>}
         </>}
 
         <div className="crm-tabs" role="tablist"><button type="button" role="tab" aria-selected={tab === 'timeline'} className={tab === 'timeline' ? 'is-on' : ''} onClick={() => setTab('timeline')}>Timeline</button><button type="button" role="tab" aria-selected={tab === 'tasks'} className={tab === 'tasks' ? 'is-on' : ''} onClick={() => setTab('tasks')}>Tasks ({r.tasks.filter((t: Row) => t.status === 'open').length})</button></div>

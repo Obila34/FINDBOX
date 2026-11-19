@@ -9,6 +9,7 @@ import { passkeyRoutes } from "./passkeys.mjs";
 import { profileRoutes, validPhoto } from "./profile.mjs";
 import { assistantRoutes } from "./assistant/index.mjs";
 import { houseRoutes, awardStar } from "./houses.mjs";
+import { schoolDeskRoutes } from "./school-desk.mjs";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -40,6 +41,8 @@ const categories = z.enum([
   "electronics",
   "other",
 ]);
+// Bump when the Terms or Privacy Notice change in a way people must accept again.
+export const LEGAL_VERSION = "2026-11";
 const clean = (schema, input) => schema.parse(input);
 const plusDays = (n) => new Date(Date.now() + n * 86400000);
 const event = async (db, caseId, user, action, note = "") =>
@@ -73,7 +76,12 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
   const pay = payments || paymentProvider(cfg);
   await app.register(cookie);
   await app.register(helmet);
-  await app.register(rateLimit, { max: 150, timeWindow: "1 minute" });
+  await app.register(rateLimit, {
+    max: (req, key) => (String(key).startsWith("s:") ? 240 : 150),
+    timeWindow: "1 minute",
+    // A whole school often shares one internet address, so signed-in people are counted per session.
+    keyGenerator: (req) => { const t = sessionToken(req); return t ? "s:" + hash(t).slice(0, 32) : req.ip; },
+  });
   app.removeContentTypeParser("application/json");
   app.addContentTypeParser(
     "application/json",
@@ -134,6 +142,8 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
           : err.statusCode || 500;
     if (status >= 500) {
       req.log.error({ err }, "Request failed");
+      // Kept for the developer's system signals and the monitoring alert; never blocks the reply.
+      pool.query("INSERT INTO runtime_errors(method,route,message,instance) VALUES($1,$2,$3,$4)", [req.method, String(req.routeOptions?.url || req.url.split("?")[0]).slice(0, 200), String(err.message || "").slice(0, 500), process.env.INSTANCE_NAME || "api"]).catch(() => {});
       if (process.env.FINDBOX_TEST_DEBUG === "1") console.error(err);
     }
     reply.code(status).send({
@@ -289,6 +299,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   await profileRoutes(app, { pool, user });
   await assistantRoutes(app, { pool, cfg, user });
   await houseRoutes(app, { pool, user });
+  await schoolDeskRoutes(app, { pool, user });
   await supportRoutes(app, { pool, cfg, user });
   await companyEmailRoutes(app,{pool,cfg,mailer});
   await companyRoutes(app, { pool, cfg, user, daraja });
@@ -296,6 +307,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
   app.get("/api/health", async () => {
     await pool.query("SELECT 1");
     return { status: "ok" };
+  });
+  // For the outside uptime check: is the background work running, and are backups fresh? No private detail.
+  app.get("/api/health/deep", async () => {
+    const beat = new Map((await pool.query("SELECT name,last_ok FROM runtime_heartbeat")).rows.map((r) => [r.name, r.last_ok]));
+    const fresh = (name, hours) => beat.has(name) && Date.now() - new Date(beat.get(name)).getTime() < hours * 3600000;
+    const checks = { database: true, worker: fresh("worker", 0.1), backup: fresh("local_backup", 26), restoreTest: fresh("backup_restore_test", 50), offsiteBackup: fresh("offsite_backup", 36) };
+    return { status: checks.worker && checks.backup ? "ok" : "degraded", checks };
   });
   app.get("/api/products", async () => ({
     products: (
@@ -317,6 +335,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
           password,
           role: z.enum(["parent", "student"]),
           schoolCode: z.string().trim().max(100).optional().default(""),
+          consent: z.boolean().optional().default(false),
         }),
         req.body,
       );
@@ -334,8 +353,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
       const u = await transaction(pool, async (db) => {
         const u = (
           await db.query(
-            "INSERT INTO users(id,name,email,password_hash,role,school_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",
-            [id(), data.name, data.email, pw, data.role, school?.id || null],
+            "INSERT INTO users(id,name,email,password_hash,role,school_id,consent_at,consent_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+            [id(), data.name, data.email, pw, data.role, school?.id || null, data.consent ? new Date() : null, data.consent ? LEGAL_VERSION : null],
           )
         ).rows[0];
         await sendToken(db, u, "verify");
@@ -372,6 +391,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
   );
   app.get("/api/auth/me", async (req) => ({
     user: publicUser(await user(req, true)),
+    // Parents who joined before the Terms existed are asked to agree the next time they open the app.
+    needsConsent: await (async () => { const u = await user(req, true); return u.role === "parent" && !u.company_role && u.consent_version !== LEGAL_VERSION; })(),
     security: await (async () => {
       const u = await user(req, true);
       return {
@@ -385,6 +406,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
       };
     })(),
   }));
+  app.post("/api/account/consent", async (req) => {
+    const u = await user(req, true);
+    const d = z.object({ agree: z.literal(true) }).strict().parse(req.body);
+    requireThat(d.agree && u.role === "parent", 400, "Only a parent or guardian account agrees to the Terms");
+    await pool.query("UPDATE users SET consent_at=now(),consent_version=$1 WHERE id=$2", [LEGAL_VERSION, u.id]);
+    return { ok: true, version: LEGAL_VERSION };
+  });
   app.post("/api/auth/logout", async (req, reply) => {
     const p = requestPortal(req), names = p ? [COOKIE[p]] : Object.values(COOKIE);
     for (const name of names) {
@@ -883,7 +911,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
     ).rows;
     return { code: tag.code, school: tag.school_name, child: (tag.child || "").trim().split(/\s+/)[0] || "", boxes };
   });
-  app.post("/api/staff/unclaimed", async (req) => {
+  app.post("/api/staff/unclaimed", { bodyLimit: 320000 }, async (req) => {
     const u = await staff(req);
     const d = clean(
       z.object({
@@ -892,6 +920,9 @@ If this was you, there is nothing to do. If not, change your password and sign o
         boxId: text(100),
         privateNote: text(500),
         photo: z.string().max(240000).nullable().default(null),
+        foundAt: z.string().trim().max(200).default(""),
+        valuable: z.boolean().default(false),
+        clientKey: z.string().uuid().optional(),
       }),
       req.body,
     );
@@ -904,10 +935,15 @@ If this was you, there is nothing to do. If not, change your password and sign o
         )
       ).rows[0];
       requireThat(box, 400, "Invalid box");
+      // A phone that was offline sends the same log again until it hears back; the key makes that harmless.
+      if (d.clientKey) {
+        const before = (await db.query("SELECT id FROM cases WHERE client_key=$1 AND school_id=$2", [d.clientKey, u.school_id])).rows[0];
+        if (before) return { id: before.id, alreadyLogged: true };
+      }
       const caseId = id();
       await db.query(
-        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7)",
-        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo],
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo,found_at,valuable,client_key) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7,$8,$9,$10)",
+        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo, d.foundAt, d.valuable, d.clientKey || null],
       );
       await event(db, caseId, u.id, "found_unclaimed");
       return { id: caseId };

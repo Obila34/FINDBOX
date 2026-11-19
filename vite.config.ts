@@ -15,7 +15,7 @@ export default defineConfig({
         id: '/app',
         name: 'FindBox',
         short_name: 'FindBox',
-        description: 'School lost & found. Register belongings, report a loss, get matched, collect safely.',
+        description: 'School lost and found. Label belongings, scan what is found, collect safely.',
         start_url: '/app/sign-in?source=homescreen',
         scope: '/',
         display: 'standalone',
@@ -30,7 +30,7 @@ export default defineConfig({
           { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
         shortcuts: [
-          { name: 'Report lost', url: '/app/report', description: 'Report a registered item lost' },
+          { name: 'Scan', url: '/app/scan', description: 'Scan a FindBox label' },
           { name: 'Found Items Gallery', url: '/app/gallery' },
         ],
       },

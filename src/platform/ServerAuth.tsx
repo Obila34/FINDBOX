@@ -132,7 +132,7 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
         return;
       }
       enter(
-        await api<AuthResult>("/auth/" + (signup ? "signup" : "login"), signup ? { ...d, role: "parent" } : { email: d.email, password: d.password, portal }),
+        await api<AuthResult>("/auth/" + (signup ? "signup" : "login"), signup ? { name: d.name, email: d.email, password: d.password, schoolCode: d.schoolCode || "", role: "parent", consent: d.consent === "on" } : { email: d.email, password: d.password, portal }),
       );
     } catch (e) {
       setError((e as Error).message);
@@ -199,6 +199,10 @@ export function ServerAuth({ portal = "family" }: { portal?: "family" | "school"
                     <small className="fs-hint">No code? Create your account now and add your school later.</small>
                   </label>
                 )}
+                <label className="fs-consent">
+                  <input type="checkbox" name="consent" required />
+                  <span>I am a parent or guardian aged 18 or over. I agree to the <a href="/terms" target="_blank" rel="noreferrer">Terms</a> and have read the <a href="/privacy" target="_blank" rel="noreferrer">Privacy notice</a>, including how FindBox handles my children's information.</span>
+                </label>
               </>
             )}
             {!reset && !verify && (

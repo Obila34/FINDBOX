@@ -1,9 +1,11 @@
+import {Terms} from './platform/Terms'
 import { isInstalledApp } from '@/lib/standalone'
 import {PrivacyNotice} from './platform/PrivacyNotice'
 import {useSearchMetadata} from './lib/useSearchMetadata'
 import {SchoolInvitation,OwnershipTransfers} from './platform/SchoolWorkspace'
 import {FamilyChildren} from './platform/FamilyChildren'
-import {SchoolAdmin} from './platform/SchoolAdmin'
+import {SchoolDesk} from './platform/school/SchoolDesk'
+import {StaffApp} from './platform/school/StaffApp'
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoadBoundary } from '@/components/ui/LoadBoundary'
@@ -51,14 +53,16 @@ export function App() {
   }
   if(OPS_URL&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <MovedTo url={OPS_URL}/>
   // The installed family app has no marketing pages: it opens on sign in, and signed-in people go on to their home.
-  if(isInstalledApp()&&!/^\/(app|manage|t|shop|school|privacy)(\/|$)/.test(platformLocation.pathname)) return <Navigate to="/app/sign-in" replace/>
+  if(isInstalledApp()&&!/^\/(app|manage|t|shop|school|privacy|terms)(\/|$)/.test(platformLocation.pathname)) return <Navigate to="/app/sign-in" replace/>
   if(SCHOOL_URL&&location.origin!==SCHOOL_URL&&SCHOOL_PATHS.test(platformLocation.pathname)) return <MovedTo url={SCHOOL_URL+here}/>
-  if(SCHOOL_URL&&location.origin===SCHOOL_URL&&!SCHOOL_PATHS.test(platformLocation.pathname)&&!/^\/(app\/(security|help|feedback|inbox|boxes|forgot|reset|verify)|privacy)/.test(platformLocation.pathname)) return <Navigate to="/school/sign-in" replace/>
+  if(SCHOOL_URL&&location.origin===SCHOOL_URL&&!SCHOOL_PATHS.test(platformLocation.pathname)&&!/^\/(app\/(security|help|feedback|inbox|boxes|forgot|reset|verify)|privacy|terms)/.test(platformLocation.pathname)) return <Navigate to="/school/sign-in" replace/>
   if(['/privacy','/privacy/children'].includes(platformLocation.pathname)) return <PrivacyNotice/>
+  if(platformLocation.pathname==='/terms') return <Terms/>
   if(['/app/school-invitation','/app/guardian-invitation'].includes(platformLocation.pathname)) return <SchoolInvitation/>
   if(platformLocation.pathname==='/app/transfers') return <OwnershipTransfers/>
   if(platformLocation.pathname==='/app/children') return <FamilyChildren/>
-  if(platformLocation.pathname==='/app/school-admin') return <SchoolAdmin/>
+  if(platformLocation.pathname==='/app/school-admin') return <SchoolDesk/>
+  if(/^\/manage(\/|$)/.test(platformLocation.pathname)) return <StaffApp/>
   if(Company&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
   if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
   if(/^\/school(\/sign-in)?\/?$/.test(platformLocation.pathname)){

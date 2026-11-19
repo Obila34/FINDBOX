@@ -63,6 +63,8 @@ const SCHOOL_SQL = `SELECT s.id,s.name,s.lifecycle,s.contact_name,s.contact_emai
 async function schools(db, where = '', params = []) {
   return (await db.query(SCHOOL_SQL + (where ? ' WHERE ' + where : '') + ' ORDER BY s.name', params)).rows.map((s) => ({ ...s, health: schoolHealth(s) }));
 }
+/** One school's live numbers and health, for the school's own workspace. */
+export async function schoolStats(db, schoolId) { return (await schools(db, 's.id=$1', [schoolId]))[0]; }
 async function counts(db, type) {
   const notes = new Map((await db.query("SELECT entity_id,count(*)::int n FROM crm_notes WHERE entity_type=$1 AND kind<>'stage' GROUP BY entity_id", [type])).rows.map((r) => [r.entity_id, r.n]));
   const tasks = new Map((await db.query("SELECT entity_id,count(*)::int n FROM crm_tasks WHERE entity_type=$1 AND status='open' GROUP BY entity_id", [type])).rows.map((r) => [r.entity_id, r.n]));
@@ -107,7 +109,15 @@ async function systemSignals(db) {
   const backup = (await db.query("SELECT last_ok FROM runtime_heartbeat WHERE name='offsite_backup'")).rows[0];
   const bAge = backup ? hours(backup.last_ok) : null;
   out.push({ name: 'Off-site backup', state: bAge === null ? 'warn' : bAge > 36 ? 'bad' : 'ok', detail: bAge === null ? 'No backup reported yet' : `Last copy ${Math.round(bAge)} hours ago`, page: 'legacy:overview' });
-  for (const a of (await db.query("SELECT name,state FROM runtime_alerts WHERE state<>'ok' ORDER BY name LIMIT 10")).rows) out.push({ name: 'Alert: ' + a.name.replaceAll('_', ' '), state: 'bad', detail: 'State: ' + a.state, page: 'legacy:overview' });
+  const beat = new Map((await db.query("SELECT name,last_ok FROM runtime_heartbeat")).rows.map((r) => [r.name, r.last_ok]));
+  const lAge = beat.has('local_backup') ? hours(beat.get('local_backup')) : null, tAge = beat.has('backup_restore_test') ? hours(beat.get('backup_restore_test')) : null;
+  out.push({ name: 'Server backup', state: lAge === null ? 'warn' : lAge > 26 ? 'bad' : 'ok', detail: lAge === null ? 'No backup reported yet' : `Last backup ${Math.round(lAge)} hours ago`, page: 'legacy:overview' });
+  out.push({ name: 'Restore test', state: tAge === null ? 'warn' : tAge > 50 ? 'bad' : 'ok', detail: tAge === null ? 'No restore test reported yet' : `Latest backup restored cleanly ${Math.round(tAge)} hours ago`, page: 'legacy:overview' });
+  const apis = [...beat].filter(([n, t]) => n.startsWith('api:') && hours(t) * 60 < 3).length;
+  out.push({ name: 'API instances', state: apis >= 2 ? 'ok' : apis === 1 ? 'warn' : 'bad', detail: apis >= 2 ? `${apis} running; one can fail without an outage` : apis === 1 ? 'One running; no spare' : 'None reporting', page: 'legacy:overview' });
+  const errs = (await db.query("SELECT count(*)::int n,(SELECT method||' '||route FROM runtime_errors ORDER BY at DESC LIMIT 1) AS last FROM runtime_errors WHERE at>now()-interval '24 hours'")).rows[0];
+  out.push({ name: 'Server errors', state: errs.n >= 20 ? 'bad' : errs.n ? 'warn' : 'ok', detail: errs.n ? `${errs.n} in the last 24 hours. Latest: ${errs.last}` : 'None in the last 24 hours', page: 'legacy:overview' });
+  for (const a of (await db.query("SELECT name,state FROM runtime_alerts WHERE state NOT IN ('ok','healthy') ORDER BY name LIMIT 10")).rows) out.push({ name: 'Alert: ' + a.name.replaceAll('_', ' '), state: 'bad', detail: 'State: ' + a.state, page: 'legacy:overview' });
   const privacy = (await db.query("SELECT count(*)::int n,min(created_at) oldest FROM privacy_requests WHERE status='pending'")).rows[0];
   out.push({ name: 'Privacy requests', state: privacy.n ? (hours(privacy.oldest) > 14 * 24 ? 'bad' : 'warn') : 'ok', detail: privacy.n ? `${privacy.n} waiting for review` : 'None waiting', page: 'legacy:privacy' });
   return out;
@@ -463,9 +473,9 @@ export async function crmRoutes(app, { pool, operator }) {
       const issue = (await pool.query('SELECT issue_id FROM crm_issue_reports WHERE ticket_id=$1', [rid])).rows[0];
       record = { title: t.subject, subtitle: `Ticket · ${t.kind} · ${t.status.replace('_', ' ')}`, ticket: { id: t.id, name: t.name, email: t.email, kind: t.kind, status: t.status, message: t.message, created_at: t.created_at, user_id: t.user_id, overdue: ticketOverdue(t), leadId: lead?.id || null, issueId: issue?.issue_id || null } };
     } else {
-      const o = (await pool.query('SELECT o.*,p.name AS customer,s.name AS school,(SELECT name FROM students WHERE id=o.student_id) AS child FROM orders o JOIN users p ON p.id=o.user_id LEFT JOIN schools s ON s.id=o.school_id WHERE o.id=$1', [rid])).rows[0];
+      const o = (await pool.query('SELECT o.*,p.name AS customer,s.name AS school,(SELECT name FROM students WHERE id=o.student_id) AS child,(SELECT code FROM tags WHERE student_id=o.student_id AND status=$2 LIMIT 1) AS child_qr FROM orders o JOIN users p ON p.id=o.user_id LEFT JOIN schools s ON s.id=o.school_id WHERE o.id=$1', [rid, 'active'])).rows[0];
       requireThat(o, 404, 'Order not found');
-      record = { title: 'Order for ' + o.customer, subtitle: `Order · ${o.status}${o.delivered_at ? ' · delivered' : ''}`, order: { id: o.id, status: o.status, amount_minor: Number(o.amount_minor), lines: o.lines, delivery: o.delivery, delivery_address: o.delivery_address, delivered_at: o.delivered_at, created_at: o.created_at, customer: o.customer, customer_id: o.user_id, school: o.school, child: o.child } };
+      record = { title: 'Order for ' + o.customer, subtitle: `Order · ${o.status}${o.delivered_at ? ' · delivered' : ''}`, order: { id: o.id, status: o.status, amount_minor: Number(o.amount_minor), lines: o.lines, delivery: o.delivery, delivery_address: o.delivery_address, delivered_at: o.delivered_at, created_at: o.created_at, customer: o.customer, customer_id: o.user_id, school: o.school, child: o.child, childQr: o.child_qr } };
     }
     timeline.sort((a, b) => new Date(b.at) - new Date(a.at));
     // Opening a customer record is itself recorded.

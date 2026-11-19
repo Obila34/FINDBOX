@@ -21,6 +21,8 @@ const config = {
   resendKey: process.env.RESEND_API_KEY,
   mailFrom: process.env.MAIL_FROM,
   ollamaUrl: process.env.OLLAMA_URL || "",
+  alertEmail: process.env.ALERT_EMAIL || "hello@findbox.africa",
+  apiInstances: Number(process.env.API_INSTANCES || 1),
   assistantModel: process.env.ASSISTANT_MODEL || "gemma4:e2b-it-qat",
   companyEmailEnabled: process.env.COMPANY_EMAIL_CODES === 'true',
   smtpHost: process.env.SMTP_HOST,
@@ -43,16 +45,30 @@ const pool = connect();
 const app = await createApp({ pool, config });
 let running = false;
 let lastOperationalCheck=0;
+const instance = process.env.INSTANCE_NAME || "api";
+const WORKER_LOCK = 770031;
 const timer = setInterval(async () => {
   if (running) return;
   running = true;
+  let lock;
   try {
-    await tick(pool, config);
-    if(Date.now()-lastOperationalCheck>300000){lastOperationalCheck=Date.now();await operationalAlerts(pool,config);}
-    await pool.query("INSERT INTO runtime_heartbeat(name,last_ok) VALUES('worker',now()) ON CONFLICT(name) DO UPDATE SET last_ok=now()");
+    await pool.query("INSERT INTO runtime_heartbeat(name,last_ok) VALUES($1,now()) ON CONFLICT(name) DO UPDATE SET last_ok=now()", ["api:" + instance]);
+    // Two API instances run side by side. Only the one holding this lock does the background work;
+    // if it stops, the other picks the work up on its next tick.
+    lock = await pool.connect();
+    if ((await lock.query("SELECT pg_try_advisory_lock($1) AS ok", [WORKER_LOCK])).rows[0].ok) {
+      try {
+        await tick(pool, config);
+        if(Date.now()-lastOperationalCheck>300000){lastOperationalCheck=Date.now();await operationalAlerts(pool,config);}
+        await pool.query("INSERT INTO runtime_heartbeat(name,last_ok) VALUES('worker',now()) ON CONFLICT(name) DO UPDATE SET last_ok=now()");
+      } finally {
+        await lock.query("SELECT pg_advisory_unlock($1)", [WORKER_LOCK]).catch(() => {});
+      }
+    }
   } catch (error) {
     app.log.error({ error }, "Worker failed");
   } finally {
+    lock?.release();
     running = false;
   }
 }, 30000);

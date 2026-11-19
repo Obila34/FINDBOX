@@ -16,3 +16,7 @@ output/
 server/tmp/
 server/package.local-backup.json
 *.tsbuildinfo
+
+# Internal audit notes: kept on the owner's machine, never in the public repository.
+docs/PRODUCTION-READINESS.md
+docs/PRODUCTION-CHECKLIST.md

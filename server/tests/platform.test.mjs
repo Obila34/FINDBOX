@@ -1223,7 +1223,7 @@ test('complimentary demo tags enforce owner, school, expiry and private activati
  const scan=await call('GET','/api/tags/FB-demo-main');assert.equal(scan.statusCode,200);assert(!scan.body.includes('demo-owner@test.com'));assert(!scan.body.includes('demo-private'));
  const found=await call('POST','/api/found',{code:payload.code,boxId:'box-a'},operator);assert.equal(found.statusCode,200,found.body);
  const caseId=found.json().id;
- const receipt=await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator);assert.equal(receipt.statusCode,200,receipt.body);
+ assert.equal(found.json().received,true,'staff put it straight into the box');assert.equal((await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator)).statusCode,409);
  const collection=await call('POST','/api/staff/cases/'+caseId+'/collect',{verification:'Presenter checked the fictional demo ownership record'},operator);assert.equal(collection.statusCode,200,collection.body);
  assert.equal((await pool.query('SELECT status FROM cases WHERE id=$1',[caseId])).rows[0].status,'returned');
  assert.equal(Number((await pool.query('SELECT count(*) FROM orders')).rows[0].count),before);
@@ -1508,7 +1508,7 @@ test("assistant routes questions to role-scoped tools, proposes changes for conf
     assert.equal(count.status, 200);
     assert.equal(count.get("result")[0].tool, "platform_stats");
     assert.ok(count.get("result")[0].rows.some((r) => /User accounts/.test(r.metric)));
-    assert.equal(count.text, "Here is the answer.");
+    assert.ok(count.text.endsWith("Here is the answer.") && count.text.startsWith("Platform numbers:"), "the first line comes from the data, then the model adds to it");
     const signedIn = await chat(smart, dev, "Who is signed in right now?");
     assert.equal(signedIn.get("result")[0].tool, "who_is_signed_in");
 
@@ -1660,4 +1660,374 @@ test("system issues: complaints reach the developer, triage rules hold, and repo
   assert.equal((await req("GET", "/api/company/crm/home", undefined, admin)).json().signals, undefined);
   assert.ok((await req("GET", "/api/company/crm/tasks", undefined, dev)).json().queue.length >= 0);
   assert.equal((await req("GET", "/api/company/crm/record/ticket/gen-1", undefined, admin)).json().ticket.issueId, issue);
+});
+
+test("school desk: staff log and hand back with a custody trail; the principal sees what needs a decision and approves donations", async () => {
+  const pw = await passwordHash("testing-password-123");
+  await pool.query("INSERT INTO schools(id,name,join_hash,lifecycle,contact_name,contact_email,privacy_basis) VALUES('desk','Desk School','desk-hash','active','Head','head@desk.test','Policy v1')");
+  await pool.query("INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES('desk-box','desk','Reception','Main office','Mon-Fri 8-4')");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('desk-head','desk-head@test.com','Desk Head',$1,'manager','desk',true),('desk-staff','desk-staff@test.com','Desk Teacher',$1,'staff','desk',true),('desk-parent','desk-parent@test.com','Desk Parent',$1,'parent','desk',true)", [pw]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('desk-head','desk','manager'),('desk-staff','desk','staff'),('desk-parent','desk','parent') ON CONFLICT DO NOTHING");
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com"), parent = await login("desk-parent@test.com");
+  const call2 = (method, url, b, cookie) => app.inject({ method, url, remoteAddress: "127.0.9.6", headers: { ...(b ? { "x-findbox-request": "1", "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}), origin: "http://localhost:5173" }, payload: b });
+  assert.equal((await call2("GET", "/api/school/desk/home", null, parent)).statusCode, 403);
+  // Staff log an item that has no QR.
+  let r = await call2("POST", "/api/staff/unclaimed", { title: "Grey hoodie, size 12", category: "clothing", boxId: "desk-box", privateNote: "Initials TK inside the collar" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  const caseId = r.json().id;
+  let home = (await call2("GET", "/api/school/desk/home", null, teacher)).json();
+  assert.equal(home.counts.unclaimed, 1);
+  assert.equal(home.stats, undefined, "teachers do not get the principal's figures");
+  const board = (await call2("GET", "/api/school/desk/board", null, teacher)).json();
+  assert.equal(board.columns.find((c) => c.id === "unclaimed").cards[0].title, "Grey hoodie, size 12");
+  let item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.equal(item.trail[0].text, "Logged without a QR");
+  assert.equal(item.trail[0].who, "Desk Teacher");
+  assert.equal(item.can.requestDisposal, false, "not held long enough yet");
+  // After the holding period a teacher may ask to donate it; only the principal, a different person, can approve.
+  await pool.query("UPDATE cases SET created_at=now()-interval '31 days' WHERE id=$1", [caseId]);
+  item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.equal(item.can.requestDisposal, true);
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_approved", note: "Approve the donation" }, head)).statusCode, 403, "nobody has requested it yet");
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_request", note: "Unclaimed for a month; donate to the uniform bank" }, teacher)).statusCode, 200);
+  home = (await call2("GET", "/api/school/desk/home", null, head)).json();
+  assert.equal(home.counts.disposals, 1);
+  assert.ok(home.attention.some((a) => a.title.includes("asked to donate")));
+  assert.equal(typeof home.stats.health.score, "number");
+  assert.equal((await call2("GET", "/api/school/desk/approvals", null, head)).json().disposals.length, 1);
+  item = (await call2("GET", "/api/school/desk/case/" + caseId, null, head)).json();
+  assert.equal(item.can.approveDisposal, true);
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_approved", note: "Approved: donate to the uniform bank" }, head)).statusCode, 200);
+  assert.equal((await pool.query("SELECT status FROM cases WHERE id=$1", [caseId])).rows[0].status, "closed");
+  // The term report is for the principal only.
+  assert.equal((await call2("GET", "/api/school/desk/report?days=90", null, teacher)).statusCode, 403);
+  const report = (await call2("GET", "/api/school/desk/report?days=90", null, head)).json();
+  assert.equal(report.total, 1);
+  assert.equal(report.byCategory[0].name, "Clothing");
+  assert.ok(report.staff.some((s) => s.name === "Desk Teacher" && s.received === 1));
+});
+
+test("school desk, deeper: the not-yet-home log, one-step receive by staff, reminders, moving boxes, classes and a student record", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com");
+  const call2 = (method, url, b, cookie) => app.inject({ method, url, remoteAddress: "127.0.9.5", headers: { ...(b ? { "x-findbox-request": "1", "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}), origin: "http://localhost:5173" }, payload: b });
+  await pool.query("INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES('desk-box2','desk','Library','Upstairs','Mon-Fri 9-3')");
+  await pool.query("INSERT INTO students(id,school_id,school_reference,name,class_name,guardian_id,guardian_email,guardian_verified_at,consent_reference) VALUES('desk-kid','desk','D-1','Tumaini Desk','Grade 2','desk-parent','desk-parent@test.com',now(),'test'),('desk-kid2','desk','D-2','Unlinked Desk','Grade 2',NULL,'',NULL,'test')");
+  await pool.query("INSERT INTO tags(id,code,activation_hash,format,owner_id,status,student_id) VALUES('desk-tag','FB-DESK-KID','x','child','desk-parent','active','desk-kid')");
+  await pool.query("INSERT INTO items(id,tag_id,owner_id,school_id,name,category,child_name,student_id) VALUES('desk-item','desk-tag','desk-parent','desk','Green lunchbox','lunchbox','Tumaini Desk','desk-kid')");
+  // A teacher holding the item scans it and puts it straight into a box: one step.
+  let r = await call2("POST", "/api/found", { code: "FB-DESK-KID", itemId: "desk-item", boxId: "desk-box" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().received, true);
+  const caseId = r.json().id;
+  assert.equal((await pool.query("SELECT status FROM cases WHERE id=$1", [caseId])).rows[0].status, "awaiting_collection");
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Green lunchbox is ready at Reception%'")).rowCount);
+  // Scanning again leads staff to the item's record, to hand it back.
+  assert.equal((await call2("GET", "/api/scan/FB-DESK-KID", null, teacher)).json().items[0].caseId, caseId);
+  // The log lists everything not yet home, with where it is.
+  const log = (await call2("GET", "/api/school/desk/log", null, teacher)).json();
+  const row = log.rows.find((x) => x.id === caseId);
+  assert.equal(row.where, "Reception");
+  assert.equal(row.owner, "Tumaini Desk · Grade 2");
+  assert.equal(row.atBox, true);
+  // Remind once a day; move between boxes; both land on the custody trail.
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/remind", {}, teacher)).statusCode, 200);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/remind", {}, teacher)).statusCode, 409);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/move", { boxId: "desk-box" }, teacher)).statusCode, 400);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/move", { boxId: "desk-box2" }, teacher)).statusCode, 200);
+  const item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.deepEqual(item.trail.map((t) => t.text), ["Received into the box", "Family told to collect it", "Moved to another box"]);
+  assert.equal(item.box, "Library");
+  // The principal's extra views.
+  const home = (await call2("GET", "/api/school/desk/home", null, head)).json();
+  assert.equal(home.boxes.find((b) => b.id === "desk-box2").count, 1);
+  assert.ok(home.today.received >= 1);
+  assert.ok(home.classes.some((c) => c.name === "Grade 2" && c.linked === 1 && c.students === 2));
+  const classes = (await call2("GET", "/api/school/desk/classes", null, head)).json().rows;
+  assert.deepEqual(classes.find((c) => c.name === "Grade 2"), { name: "Grade 2", students: 2, linked: 1, items: 1, open: 1, lost90: 1 });
+  assert.equal((await call2("GET", "/api/school/desk/classes", null, teacher)).statusCode, 403);
+  const student = (await call2("GET", "/api/school/desk/student/desk-kid", null, head)).json();
+  assert.equal(student.hasQr, true);
+  assert.equal(student.items.length, 1);
+  assert.equal(student.cases[0].stage, "In the box");
+  assert.ok((await call2("GET", "/api/school/desk/activity", null, head)).json().rows.some((a) => a.text === "Moved to another box"));
+  assert.equal((await call2("GET", "/api/school/students?status=unlinked", null, head)).json().rows.map((s) => s.name).join(), "Unlinked Desk");
+  // An item with no QR: staff log it as a valuable, with where it was found, then name its owner.
+  r = await call2("POST", "/api/staff/unclaimed", { title: "Silver watch", category: "other", boxId: "desk-box", privateNote: "Scratched strap", foundAt: "Swimming pool", valuable: true }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  const watch = r.json().id;
+  let sheet = (await call2("GET", "/api/school/desk/case/" + watch, null, teacher)).json();
+  assert.equal(sheet.valuable, true);
+  assert.equal(sheet.foundAt, "Swimming pool");
+  assert.match(sheet.ref, /^#[A-Z0-9]{5}$/);
+  assert.equal(sheet.can.nameOwner, true);
+  assert.ok((await call2("GET", "/api/school/desk/home", null, head)).json().attention.some((a) => a.title === "Valuable waiting: Silver watch"));
+  assert.equal((await call2("GET", "/api/school/desk/students?q=Tum", null, teacher)).json().rows[0].name, "Tumaini Desk");
+  r = await call2("POST", "/api/school/desk/case/" + watch + "/owner", { studentId: "desk-kid" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().notified, true);
+  sheet = (await call2("GET", "/api/school/desk/case/" + watch, null, teacher)).json();
+  assert.equal(sheet.status, "awaiting_collection");
+  assert.equal(sheet.owner.child, "Tumaini Desk");
+  assert.equal(sheet.owner.guardian, "Desk Parent");
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Silver watch belonging to Tumaini%'")).rowCount);
+  assert.ok((await call2("GET", "/api/school/desk/report?days=90", null, head)).json().byPlace.some((p) => p.name === "Swimming pool"));
+  r = await call2("POST", "/api/school/desk/remind-families", {}, head);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().families, 1);
+  assert.equal((await call2("POST", "/api/school/desk/remind-families", {}, head)).statusCode, 409, "at most once a week");
+});
+
+test("the principal gets the assistant for their own school only", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.4", headers: { origin: "http://localhost:5173", "x-findbox-portal": "school", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  const meta = (await req("GET", "/api/company/assistant", undefined, head)).json();
+  assert.equal(meta.role, "principal");
+  const names = meta.tools.map((t) => t.name);
+  assert.ok(["school_overview", "items_not_home", "overdue_items", "find_student", "unlinked_students", "collection_points", "valuables_held", "loss_hotspots", "notify_family", "add_collection_box", "what_can_you_do"].every((n) => names.includes(n)), "school tools");
+  assert.ok(!names.some((n) => ["platform_stats", "find_users", "lead_pipeline", "system_issues", "school_health", "my_tasks", "add_lead", "disable_user"].includes(n)), "no company tools");
+  assert.equal((await req("GET", "/api/company/assistant", undefined, teacher)).statusCode, 403, "teachers do not get it");
+  const chat = async (message) => { const r = await req("POST", "/api/company/assistant/chat", { message }, head); const events = r.body.split(String.fromCharCode(10, 10)).filter(Boolean).map((b) => ({ event: /event: (.*)/.exec(b)?.[1], data: JSON.parse(/data: (.*)/.exec(b)?.[1] || "{}") })); return events; };
+  let ev = await chat("Which items are not yet home?");
+  const result = ev.find((e) => e.event === "result").data;
+  assert.equal(result.tool, "items_not_home");
+  assert.ok(result.rows.every((r) => typeof r.item === "string"));
+  ev = await chat("How are the classes doing?");
+  assert.equal(ev.find((e) => e.event === "result").data.tool, "class_progress");
+  // Changes are only proposed; nothing is sent until the principal confirms.
+  const sentBefore = (await pool.query("SELECT count(*)::int n FROM operation_audit WHERE action='school_families_reminded'")).rows[0].n;
+  ev = await chat("Remind all families please");
+  const proposal = ev.find((e) => e.event === "proposal").data;
+  assert.match(proposal.summary, /Remind every family at Desk School/);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM operation_audit WHERE action='school_families_reminded'")).rows[0].n, sentBefore);
+
+  // More tools: each question reaches its own tool and reads this school only.
+  const ask = async (message) => { const e = await chat(message); return { result: e.find((x) => x.event === "result")?.data, proposal: e.find((x) => x.event === "proposal")?.data, text: e.filter((x) => x.event === "token" || x.event === "error").map((x) => x.data.text).join("") }; };
+  let a = await ask("Any valuables in the box?");
+  assert.equal(a.result.tool, "valuables_held");
+  assert.ok(a.result.rows.some((r) => r.item === "Silver watch" && /Tumaini Desk/.test(r.owner)));
+  a = await ask("Where do things get lost?");
+  assert.equal(a.result.tool, "loss_hotspots");
+  assert.ok(a.result.rows.some((r) => r.kind === "Place" && r.name === "Swimming pool"));
+  a = await ask("Find student Tumaini Desk");
+  assert.equal(a.result.tool, "find_student");
+  assert.equal(a.result.rows[0].name, "Tumaini Desk");
+  assert.equal(a.result.rows[0].parent, "Linked");
+  assert.equal((await ask("Which students have no parent linked?")).result.tool, "unlinked_students");
+  assert.equal((await ask("Which items are overdue?")).result.tool, "overdue_items");
+  a = await ask("How full are the collection points?");
+  assert.equal(a.result.tool, "collection_points");
+  assert.ok(a.result.rows.some((r) => r.name === "Reception") && a.result.rows.some((r) => r.name === "Library"));
+  assert.equal((await ask("Which items are not yet home for Tumaini?")).result.rows.every((r) => /Tumaini/.test(r.owner)), true, "the log can be narrowed by name");
+  a = await ask("What can you do?");
+  assert.equal(a.result.tool, "what_can_you_do");
+  assert.ok(a.result.rows.some((r) => r.kind === "Prepare a change") && a.result.rows.length === names.length - 1);
+  assert.equal((await ask("What is waiting for my approval?")).result.tool, "pending_approvals");
+
+  // One family is reminded only after the principal confirms.
+  const confirm = (card) => req("POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, head);
+  const before = (await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n;
+  a = await ask("Notify the family about the Silver watch");
+  assert.match(a.proposal.summary, /Tell the family to collect Silver watch \(Tumaini Desk/);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n, before);
+  let done = await confirm(a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n, before + 1);
+  a = await ask("Notify the family of Nobody Here");
+  assert.equal(a.proposal, undefined);
+  assert.match(a.text, /Nothing waiting in a box/);
+  a = await ask("Add a collection box called Sports Hall");
+  assert.match(a.proposal.summary, /Add a collection box called Sports Hall/);
+  done = await confirm(a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM boxes WHERE school_id='desk' AND name='Sports Hall' AND active")).rows[0].n, 1);
+  assert.match((await ask("Add a collection box")).text, /need/i, "a missing name is asked for");
+});
+
+test("the assistant works the CRM: pipeline, tasks, health and system issues, each change confirmed first", async () => {
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const admin = await token("crm-admin"), dev = await token("crm-dev");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.5", headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  const ask = async (cookie, message) => {
+    const r = await req("POST", "/api/company/assistant/chat", { message }, cookie);
+    const e = r.body.split(String.fromCharCode(10, 10)).filter(Boolean).map((b) => ({ event: /event: (.*)/.exec(b)?.[1], data: JSON.parse(/data: (.*)/.exec(b)?.[1] || "{}") }));
+    return { result: e.find((x) => x.event === "result")?.data, proposal: e.find((x) => x.event === "proposal")?.data, text: e.filter((x) => x.event === "token" || x.event === "error").map((x) => x.data.text).join("") };
+  };
+  const confirm = (cookie, card) => req("POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, cookie);
+  const meta = (await req("GET", "/api/company/assistant", undefined, admin)).json(), devMeta = (await req("GET", "/api/company/assistant", undefined, dev)).json();
+  assert.ok(["lead_pipeline", "add_lead", "move_lead", "family_accounts", "mark_order_delivered", "my_tasks", "school_health", "system_issues", "log_issue"].every((n) => meta.tools.some((t) => t.name === n)));
+  assert.ok(["system_signals", "triage_issue", "my_tasks", "system_issues"].every((n) => devMeta.tools.some((t) => t.name === n)));
+  assert.ok(!devMeta.tools.some((t) => ["lead_pipeline", "add_lead", "move_lead", "family_accounts", "mark_order_delivered"].includes(t.name)), "sales tools are the admin's");
+  assert.ok(!meta.tools.some((t) => ["triage_issue", "system_signals"].includes(t.name)), "triage is the developer's");
+
+  // A lead is added, then moved, each only after confirmation; the stage rules still hold.
+  let a = await ask(admin, "Add a lead for Assistant Academy");
+  assert.match(a.proposal.summary, /Add Assistant Academy as a school lead/);
+  assert.equal((await pool.query("SELECT 1 FROM crm_leads WHERE school_name='Assistant Academy'")).rowCount, 0);
+  assert.equal((await confirm(dev, a.proposal)).statusCode, 409, "only the person who asked can confirm");
+  let done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT stage FROM crm_leads WHERE school_name='Assistant Academy'")).rows[0].stage, "new");
+  a = await ask(admin, "Show the school pipeline for Assistant Academy");
+  assert.equal(a.result.tool, "lead_pipeline");
+  assert.deepEqual(a.result.rows.map((r) => [r.title, r.stage]), [["Assistant Academy", "New"]]);
+  a = await ask(admin, "Move the Assistant Academy lead to contacted");
+  assert.match(a.proposal.summary, /Move Assistant Academy from New to contacted/);
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 400, "no contact yet, so the stage rule refuses");
+  await pool.query("UPDATE crm_leads SET contact_name='Head Teacher' WHERE school_name='Assistant Academy'");
+  a = await ask(admin, "Move the Assistant Academy lead to contacted");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT stage FROM crm_leads WHERE school_name='Assistant Academy'")).rows[0].stage, "contacted");
+  assert.match((await ask(admin, "Move the Nowhere School lead to demo")).text, /No lead matches/);
+
+  // Tasks: added with a due date read from the sentence, then listed with the work queue.
+  a = await ask(admin, "Add a task to call Assistant Academy by tomorrow");
+  assert.equal(a.proposal.summary, "Add a task: call Assistant Academy");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  const task = (await pool.query("SELECT due_at,assignee_id FROM crm_tasks WHERE title='call Assistant Academy'")).rows[0];
+  assert.equal(task.assignee_id, "crm-admin");
+  assert.ok(task.due_at, "the due date was read from the sentence");
+  a = await ask(admin, "What should I work on?");
+  assert.equal(a.result.tool, "my_tasks");
+  assert.ok(a.result.rows.some((r) => r.kind === "Task" && r.what === "call Assistant Academy"));
+
+  // Health and families are read from the CRM.
+  a = await ask(admin, "Which schools are at risk?");
+  assert.equal(a.result.tool, "school_health");
+  assert.ok(a.result.rows.length > 0 && a.result.rows.every((r) => typeof r.health === "string"));
+  assert.equal((await ask(admin, "Show top spending families")).result.tool, "family_accounts");
+  assert.equal((await ask(admin, "List schools")).result.tool, "find_schools", "the plain list still works");
+
+  // System issues: support logs one, the developer triages it.
+  a = await ask(admin, "Log an issue: assistant labels print blank, reported by mum@assistant.test");
+  assert.equal(a.proposal.summary, "Log a system issue: assistant labels print blank");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  const issue = (await pool.query("SELECT id,status,severity FROM crm_issues WHERE title='assistant labels print blank'")).rows[0];
+  assert.deepEqual([issue.status, issue.severity], ["new", null]);
+  assert.equal((await pool.query("SELECT email FROM crm_issue_reports WHERE issue_id=$1", [issue.id])).rows[0].email, "mum@assistant.test");
+  a = await ask(dev, "Show open system issues");
+  assert.equal(a.result.tool, "system_issues");
+  assert.ok(a.result.rows.some((r) => r.title === "assistant labels print blank" && r.severity === "Needs triage"));
+  a = await ask(dev, "Triage the assistant labels issue as major");
+  assert.match(a.proposal.summary, /Triage "assistant labels print blank" as S2/);
+  done = await confirm(dev, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.deepEqual(Object.values((await pool.query("SELECT status,severity FROM crm_issues WHERE id=$1", [issue.id])).rows[0]), ["triaged", "s2"]);
+  a = await ask(dev, "Show system signals");
+  assert.equal(a.result.tool, "system_signals");
+  assert.ok(a.result.rows.length > 0);
+  a = await ask(dev, "What can you do?");
+  assert.equal(a.result.rows.length, devMeta.tools.length - 1);
+  assert.notEqual((await ask(dev, "Show the school pipeline")).result?.tool, "lead_pipeline");
+  a = await ask(admin, "Log a critical issue: assistant checkout is down");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.deepEqual(Object.values((await pool.query("SELECT status,severity FROM crm_issues WHERE title='assistant checkout is down'")).rows[0]), ["triaged", "s1"]);
+});
+
+test("production hardening: consent on next sign-in, bulk clear-out under the two-person rule, offline-safe logging and monitoring checks", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com"), parent = await login("desk-parent@test.com");
+  const req = (method, url, payload, cookie, portal = "school") => app.inject({ method, url, payload, remoteAddress: "127.0.9.6", headers: { origin: "http://localhost:5173", ...(portal ? { "x-findbox-portal": portal } : {}), ...(payload ? { "x-findbox-request": "1" } : {}), ...(cookie ? { cookie } : {}) } });
+
+  // A parent who joined before the Terms existed is asked once, and the answer is recorded with its version.
+  await pool.query("UPDATE users SET consent_at=NULL,consent_version=NULL WHERE id='desk-parent'");
+  let me = (await req("GET", "/api/auth/me", undefined, parent, "family")).json();
+  assert.equal(me.needsConsent, true);
+  assert.equal((await req("POST", "/api/account/consent", { agree: false }, parent, "family")).statusCode, 400);
+  assert.equal((await req("POST", "/api/account/consent", { agree: true }, parent, "family")).statusCode, 200);
+  me = (await req("GET", "/api/auth/me", undefined, parent, "family")).json();
+  assert.equal(me.needsConsent, false);
+  assert.ok((await pool.query("SELECT consent_at FROM users WHERE id='desk-parent' AND consent_version IS NOT NULL")).rows[0].consent_at);
+  assert.equal((await req("GET", "/api/auth/me", undefined, teacher)).json().needsConsent, false, "staff are covered by the school's agreement");
+  assert.equal((await req("POST", "/api/account/consent", { agree: true }, teacher)).statusCode, 400);
+
+  // End-of-term clear-out: many items at once, and the safeguards for one item still hold for each.
+  await pool.query(`INSERT INTO cases(id,school_id,box_id,title,category,status,created_at,valuable) VALUES
+    ('clear-1','desk','desk-box','Old blue cap','clothing','unclaimed',now()-interval '45 days',false),
+    ('clear-2','desk','desk-box','Old lunch bag','other','unclaimed',now()-interval '50 days',false),
+    ('clear-3','desk','desk-box','Old phone','other','unclaimed',now()-interval '60 days',true),
+    ('clear-4','desk','desk-box','Fresh scarf','clothing','unclaimed',now()-interval '3 days',false)`);
+  await pool.query("INSERT INTO cases(id,school_id,box_id,title,category,status,created_at,due_at,student_id) VALUES('clear-5','desk','desk-box','Uncollected jumper','clothing','awaiting_collection',now()-interval '20 days',now()-interval '2 days','desk-kid')");
+  let list = (await req("GET", "/api/school/desk/clearout", undefined, teacher)).json();
+  assert.equal(list.canApprove, false);
+  const mine = (id) => list.rows.find((r) => r.id === id);
+  assert.ok(mine("clear-1") && mine("clear-2") && mine("clear-3") && mine("clear-5") && !mine("clear-4"), "only items past their date are listed");
+  assert.equal(mine("clear-5").why, "Past collection date");
+  assert.match(mine("clear-5").owner, /Tumaini Desk/);
+  const ids = ["clear-1", "clear-2", "clear-3", "clear-4", "clear-5"];
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "End of term clear-out" }, teacher)).statusCode, 403, "only the administrator approves");
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ids, note: "short" }, teacher)).statusCode, 400, "a reason is required");
+  // Nothing has been requested yet, so there is nothing the administrator can approve.
+  let r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ids, note: "End of term clear-out" }, teacher)).json();
+  assert.equal(r.done, 4);
+  assert.deepEqual(r.skipped.map((x) => x.why), ["It is no longer waiting past its date"]);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ["clear-1"], note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0, "an item is requested once");
+  list = (await req("GET", "/api/school/desk/clearout", undefined, head)).json();
+  assert.equal(list.canApprove, true);
+  assert.equal(list.rows.find((x) => x.id === "clear-1").requestedBy, "Desk Teacher");
+  assert.equal(list.rows.find((x) => x.id === "clear-1").requestedByMe, false);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "Approved for the charity collection" }, head)).json();
+  assert.equal(r.done, 3);
+  assert.ok(r.skipped.some((x) => x.title === "Old phone" && /one at a time/.test(x.why)), "valuables are never approved in bulk");
+  assert.deepEqual((await pool.query("SELECT id,status FROM cases WHERE id LIKE 'clear-%' ORDER BY id")).rows.map((c) => c.status), ["closed", "closed", "unclaimed", "unclaimed", "closed"]);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM case_reviews WHERE case_id LIKE 'clear-%' AND kind='disposal_approved'")).rows[0].n, 3);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM events WHERE case_id='clear-1' AND action IN ('disposal_request','disposal_approved')")).rows[0].n, 2, "each item keeps its own trail");
+  // Nobody approves their own request.
+  await pool.query("INSERT INTO cases(id,school_id,box_id,title,category,status,created_at) VALUES('clear-6','desk','desk-box','Old ruler','other','unclaimed',now()-interval '40 days')");
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ["clear-6"], note: "End of term clear-out" }, head)).json().done, 1);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ["clear-6"], note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0);
+  assert.match(r.skipped[0].why, /Someone else must approve/);
+
+  // A phone that lost its connection sends the same log twice; it is recorded once.
+  const key = crypto.randomUUID(), body = { title: "Offline water bottle", category: "bottle", boxId: "desk-box", privateNote: "Logged offline", clientKey: key };
+  const first = await req("POST", "/api/staff/unclaimed", body, teacher);
+  assert.equal(first.statusCode, 200, first.body);
+  const again = await req("POST", "/api/staff/unclaimed", body, teacher);
+  assert.equal(again.statusCode, 200, again.body);
+  assert.equal(again.json().id, first.json().id);
+  assert.equal(again.json().alreadyLogged, true);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM cases WHERE title='Offline water bottle'")).rows[0].n, 1);
+  assert.equal((await req("POST", "/api/staff/unclaimed", { ...body, clientKey: "not-a-key" }, teacher)).statusCode, 400);
+
+  // The outside uptime check reads this: no private detail, only whether background work and backups are fresh.
+  let deep = (await req("GET", "/api/health/deep", undefined, undefined, "")).json();
+  assert.equal(deep.status, "degraded", "no backup has reported yet");
+  assert.deepEqual(Object.keys(deep.checks).sort(), ["backup", "database", "offsiteBackup", "restoreTest", "worker"]);
+  await pool.query("INSERT INTO runtime_heartbeat(name,last_ok) VALUES('worker',now()),('local_backup',now()),('backup_restore_test',now()),('api:api-1',now()),('api:api-2',now()) ON CONFLICT(name) DO UPDATE SET last_ok=now()");
+  deep = (await req("GET", "/api/health/deep", undefined, undefined, "")).json();
+  assert.equal(deep.status, "ok");
+
+  // Monitoring: each check reports a problem or not; a problem opens one issue for the developer and recovery clears the alert.
+  const { operationalChecks, operationalAlerts } = await import("../operational-alerts.mjs");
+  let checks = new Map((await operationalChecks(pool, { apiInstances: 2 })).map(([name, problem]) => [name, problem]));
+  assert.equal(checks.get("local_backup"), false);
+  assert.equal(checks.get("backup_restore_test"), false);
+  assert.equal(checks.get("api_instances"), false);
+  assert.equal(checks.get("server_errors"), false);
+  assert.equal(checks.get("offsite_backup"), true, "nothing has copied a backup off the server in this test");
+  await pool.query("UPDATE runtime_heartbeat SET last_ok=now()-interval '10 minutes' WHERE name='api:api-2'");
+  await pool.query("INSERT INTO runtime_errors(method,route,message) SELECT 'GET','/api/test','boom' FROM generate_series(1,12)");
+  checks = new Map((await operationalChecks(pool, { apiInstances: 2 })).map(([name, problem]) => [name, problem]));
+  assert.equal(checks.get("api_instances"), true);
+  assert.equal(checks.get("server_errors"), true);
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT state FROM runtime_alerts WHERE name='server_errors'")).rows[0].state, "attention");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM crm_issues WHERE source='monitor' AND title='Monitoring: server errors' AND severity='s1'")).rows[0].n, 1);
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT count(*)::int n FROM crm_issues WHERE source='monitor' AND title='Monitoring: server errors'")).rows[0].n, 1, "one issue, not one per check");
+  await pool.query("DELETE FROM runtime_errors");
+  await pool.query("UPDATE runtime_heartbeat SET last_ok=now() WHERE name='api:api-2'");
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT state FROM runtime_alerts WHERE name='server_errors'")).rows[0].state, "healthy");
+
+  // A failed request is kept for the developer.
+  const { modelLoad } = await import("../assistant/llm.mjs");
+  assert.deepEqual({ active: modelLoad().active, waiting: modelLoad().waiting }, { active: 0, waiting: 0 }, "no model call is left holding the queue");
 });

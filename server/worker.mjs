@@ -93,5 +93,6 @@ export async function tick(pool, config) {
     }
   }
   await pool.query("DELETE FROM sessions WHERE expires_at<now()");
+  await pool.query("DELETE FROM runtime_errors WHERE at<now()-interval '14 days'");
   await pool.query("DELETE FROM auth_tokens WHERE expires_at<now()");
 }

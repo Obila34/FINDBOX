@@ -87,7 +87,7 @@ export const TOOLS = [
     } },
   { name: 'find_schools', roles: ['admin', 'developer'], kind: 'read', label: 'Searching schools',
     desc: 'List or search schools with their status and collection days.',
-    keywords: [/^(?!.*\b(how many|number of|count|totals?|report|invit|code|recover)).*\bschools?\b/i], params: { query: { type: 'string', desc: 'School name to search for. Empty lists all.' } },
+    keywords: [/^(?!.*\b(how many|number of|count|totals?|report|invit|code|recover|health|healthy|at risk|struggling|pipeline|leads?|prospects?)).*\bschools?\b/i], params: { query: { type: 'string', desc: 'School name to search for. Empty lists all.' } },
     async run(ctx, { query = '' }) {
       const rows = (await records(ctx, 'schools', query)).map(r => ({ school: r.name, status: r.lifecycle, collection_days: r.collection_days }))
       return { title: 'Schools', columns: [['school', 'School'], ['status', 'Status'], ['collection_days', 'Collection days']], rows, entities: { schools: rows.map(r => r.school) } }
@@ -326,6 +326,276 @@ export const TOOLS = [
       return { summary: `Mark privacy request ${short(p.id)} ${status}`, details: [['Request', short(p.id)], ['Kind', p.kind], ['Status', status], ['Resolution', resolution]], request: { method: 'POST', url: `/api/company/privacy-requests/${p.id}`, body: { status, resolution } } }
     } },
 ]
+
+// ===== principal (school administrator): everything is scoped to their own school by the school endpoints =====
+const desk = (ctx, path) => ctx.api('GET', '/api/school/desk/' + path)
+const PRINCIPAL = [
+  { name: 'school_overview', roles: ['principal'], kind: 'read', label: 'Checking your school',
+    desc: 'School overview: items in the box, overdue, unclaimed, returned, return rate, students, parents linked and what needs a decision.',
+    keywords: [/overview|summary|how (are|is) (we|the school) doing|today|status|dashboard|what needs|attention|decision/i], params: {},
+    async run(ctx) {
+      const h = await desk(ctx, 'home'), c = h.counts
+      const rows = [['Not yet home', c.notHome], ['In the box', c.inBox], ['Past collection date', c.overdue], ['Unclaimed', c.unclaimed], ['Returned in 30 days', c.returned30], ['Return rate', h.returnRate.pct === null ? 'No items yet' : h.returnRate.pct + '%'], ['Students', h.stats.students], ['Students with a parent linked', h.stats.linked], ['Waiting for your approval', h.badges.approvals]].map(([measure, value]) => ({ measure, value }))
+      return { title: `${h.school.name} overview`, columns: [['measure', 'Measure'], ['value', 'Value']], rows, facts: h.attention.map((a) => a.title) }
+    } },
+  { name: 'items_not_home', roles: ['principal'], kind: 'read', label: 'Listing items not yet home',
+    desc: 'Items not yet home: everything lost or found that has not reached its owner, where it is and how long it has waited. Optional search by item, student, class or box.',
+    keywords: [/not (yet )?home|in the box|waiting|unclaimed|overdue|lost (and|&) found|lost items?|found items?|collection point|where is|which items/i],
+    quick: true, looseQuery: true, params: { query: { type: 'string', desc: 'Item, student, class or box to look for.' } },
+    async run(ctx, a) {
+      const d = await desk(ctx, 'log?q=' + encodeURIComponent(a.query || ''))
+      return { title: 'Items not yet home', columns: [['item', 'Item'], ['owner', 'Owner'], ['where', 'Where'], ['stage', 'Stage'], ['days', 'Days waiting']], rows: d.rows.map((r) => ({ item: r.title, owner: r.owner, where: r.where, stage: r.stage, days: r.ageDays })) }
+    } },
+  { name: 'class_progress', roles: ['principal'], kind: 'read', label: 'Checking each class',
+    desc: 'Classes: students, parents linked, items labelled, items not yet home and losses in 90 days, per class.',
+    keywords: [/class(es)?\b|grade|which class|per class|teachers? to nudge|linked/i], params: {},
+    async run(ctx) {
+      const d = await desk(ctx, 'classes')
+      return { title: 'Classes', columns: [['name', 'Class'], ['students', 'Students'], ['linked', 'Parents linked'], ['items', 'Items labelled'], ['open', 'Not yet home'], ['lost90', 'Lost in 90 days']], rows: d.rows }
+    } },
+  { name: 'term_report', roles: ['principal'], kind: 'read', label: 'Preparing the report',
+    desc: 'Report: items logged and returned, return rate and days to return, by kind of item, over 30, 90 or 365 days.',
+    keywords: [/report|term|this year|statistics|stats|return rate|how many (items|things)|most (lost|common)|what gets lost/i],
+    params: { days: { type: 'string', desc: 'Period in days.', enum: ['30', '90', '365'] } },
+    async run(ctx, a) {
+      const r = await desk(ctx, 'report?days=' + (a.days || '90'))
+      return { title: `Lost and found, last ${r.days} days`, columns: [['name', 'Kind of item'], ['found', 'Logged'], ['returned', 'Returned']], rows: r.byCategory, facts: [`${r.total} items logged, ${r.returned} returned`, r.returnRate === null ? 'No return rate yet' : `Return rate ${r.returnRate}%`, r.avgDays === null ? '' : `${r.avgDays} days on average to return`].filter(Boolean) }
+    } },
+  { name: 'staff_activity', roles: ['principal'], kind: 'read', label: 'Checking staff activity',
+    desc: 'Staff: who received and handed back items, and when they were last active.',
+    keywords: [/staff|teachers?|who (received|handed|logged)|team|activity/i], params: {},
+    async run(ctx) {
+      const h = await desk(ctx, 'home')
+      return { title: 'Staff', columns: [['name', 'Name'], ['role', 'Role'], ['handled', 'Items handled in 30 days'], ['last', 'Last active']], rows: h.team.map((t) => ({ name: t.name, role: t.role === 'manager' ? 'Administrator' : 'Teacher', handled: t.handled, last: t.last_seen ? new Date(t.last_seen).toLocaleDateString('en-KE') : 'Not yet' })) }
+    } },
+  { name: 'house_standings', roles: ['principal'], kind: 'read', label: 'Checking the houses',
+    desc: 'Houses: standings, members, stars and items lost per house.',
+    keywords: [/houses?\b|standings|stars|ubuntu|which house|green|red|blue|yellow/i], params: {},
+    async run(ctx) {
+      const h = await desk(ctx, 'home')
+      return { title: 'House standings', columns: [['rank', '#'], ['name', 'House'], ['members', 'Members'], ['stars', 'Stars'], ['lost', 'Lost'], ['score', 'Score']], rows: h.houses }
+    } },
+  { name: 'pending_approvals', roles: ['principal'], kind: 'read', label: 'Checking approvals',
+    desc: 'Approvals: claims on unclaimed items and donation requests waiting for a decision.',
+    keywords: [/approv|claims?|donat|waiting for me|pending|decide/i, /approv|waiting for me/i], params: {},
+    async run(ctx) {
+      const d = await desk(ctx, 'approvals')
+      const rows = [...d.claims.map((c) => ({ kind: 'Claim', item: c.title, who: c.name, note: c.evidence })), ...d.disposals.map((x) => ({ kind: 'Donation request', item: x.title, who: x.requested_by, note: x.note }))]
+      return { title: 'Waiting for your decision', columns: [['kind', 'Kind'], ['item', 'Item'], ['who', 'From'], ['note', 'Note']], rows }
+    } },
+  { name: 'remind_families', roles: ['principal'], kind: 'write', label: 'Preparing a reminder to families',
+    desc: 'Remind all families that items are waiting at the collection points (fixed message, at most once a week).',
+    keywords: [/remind (all |the )?(families|parents)|tell (all |the )?(parents|families)|send (a )?reminder/i], params: {},
+    async prepare(ctx) {
+      const h = await desk(ctx, 'home')
+      return { summary: `Remind every family at ${h.school.name} that items are waiting`, details: [['Items at collection points', String(h.counts.inBox + h.counts.unclaimed)], ['Message', 'Fixed FindBox reminder; unclaimed items are donated after 30 days'], ['Limit', 'At most once a week']], request: { method: 'POST', url: '/api/school/desk/remind-families', body: {} } }
+    } },
+  { name: 'invite_teacher', roles: ['principal'], kind: 'write', label: 'Preparing a teacher invitation',
+    desc: 'Invite a teacher or office staff member to use the staff app.',
+    keywords: [/invite (a )?(teacher|staff)|add (a )?(teacher|staff member)/i],
+    params: { name: { type: 'string', desc: 'Their full name.', required: true }, email: { type: 'string', desc: 'Their work email.', required: true } },
+    async prepare(ctx, a) {
+      return { summary: `Invite ${a.name} (${a.email}) as a teacher`, details: [['Name', a.name], ['Email', a.email], ['What happens', 'They get an email to set a password and use the staff app']], request: { method: 'POST', url: '/api/school/staff/invite', body: { name: a.name, email: a.email } } }
+    } },
+]
+TOOLS.push(...PRINCIPAL)
+
+// ===== more tools: the CRM, system issues, tasks, and deeper school tools =====
+// Flags read by the planner: quick = optional fields are filled by rules only (no model call),
+// looseQuery / ruleTitle / ruleName = the planner may read that field straight from the sentence.
+const crm = (ctx, path) => ctx.api('GET', '/api/company/crm/' + path)
+const cards = (board) => board.columns.flatMap((c) => c.cards.map((x) => ({ ...x, column: c.title, columnId: c.id })))
+const pickOne = (list, query, label) => {
+  const q = String(query || '').toLowerCase().trim(), hits = list.filter((x) => x.title.toLowerCase().includes(q))
+  if (!hits.length) throw new ToolError(`No ${label} matches "${query}".`, 404)
+  const exact = hits.find((x) => x.title.toLowerCase() === q)
+  if (hits.length > 1 && !exact) throw new ToolError(`Several ${label}s match "${query}": ${hits.slice(0, 5).map((x) => x.title).join(', ')}. Which one?`, 409)
+  return exact || hits[0]
+}
+const SEVERITIES = ['s1', 's2', 's3', 's4'], LEAD_STAGES = ['contacted', 'demo', 'proposal', 'won', 'new']
+const MORE_TOOLS = [
+  { name: 'what_can_you_do', roles: ['admin', 'developer', 'principal'], kind: 'read', label: 'Listing what I can do', plain: true,
+    desc: 'Help: everything this assistant can look up or prepare for you.',
+    keywords: [/^help\b|what can you (do|help)|what do you do|your (tools|abilities|capabilities)|how (do|can) (i|you) use (you|this)/i], params: {},
+    async run(ctx) {
+      const mine = TOOLS.filter((t) => t.roles.includes(ctx.role) && t.name !== 'what_can_you_do')
+      const needs = (t) => Object.entries(t.params || {}).filter(([, d]) => d.required).map(([k]) => k.replaceAll('_', ' ')).join(', ') || 'Nothing'
+      return { title: 'What I can do', columns: [['kind', 'Type'], ['what', 'What'], ['needs', 'I need from you']], rows: mine.map((t) => ({ kind: t.kind === 'read' ? 'Look up' : 'Prepare a change', what: t.desc.split(':')[0].replace(/\.$/, ''), needs: needs(t) })), facts: [`${mine.filter((t) => t.kind === 'read').length} things I can look up`, `${mine.filter((t) => t.kind === 'write').length} changes I can prepare for you to confirm`] }
+    } },
+  { name: 'school_health', roles: ['admin', 'developer'], kind: 'read', label: 'Checking school health', quick: true, looseQuery: true,
+    desc: 'School health: each partner school with students, families, items and a health score; shows which are at risk.',
+    keywords: [/school health|health scores?|at risk|struggling|healthy schools?|roll-?out/i, /\b(health|at risk|struggling)\b.*\bschools?\b|\bschools?\b.*\b(health|at risk|struggling|need (attention|help))\b/i], params: { query: { type: 'string', desc: 'School name to look for.' } },
+    async run(ctx, a) {
+      const d = await crm(ctx, 'customers?type=schools&sort=health&q=' + encodeURIComponent(a.query || ''))
+      return { title: 'School health', columns: [['name', 'School'], ['students', 'Students'], ['families', 'Families'], ['items', 'Items'], ['health', 'Health']], rows: d.rows.map((s) => ({ name: s.name, students: s.a, families: s.b, items: s.c, health: s.health.band === 'new' ? 'New' : `${s.health.score} (${s.health.band})` })), entities: { schools: d.rows.map((s) => s.name) }, facts: [`${d.rows.filter((s) => s.health.band === 'red').length} at risk`, `${d.rows.filter((s) => s.health.band === 'green').length} healthy`] }
+    } },
+  { name: 'my_tasks', roles: ['admin', 'developer'], kind: 'read', label: 'Checking your tasks',
+    desc: 'Tasks: your open tasks and the work queue (orders to fulfil, overdue tickets, stalled leads, issues to triage).',
+    keywords: [/my tasks?|to-?do list|work queue|what should i (do|work on)|what('s| is) next|priorit/i, /my tasks?|work queue|what should i (do|work on)/i], params: {},
+    async run(ctx) {
+      const d = await crm(ctx, 'tasks?scope=mine')
+      const rows = [...d.queue.map((x) => ({ kind: 'Queue', what: x.title, due: x.tone === 'bad' ? 'Now' : 'Soon' })), ...d.tasks.filter((t) => t.status === 'open').map((t) => ({ kind: 'Task', what: t.title + (t.entity_label ? ' (' + t.entity_label + ')' : ''), due: t.due_at ? new Date(t.due_at).toISOString().slice(0, 10) : 'No date' }))]
+      return { title: 'Your work', columns: [['kind', 'Kind'], ['what', 'What'], ['due', 'When']], rows, facts: [`${rows.filter((r) => r.due === 'Now').length} need attention now`] }
+    } },
+  { name: 'system_issues', roles: ['admin', 'developer'], kind: 'read', label: 'Checking system issues', quick: true,
+    desc: 'System issues: problems reported with FindBox, with severity, status, area and how many people reported each.',
+    keywords: [/\bissues\b|\bbugs?\b|system (issue|complaint|problem)s?|what('s| is) broken|incidents?/i, /system issues|open issues|known issues|\bbugs\b/i], params: { query: { type: 'string', desc: 'Words from the issue title.' } },
+    async run(ctx, a) {
+      const list = cards(await crm(ctx, 'board/issues?q=' + encodeURIComponent(a.query || '')))
+      return { title: 'System issues', columns: [['title', 'Issue'], ['severity', 'Severity'], ['status', 'Status'], ['detail', 'Area and reports'], ['flags', 'Flags']], rows: list.map((i) => ({ title: i.title, severity: i.chip.text, status: i.column, detail: i.line, flags: i.flags.map((f) => f.text).join(', ') })), facts: [`${list.filter((i) => !['fixed', 'closed'].includes(i.columnId)).length} open`, `${list.filter((i) => i.columnId === 'new').length} waiting for triage`] }
+    } },
+  { name: 'family_accounts', roles: ['admin'], kind: 'read', label: 'Looking up families', quick: true,
+    desc: 'Families: parents and guardians with their school, number of children, items and what they have spent.',
+    keywords: [/top (spend\w*|famil\w*|customers)|famil(y|ies) (by|with|who|that)|which famil|biggest (spenders|customers)|family spend/i, /top (spend\w*|famil\w*|customers)|famil(y|ies) (by|with|who|that)|which famil|biggest (spenders|customers)|family spend/i], params: { query: { type: 'string', desc: 'Name or email.' } },
+    async run(ctx, a) {
+      const d = await crm(ctx, 'customers?type=families&sort=spend&q=' + encodeURIComponent(a.query || ''))
+      return { title: 'Families', columns: [['name', 'Name'], ['email', 'Email'], ['school', 'School'], ['children', 'Children'], ['items', 'Items'], ['spent', 'Spent']], rows: d.rows.map((f) => ({ name: f.name, email: f.sub, school: f.school || '', children: f.a, items: f.b, spent: f.c ? ksh(f.c) : '' })), entities: { emails: d.rows.slice(0, 5).map((f) => f.sub) }, facts: [`${d.rows.filter((f) => f.c > 0).length} have bought labels`] }
+    } },
+  { name: 'lead_pipeline', roles: ['admin'], kind: 'read', label: 'Checking the school pipeline', quick: true, looseQuery: true,
+    desc: 'School leads: every prospect school with its stage, contact, value, score, next step and whether it is stalled.',
+    keywords: [/\bleads?\b|pipeline|prospects?|\bdeals?\b|forecast|sales funnel/i, /pipeline|\bleads\b|prospects/i], params: { query: { type: 'string', desc: 'School name to look for.' } },
+    async run(ctx, a) {
+      const list = cards(await crm(ctx, 'board/leads?q=' + encodeURIComponent(a.query || '')))
+      const open = list.filter((l) => !['won', 'lost'].includes(l.columnId))
+      return { title: 'School leads', columns: [['title', 'School'], ['stage', 'Stage'], ['who', 'Contact and size'], ['value', 'Value'], ['score', 'Score'], ['next', 'Next step due'], ['flags', 'Flags']], rows: list.map((l) => ({ title: l.title, stage: l.column, who: l.line, value: l.value ? ksh(l.value) : '', score: l.score, next: l.chip.text, flags: l.flags.map((f) => f.text).join(', ') })), facts: [`${open.length} open, worth ${ksh(open.reduce((n, l) => n + (l.value || 0), 0))}`, `${list.filter((l) => l.flags.some((f) => f.text === 'Stalled')).length} stalled`] }
+    } },
+  { name: 'system_signals', roles: ['developer'], kind: 'read', label: 'Reading system signals',
+    desc: 'System signals: background worker, email delivery, off-site backup, alerts and privacy requests, each good or needing a check.',
+    keywords: [/signals?\b|\bworker\b|backups?|monitoring|\balerts?\b/i], params: {},
+    async run(ctx) {
+      const h = await crm(ctx, 'home')
+      return { title: 'System signals', columns: [['name', 'Signal'], ['state', 'State'], ['detail', 'Detail']], rows: (h.signals || []).map((s) => ({ name: s.name, state: s.state === 'ok' ? 'Good' : s.state === 'warn' ? 'Check' : 'Problem', detail: s.detail })), facts: [`${(h.signals || []).filter((s) => s.state !== 'ok').length} need attention`] }
+    } },
+  { name: 'add_task', roles: ['admin', 'developer'], kind: 'write', label: 'Preparing a task', ruleTitle: true,
+    desc: 'Add a task for yourself, with an optional due date.',
+    keywords: [/add (a |an )?(task|reminder|to-?do)|remind me to|create (a )?task|new task/i],
+    params: { title: { type: 'string', desc: 'What needs doing.', required: true }, due: { type: 'string', desc: 'Due date as YYYY-MM-DD.' } },
+    async prepare(ctx, a) {
+      const due = /^\d{4}-\d{2}-\d{2}$/.test(a.due || '') ? a.due : null
+      return { summary: `Add a task: ${a.title}`, details: [['Task', a.title], ['Due', due || 'No date'], ['Assigned to', 'You']], request: { method: 'POST', url: '/api/company/crm/tasks', body: { title: String(a.title).slice(0, 200), dueAt: due } } }
+    } },
+  { name: 'log_issue', roles: ['admin', 'developer'], kind: 'write', label: 'Preparing a system issue', ruleTitle: true,
+    desc: 'Log a system issue (a problem with FindBox), with an optional severity and the reporter\'s email.',
+    keywords: [/log (an? )?(\w+ )?(issue|bug|problem|complaint)|report (an? )?(\w+ )?(bug|problem|issue)|raise (an? )?issue/i],
+    params: { title: { type: 'string', desc: 'What is going wrong.', required: true }, severity: { type: 'string', desc: 'Severity by customer impact.', enum: SEVERITIES }, email: { type: 'string', desc: 'Email of the person who reported it.' } },
+    async prepare(ctx, a) {
+      return { summary: `Log a system issue: ${a.title}`, details: [['Issue', a.title], ['Severity', a.severity ? a.severity.toUpperCase() : 'For the developer to set'], ['Reporter', a.email || 'Not given']], request: { method: 'POST', url: '/api/company/crm/issues', body: { title: String(a.title).slice(0, 200), description: 'Logged through the FindBox assistant.', source: 'internal', severity: a.severity || null, reporterEmail: a.email || '' } } }
+    } },
+  { name: 'add_lead', roles: ['admin'], kind: 'write', label: 'Preparing a school lead', ruleName: true,
+    desc: 'Add a school lead to the pipeline.',
+    keywords: [/add (a |an )?(new )?(school )?(lead|prospect)|new lead/i],
+    params: { name: { type: 'string', desc: 'The school\'s name.', required: true }, email: { type: 'string', desc: 'Contact email.' }, source: { type: 'string', desc: 'Where the lead came from.', enum: ['website', 'referral', 'event', 'outreach'] } },
+    async prepare(ctx, a) {
+      return { summary: `Add ${a.name} as a school lead`, details: [['School', a.name], ['Contact email', a.email || 'Not given'], ['Source', a.source || 'other']], request: { method: 'POST', url: '/api/company/crm/leads', body: { schoolName: String(a.name).slice(0, 150), contactEmail: a.email || '', source: a.source || 'other' } } }
+    } },
+  { name: 'move_lead', roles: ['admin'], kind: 'write', label: 'Preparing to move a lead', looseQuery: true,
+    desc: 'Move a school lead to another stage (contacted, demo, proposal, won).',
+    keywords: [/\bmove\b.*\b(lead|to (new|contacted|demo|proposal|won))\b|mark .*\b(as )?(contacted|won)\b|lead .* (to|is) (contacted|demo|proposal|won)/i],
+    params: { query: { type: 'string', desc: 'The school\'s name.', required: true }, stage: { type: 'string', desc: 'The new stage.', enum: LEAD_STAGES, required: true } },
+    async prepare(ctx, a) {
+      const lead = pickOne(cards(await crm(ctx, 'board/leads')), a.query, 'lead')
+      if (lead.columnId === a.stage) throw new ToolError(`${lead.title} is already at ${lead.column}.`, 409)
+      return { summary: `Move ${lead.title} from ${lead.column} to ${a.stage}`, details: [['Lead', lead.title], ['From', lead.column], ['To', a.stage], ['Note', 'Stage rules still apply: a contact is needed, and a size before Proposal']], request: { method: 'POST', url: '/api/company/crm/leads/' + lead.id, body: { revision: lead.revision, stage: a.stage } } }
+    } },
+  { name: 'mark_order_delivered', roles: ['admin'], kind: 'write', label: 'Preparing to mark an order delivered',
+    desc: 'Mark a fulfilled order as delivered, so the family can start adding belongings.',
+    keywords: [/mark .*delivered|order .*(has been |was |is )?delivered|labels? (have |has )?(arrived|been delivered)/i],
+    params: { order: { type: 'string', desc: 'First characters of the order number.', required: true } },
+    async prepare(ctx, a) {
+      const o = await byPrefix(ctx, 'orders', 'id', a.order, 'order')
+      if (o.status !== 'fulfilled') throw new ToolError('Only a fulfilled order can be marked delivered. This one is ' + o.status + '.', 409)
+      if (o.delivered_at) throw new ToolError('That order is already marked delivered.', 409)
+      return { summary: `Mark order ${short(o.id)} delivered`, details: [['Order', short(o.id)], ['Amount', ksh(o.amount_minor)], ['Effect', 'The family is told and can scan labels to add belongings']], request: { method: 'POST', url: '/api/company/orders/' + o.id + '/delivered', body: { reason: ctx.reason } } }
+    } },
+  { name: 'triage_issue', roles: ['developer'], kind: 'write', label: 'Preparing to triage an issue', looseQuery: true,
+    desc: 'Triage a system issue: set its severity so it is acknowledged.',
+    keywords: [/\btriage\b|set (the )?severity|acknowledge (the )?(issue|bug)/i],
+    params: { query: { type: 'string', desc: 'Words from the issue title.', required: true }, severity: { type: 'string', desc: 'Severity by customer impact.', enum: SEVERITIES, required: true } },
+    async prepare(ctx, a) {
+      const issue = pickOne(cards(await crm(ctx, 'board/issues')), a.query, 'issue')
+      return { summary: `Triage "${issue.title}" as ${a.severity.toUpperCase()}`, details: [['Issue', issue.title], ['Severity', a.severity.toUpperCase()], ['Status', issue.columnId === 'new' ? 'New to Triaged' : issue.column]], request: { method: 'POST', url: '/api/company/crm/issues/' + issue.id, body: { revision: issue.revision, severity: a.severity, ...(issue.columnId === 'new' ? { status: 'triaged' } : {}) } } }
+    } },
+
+  // ----- the principal -----
+  { name: 'find_student', roles: ['principal'], kind: 'read', label: 'Looking up students', quick: true, looseQuery: true,
+    desc: 'Students: find a student by name, class or admission number, with their house and whether a parent is linked.',
+    keywords: [/find (a |the )?(student|pupil|learner)|(student|pupil|learner)s? (named|called)|look ?up .*(student|pupil|learner)|admission (no|number)|\bstudents? in\b/i], params: { query: { type: 'string', desc: 'Name, class or admission number.' } },
+    async run(ctx, a) {
+      const d = await ctx.api('GET', '/api/school/students?status=all&page=0&q=' + encodeURIComponent(a.query || ''))
+      return { title: 'Students', columns: [['name', 'Student'], ['ref', 'Admission no.'], ['cls', 'Class'], ['house', 'House'], ['parent', 'Parent'], ['status', 'Status']], rows: d.rows.map((s) => ({ name: s.name, ref: s.school_reference, cls: s.class_name, house: s.house || '', parent: s.guardian_id ? 'Linked' : s.guardian_email ? 'Email on file' : 'Not linked', status: s.status })), facts: d.hasMore ? ['Showing the first 50'] : [] }
+    } },
+  { name: 'unlinked_students', roles: ['principal'], kind: 'read', label: 'Listing students with no parent linked',
+    desc: 'Students with no parent linked yet, so you know whom to invite.',
+    keywords: [/unlinked|not (yet )?linked|no parent|without (a )?parent|who (has not|hasn't|have not|haven't) joined|still to (join|invite)/i, /unlinked|not (yet )?linked|no parent|without (a )?parent/i], params: {},
+    async run(ctx) {
+      const d = await ctx.api('GET', '/api/school/students?status=unlinked&page=0&q=')
+      return { title: 'Students with no parent linked', columns: [['name', 'Student'], ['cls', 'Class'], ['email', 'Parent email on file']], rows: d.rows.map((s) => ({ name: s.name, cls: s.class_name, email: s.guardian_email || 'None' })), facts: [d.hasMore ? 'Showing the first 50' : '', `${d.rows.filter((s) => s.guardian_email).length} have an email you can invite`].filter(Boolean) }
+    } },
+  { name: 'collection_points', roles: ['principal'], kind: 'read', label: 'Checking the collection points',
+    desc: 'Collection points: each box, how many items are in it and how long the oldest has waited.',
+    keywords: [/collection (points|boxes?)|\bboxes\b|how full|which box|what('s| is) in (the |each )?(box|boxes|library|office|reception)/i], params: {},
+    async run(ctx) {
+      const h = await desk(ctx, 'home')
+      return { title: 'Collection points', columns: [['name', 'Box'], ['count', 'Items inside'], ['oldest', 'Oldest item'], ['hours', 'Open']], rows: h.boxes.map((b) => ({ name: b.name, count: b.count, oldest: b.count ? b.oldestDays + ' days' : '', hours: b.opening_hours })), facts: [`${h.boxes.reduce((n, b) => n + b.count, 0)} items inside in total`] }
+    } },
+  { name: 'overdue_items', roles: ['principal'], kind: 'read', label: 'Listing overdue items',
+    desc: 'Overdue: items past their collection date or held over 30 days, ready for a reminder or donation.',
+    keywords: [/overdue|past (their |its |the )?collection|held (too long|over)|end of term clear/i, /overdue|ready to donate|clear.?out/i], params: {},
+    async run(ctx) {
+      const d = await desk(ctx, 'log')
+      const rows = d.rows.filter((r) => r.overdue || r.holdOver).map((r) => ({ item: r.title, owner: r.owner, where: r.where, days: r.ageDays, why: r.holdOver ? 'Held over ' + d.holdDays + ' days' : 'Past collection date' }))
+      return { title: 'Overdue items', columns: [['item', 'Item'], ['owner', 'Owner'], ['where', 'Where'], ['days', 'Days waiting'], ['why', 'Why']], rows, facts: [`${rows.filter((r) => r.why.startsWith('Held')).length} can go to donation approval`] }
+    } },
+  { name: 'valuables_held', roles: ['principal'], kind: 'read', label: 'Listing valuables',
+    desc: 'Valuables: phones, money, glasses and watches currently held by the school.',
+    keywords: [/valuables?|\bphones?\b|\bmoney\b|\bwatch(es)?\b|\bglasses\b|expensive/i, /valuables?/i], params: {},
+    async run(ctx) {
+      const d = await desk(ctx, 'log')
+      return { title: 'Valuables held', columns: [['item', 'Item'], ['owner', 'Owner'], ['where', 'Where'], ['days', 'Days waiting']], rows: d.rows.filter((r) => r.valuable).map((r) => ({ item: r.title, owner: r.owner, where: r.where, days: r.ageDays })) }
+    } },
+  { name: 'loss_hotspots', roles: ['principal'], kind: 'read', label: 'Finding where things get lost',
+    desc: 'Hotspots: the places where items are most often found, and which classes lose most.',
+    keywords: [/hot ?spots?|where (do|are) (things|items|belongings) (get |getting |being )?(lost|found)|which (place|area)s?|most (often )?found/i], params: {},
+    async run(ctx) {
+      const r = await desk(ctx, 'report?days=90')
+      const rows = [...r.byPlace.map((p) => ({ kind: 'Place', name: p.name, found: p.found, returned: p.returned })), ...r.byClass.slice(0, 8).map((c) => ({ kind: 'Class', name: c.name, found: c.found, returned: c.returned }))]
+      return { title: 'Where things are found, last 90 days', columns: [['kind', 'Kind'], ['name', 'Name'], ['found', 'Logged'], ['returned', 'Returned']], rows }
+    } },
+  { name: 'recent_activity', roles: ['principal'], kind: 'read', label: 'Reading recent activity',
+    desc: 'Activity: who received, handed back, reminded or decided what, most recent first.',
+    keywords: [/recent activity|what (has )?happened|activity log|\baudit\b|latest (activity|actions|changes)/i, /recent activity|what (has )?happened|activity log/i], params: {},
+    async run(ctx) {
+      const d = await desk(ctx, 'activity')
+      return { title: 'Recent activity', columns: [['when', 'When'], ['who', 'Who'], ['what', 'What'], ['item', 'Item']], rows: d.rows.slice(0, 40).map((r) => ({ when: day(r.at), who: r.who, what: r.text, item: r.title })) }
+    } },
+  { name: 'parents_waiting', roles: ['principal'], kind: 'read', label: 'Checking parents waiting',
+    desc: 'Parents waiting for you to approve the child they added.',
+    keywords: [/parents? (are |is )?waiting|child(ren)? requests?|join requests?|waiting to be approved|who (wants|asked) to (join|add)/i], params: {},
+    async run(ctx) {
+      const d = await ctx.api('GET', '/api/school/child-requests')
+      return { title: 'Parents waiting for approval', columns: [['child', 'Child'], ['cls', 'Class'], ['parent', 'Parent'], ['match', 'On your roster']], rows: d.rows.map((r) => ({ child: r.name, cls: r.class_name, parent: r.guardian, match: r.match_id ? 'Yes' : 'No: approving adds them' })), facts: ['Approve or decline these in Approvals'] }
+    } },
+  { name: 'notify_family', roles: ['principal'], kind: 'write', label: 'Preparing a reminder for one family', looseQuery: true,
+    desc: 'Tell one family to collect an item that is waiting in a box.',
+    keywords: [/notify (the )?(family|parents?)|tell (the )?(family|parent) (of|to|about)|remind (the )?(family|parent) (of|about|to)/i],
+    params: { query: { type: 'string', desc: 'The item or the student\'s name.', required: true } },
+    async prepare(ctx, a) {
+      const d = await desk(ctx, 'log?q=' + encodeURIComponent(a.query))
+      const ready = d.rows.filter((r) => r.status === 'awaiting_collection' && r.owner !== 'Owner not known')
+      if (!ready.length) throw new ToolError(`Nothing waiting in a box with a known owner matches "${a.query}".`, 404)
+      if (ready.length > 1) throw new ToolError(`${ready.length} items match "${a.query}": ${ready.slice(0, 5).map((r) => r.title + ' (' + r.owner + ')').join(', ')}. Which one?`, 409)
+      const item = ready[0]
+      return { summary: `Tell the family to collect ${item.title} (${item.owner})`, details: [['Item', item.title], ['Owner', item.owner], ['Where', item.where], ['Waiting', item.ageDays + ' days'], ['Limit', 'Once a day per item']], request: { method: 'POST', url: '/api/school/desk/case/' + item.id + '/remind', body: {} } }
+    } },
+  { name: 'add_collection_box', roles: ['principal'], kind: 'write', label: 'Preparing a collection box', ruleName: true,
+    desc: 'Add a collection box where found items wait.',
+    keywords: [/add (a |another )?(new )?(collection )?(box|point)|new (collection )?(box|point)/i],
+    params: { name: { type: 'string', desc: 'The box\'s name, for example Reception.', required: true }, directions: { type: 'string', desc: 'Where it is.' }, hours: { type: 'string', desc: 'When parents can collect.' } },
+    async prepare(ctx, a) {
+      return { summary: `Add a collection box called ${a.name}`, details: [['Name', a.name], ['Where', a.directions || 'Main school office'], ['Open', a.hours || 'School days, 8am to 4pm']], request: { method: 'POST', url: '/api/school/boxes', body: { name: String(a.name).slice(0, 100), directions: a.directions || 'Main school office', hours: a.hours || 'School days, 8am to 4pm', active: true, publicListing: false, reason: 'Added through the FindBox assistant' } } }
+    } },
+]
+TOOLS.push(...MORE_TOOLS)
 
 export const toolsFor = (role) => TOOLS.filter(t => t.roles.includes(role))
 export const byName = (name) => TOOLS.find(t => t.name === name)
