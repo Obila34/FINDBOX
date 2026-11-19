@@ -22,3 +22,6 @@
 .cx-access button{justify-self:start;padding:10px 14px;border-radius:9px;background:#e7ecde;color:#050806;font-size:12px;font-weight:700}
 .cx-assistant-tab{position:relative}
 .cx-new-pill{margin-left:auto;padding:2px 7px;border-radius:99px;font-size:9.5px;font-weight:800;letter-spacing:.08em;background:#f39a5b;color:#1a0b03}
+
+/* Embedded in the CRM shell: no sidebar of its own. */
+.cx-bare{display:block;max-width:none;margin:0}.cx-bare>.cx-sidebar{display:none}.cx-bare>.cx-content{padding:0}

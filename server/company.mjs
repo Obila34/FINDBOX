@@ -3,6 +3,7 @@ import { safeguardsRoutes } from './safeguards.mjs';
 import { schoolCompanyRoutes } from './schools.mjs';
 import { mailReady } from './mail.mjs';
 import { operationsRoutes } from './operations.mjs';
+import { crmRoutes } from './crm.mjs';
 import { requireThat, id } from './security.mjs';
 import { darajaRoutes, darajaConfigured } from './daraja.mjs';
 
@@ -74,4 +75,5 @@ export async function companyRoutes(app, { pool, cfg, user, daraja }) {
   await safeguardsRoutes(app,{pool,cfg,user,operator});
   await schoolCompanyRoutes(app,{pool,cfg,operator});
   await operationsRoutes(app,{pool,cfg,operator});
+  await crmRoutes(app,{pool,operator});
 }
