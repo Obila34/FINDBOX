@@ -1,14 +1,12 @@
 import { RevealPassword } from '@/components/ui/RevealPassword';
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
-import { CompanyConsole } from './CompanyConsole'
+import { Crm } from './crm/Crm'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { api, ApiError } from './api'
 import './company.css'
 import { SignIn1 } from '@/components/ui/modern-stunning-sign-in'
-import { Logo } from '@/components/brand/Logo'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { CompanyDashboard, type Overview, type Health } from './CompanyDashboard'
 import { notify } from './feedback'
 
@@ -75,11 +73,11 @@ export function Company() {
       {(challenge||emailChallenge)&&<button type="button" onClick={()=>{setChallenge(false);setEmailChallenge(false)}}>Use a different account</button>}</form>}
       {denied&&<Link to="/app/security">Manage two-factor authentication</Link>}
     </div></SignIn1>
-  return <div className="co-root"><header className="co-header"><Link to="/" className="co-brand"><Logo height={22} /> <span>Company</span></Link><span className="flex items-center gap-3"><span><ShieldCheck size={16}/> Restricted workspace</span><ThemeToggle /></span></header>
-    {loading?<main className="co-login" role="status">Checking access…</main>:access&&<CompanyConsole access={access} onLogout={()=>void logout()}><CompanyDashboard role={access.role} name={access.name} overview={overview} health={health} busy={busy} onRefresh={()=>void load()} onLogout={()=>void logout()} security={emailEnabled?<button type="button" onClick={()=>setSecurityInfo(v=>!v)} aria-expanded={securityInfo}><ShieldCheck size={16}/> Security</button>:<Link to="/app/security"><ShieldCheck size={16}/> Security</Link>}>
+  return <div className="co-root co-crm">
+    {loading?<main className="co-login" role="status">Checking access…</main>:access&&<Crm access={access} onLogout={()=>void logout()} overview={<CompanyDashboard role={access.role} name={access.name} overview={overview} health={health} busy={busy} onRefresh={()=>void load()} onLogout={()=>void logout()} security={emailEnabled?<button type="button" onClick={()=>setSecurityInfo(v=>!v)} aria-expanded={securityInfo}><ShieldCheck size={16}/> Security</button>:<Link to="/app/security"><ShieldCheck size={16}/> Security</Link>}>
     {error&&<p className="co-error" role="alert">{error}</p>}
     {securityInfo&&<section className="co-panel"><h2>Password + email verification</h2><p>Every sign-in requires your website password and a single-use six-digit email code. Codes expire after 60 seconds; resends are available after 60 seconds. Five incorrect attempts block that code. Company sessions expire after eight hours.</p></section>}
     {daraja&&<section className="co-panel"><h2>Daraja sandbox</h2><p>Test environment only. These attempts never affect sales, orders or tag stock. Use a Safaricom sandbox test number. Sign in within the last 10 minutes before starting a test.</p>{daraja.configured?<form className="co-sandbox" onSubmit={sandbox}><label>Test phone<input name="phone" type="tel" pattern="254[17][0-9]{8}" placeholder="2547XXXXXXXX" required/></label><label>Amount · KES<input name="amount" type="number" min={1} max={1000} defaultValue={1} required/></label><button className="co-button" disabled={busy}>Start sandbox test</button></form>:<p>Waiting for your sandbox consumer key, consumer secret, shortcode and passkey. Credentials are configured on the server, never in this page.</p>}{daraja.attempts.map(a=><div className="co-row" key={a.id}><span>{a.id.slice(0,8)} · KES {a.amount_kes} · phone ending {a.phone_suffix} · {a.status}</span><button disabled={busy} onClick={()=>void query(a.id)}>Check provider status</button></div>)}</section>}
     <p className="co-note">Company access is audited. Counts reflect recorded activity; password sign-ins are separate from two-factor completion.</p>
-    </CompanyDashboard></CompanyConsole>}</div>
+    </CompanyDashboard>}/>}</div>
 }

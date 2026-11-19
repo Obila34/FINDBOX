@@ -1552,3 +1552,112 @@ test("assistant routes questions to role-scoped tools, proposes changes for conf
     assert.ok(seen.length > 0);
   } finally { fake.close(); await smart.close(); await offline.close(); }
 });
+
+test("operations CRM: leads follow stage rules, records link everything, tasks and health are read from live data", async () => {
+  const pw = await passwordHash("crm-fixture-12345");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,verified,mfa_secret) VALUES('crm-admin','crm-admin@test.com','CRM Admin',$1,'parent',true,'enrolled'),('crm-dev','crm-dev@test.com','CRM Dev',$1,'parent',true,'enrolled') ON CONFLICT DO NOTHING", [pw]);
+  await pool.query("INSERT INTO company_access(user_id,role) VALUES('crm-admin','admin'),('crm-dev','developer') ON CONFLICT(user_id) DO UPDATE SET role=EXCLUDED.role");
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const admin = await token("crm-admin"), dev = await token("crm-dev");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.8", headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  // Leads: admin only, duplicates refused.
+  assert.equal((await req("POST", "/api/company/crm/leads", { schoolName: "Hillcrest Prep" }, dev)).statusCode, 403);
+  let r = await req("POST", "/api/company/crm/leads", { schoolName: "Hillcrest Prep", source: "referral" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  const lead = r.json().id;
+  assert.equal((await req("POST", "/api/company/crm/leads", { schoolName: "hillcrest prep" }, admin)).statusCode, 409);
+  // Stage rules.
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 1, stage: "contacted" }, admin)).statusCode, 400, "needs a contact first");
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 1, stage: "contacted", contactName: "Mrs Otieno", contactEmail: "head@hillcrest.test", nextStep: "Call back", nextAt: new Date(Date.now() + 2 * 864e5).toISOString().slice(0, 10) }, admin)).statusCode, 200);
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 1, stage: "demo" }, admin)).statusCode, 409, "stale revision");
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 2, stage: "proposal" }, admin)).statusCode, 400, "needs a size first");
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 2, stage: "proposal", estStudents: 420, valueKes: 200000 }, admin)).statusCode, 200);
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 3, stage: "lost" }, admin)).statusCode, 400, "needs a reason");
+  // Notes, tasks, the record and the board.
+  assert.equal((await req("POST", "/api/company/crm/notes", { entityType: "lead", entityId: lead, kind: "call", body: "Spoke to the head teacher; wants a demo." }, admin)).statusCode, 200);
+  assert.equal((await req("POST", "/api/company/crm/notes", { entityType: "lead", entityId: lead, body: "Not allowed" }, dev)).statusCode, 403);
+  r = await req("POST", "/api/company/crm/tasks", { title: "Send proposal", entityType: "lead", entityId: lead, entityLabel: "Hillcrest Prep" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  const record = (await req("GET", "/api/company/crm/record/lead/" + lead, undefined, admin)).json();
+  assert.equal(record.lead.stage, "proposal");
+  assert.ok(record.lead.score >= 60, "referral + size + booked next step + a note scores well: " + record.lead.score);
+  assert.ok(record.timeline.some((t) => t.kind === "call") && record.timeline.some((t) => t.kind === "stage"));
+  assert.equal(record.tasks.length, 1);
+  const board = (await req("GET", "/api/company/crm/board/leads", undefined, admin)).json();
+  const card = board.columns.find((c) => c.id === "proposal").cards[0];
+  assert.equal(card.title, "Hillcrest Prep");
+  assert.equal(card.notes, 1, "stage moves are not counted as notes");
+  assert.equal(card.tasks, 1);
+  assert.equal((await req("GET", "/api/company/crm/board/leads", undefined, dev)).statusCode, 403);
+  assert.equal((await req("POST", "/api/company/crm/tasks/" + r.json().id, { done: true }, admin)).statusCode, 200);
+  // Schools: health and onboarding come from live data; both roles can read them.
+  const onboarding = (await req("GET", "/api/company/crm/board/onboarding", undefined, dev)).json();
+  const kids = onboarding.columns.flatMap((c) => c.cards).find((c) => c.title === "Kids School");
+  assert.ok(kids, "Kids School is on the onboarding board");
+  const school = (await req("GET", "/api/company/crm/record/school/kids", undefined, dev)).json();
+  assert.equal(typeof school.school.health.score, "number");
+  assert.equal(school.school.orders, undefined, "developers do not see sales figures");
+  // Families: children's names only for the role that fulfils labels.
+  const family = (await req("GET", "/api/company/crm/record/family/kids-parent", undefined, admin)).json();
+  assert.ok(family.family.children.some((c) => c.name === "Baraka Kids"));
+  const masked = (await req("GET", "/api/company/crm/record/family/kids-parent", undefined, dev)).json();
+  assert.ok(masked.family.children.every((c) => c.name.startsWith("Child ")));
+  assert.equal(masked.family.orders, undefined);
+  // Dashboard and work queue.
+  const home = (await req("GET", "/api/company/crm/home", undefined, admin)).json();
+  assert.equal(home.pipeline.open, 1);
+  assert.equal(home.pipeline.weightedMinor, 15000000, "KSh 200,000 at 75%");
+  assert.equal(home.bars.length, 7);
+  assert.equal((await req("GET", "/api/company/crm/home", undefined, dev)).json().pipeline, undefined);
+  const queue = (await req("GET", "/api/company/crm/tasks", undefined, admin)).json();
+  assert.ok(Array.isArray(queue.queue) && queue.tasks.length === 1);
+  assert.ok((await req("GET", "/api/company/crm/customers?type=families&q=Kids", undefined, admin)).json().rows.some((f) => f.name === "Kids parent"));
+  assert.ok((await req("GET", "/api/company/crm/activity?filter=sales", undefined, admin)).json().rows.some((a) => a.action === "lead created"));
+  // Won and lost close the lead.
+  assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 3, stage: "won", schoolId: "kids" }, admin)).statusCode, 200);
+  assert.equal((await req("GET", "/api/company/crm/home", undefined, admin)).json().pipeline.winRate, 100);
+});
+
+test("system issues: complaints reach the developer, triage rules hold, and reporters hear when it is fixed", async () => {
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const admin = await token("crm-admin"), dev = await token("crm-dev");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.7", headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  // A bug sent through the app is picked up automatically; support can escalate anything else.
+  await pool.query("INSERT INTO support_tickets(id,name,email,kind,subject,message,request_key,scope) VALUES('bug-1','Ann Parent','ann@test.com','bug','Scanner shows a black screen','The camera never opens on my phone.','bug-1','test'),('gen-1','Ben Parent','ben@test.com','general','Camera is black for me too','Same problem when scanning.','gen-1','test')");
+  let board = (await req("GET", "/api/company/crm/board/issues", undefined, dev)).json();
+  const card = board.columns.find((c) => c.id === "new").cards.find((c) => c.title === "Scanner shows a black screen");
+  assert.ok(card, "bug tickets become issues");
+  assert.equal(card.chip.text, "Needs triage");
+  const issue = card.id;
+  let r = await req("POST", "/api/company/crm/issues/from-ticket/gen-1", { issueId: issue }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await req("POST", "/api/company/crm/issues/from-ticket/gen-1", {}, admin)).json().existing, true);
+  // Only the developer changes an issue, and the rules hold.
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged" }, admin)).statusCode, 403);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged" }, dev)).statusCode, 400, "needs a severity");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged", severity: "s2", area: "family_app" }, dev)).statusCode, 200);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 2, status: "in_progress" }, dev)).statusCode, 200);
+  assert.equal((await pool.query("SELECT assignee_id FROM crm_issues WHERE id=$1", [issue])).rows[0].assignee_id, "crm-dev", "starting work assigns it");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed" }, dev)).statusCode, 400, "needs the fix written down");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed", resolution: "Camera permission prompt now appears on first scan." }, dev)).statusCode, 400, "major issues need a root cause");
+  r = await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed", resolution: "Camera permission prompt now appears on first scan.", rootCause: "The scanner started before permission was granted." }, dev);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().notified, 2, "both reporters are told");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM outbox WHERE subject='Fixed: Scanner shows a black screen' AND recipient_email IN ('ann@test.com','ben@test.com')")).rows[0].n, 2);
+  assert.equal((await pool.query("SELECT status FROM support_tickets WHERE id='bug-1'")).rows[0].status, "resolved");
+  // The record, logging by hand, and the dashboards.
+  const record = (await req("GET", "/api/company/crm/record/issue/" + issue, undefined, admin)).json();
+  assert.equal(record.issue.reports.length, 2);
+  assert.equal(record.issue.sla.onTime, true);
+  assert.equal(record.issue.canEdit, false, "admins read issues; developers change them");
+  r = await req("POST", "/api/company/crm/issues", { title: "Complaint email: cannot pay with M-Pesa", description: "Forwarded from hello@", source: "email", reporterEmail: "cara@test.com", severity: "s1", area: "payments" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + r.json().id + "/reports", { name: "Dan", email: "dan@test.com" }, admin)).statusCode, 200);
+  const home = (await req("GET", "/api/company/crm/home", undefined, dev)).json();
+  assert.equal(home.issues.critical, 1);
+  assert.equal(home.issues.onTimePct, 100);
+  assert.ok(home.signals.some((s) => s.name === "Email delivery"));
+  assert.equal((await req("GET", "/api/company/crm/home", undefined, admin)).json().signals, undefined);
+  assert.ok((await req("GET", "/api/company/crm/tasks", undefined, dev)).json().queue.length >= 0);
+  assert.equal((await req("GET", "/api/company/crm/record/ticket/gen-1", undefined, admin)).json().ticket.issueId, issue);
+});
