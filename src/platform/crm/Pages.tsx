@@ -21,7 +21,7 @@ function Queue({ items, go, onOpen, limit }: { items: Row[]; go: (page: string) 
   return <ul className="crm-list">{items.slice(0, limit ?? items.length).map((x, i) => <li key={i}><i className={'crm-dot t-' + x.tone} /><div><button type="button" className="crm-link" onClick={() => { go(x.page); if (x.record) onOpen(x.record) }}>{x.title}</button></div><ArrowRight size={14} /></li>)}</ul>
 }
 
-export function Dashboard({ home, go, onOpen, version }: { home: Row; go: (page: string) => void; onOpen: (r: RecordRef) => void; version: number }) {
+export function Dashboard({ home, go, onOpen, version, onIssue }: { home: Row; go: (page: string) => void; onOpen: (r: RecordRef) => void; version: number; onIssue?: (title: string) => void }) {
   const [queue, setQueue] = useState<Row[]>([])
   useEffect(() => { api<{ queue: Row[] }>('/company/crm/tasks').then((d) => setQueue(d.queue)).catch(() => {}) }, [version])
   const p = home.pipeline, h = home.schools, max = p ? Math.max(1, ...p.byStage.map((s: Row) => s.count)) : 1
@@ -29,6 +29,14 @@ export function Dashboard({ home, go, onOpen, version }: { home: Row; go: (page:
     <div className="crm-head"><div><h1>Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {home.me.name.split(' ')[0]}</h1><p>{home.customers.schools} partner school{home.customers.schools === 1 ? '' : 's'} · {home.customers.families} families · {home.customers.students} students</p></div></div>
     <div className="crm-grid">
       <Panel i={0}><h2>Needs attention<button type="button" onClick={() => go('tasks')}>All tasks<ArrowRight size={13} /></button></h2><Queue items={queue} go={go} onOpen={onOpen} limit={6} /></Panel>
+      {home.issues && <Panel i={1}><h2>System issues<button type="button" onClick={() => go('issues')}>Open board<ArrowRight size={13} /></button></h2>
+        <div className="crm-kpis"><div><strong><N v={home.issues.open} /></strong><small>Open</small></div><div><strong style={home.issues.critical ? { color: 'var(--c-bad)' } : undefined}><N v={home.issues.critical} /></strong><small>Critical or major</small></div><div><strong style={home.issues.overdue ? { color: 'var(--c-bad)' } : undefined}><N v={home.issues.overdue} /></strong><small>Overdue</small></div><div><strong>{home.issues.mttrHours === null ? '—' : home.issues.mttrHours < 48 ? home.issues.mttrHours + 'h' : Math.round(home.issues.mttrHours / 24) + 'd'}</strong><small>Average time to fix</small></div></div>
+        {home.issues.byArea.length > 0 && <div className="crm-funnel">{home.issues.byArea.map((a: Row) => <div key={a.area}><span>{a.title}</span><motion.i initial={{ width: 0 }} animate={{ width: `${(a.count / Math.max(1, ...home.issues.byArea.map((x: Row) => x.count))) * 100}%` }} transition={{ duration: 0.8, ease, delay: 0.2 }} /><span>{a.count}</span></div>)}</div>}
+        <div className="crm-legend">{home.issues.bySeverity.map((s: Row) => <span key={s.severity}>{s.title}: {s.count}</span>)}</div>
+      </Panel>}
+      {home.signals && <Panel i={2}><h2>System signals<button type="button" onClick={() => go('legacy:overview')}>System health<ArrowRight size={13} /></button></h2>
+        <ul className="crm-list">{home.signals.map((s: Row) => <li key={s.name}><i className={'crm-dot t-' + (s.state === 'ok' ? 'good' : s.state)} /><div><button type="button" className="crm-link" onClick={() => go(s.page)}>{s.name}</button><small>{s.detail}</small></div>{s.state !== 'ok' && onIssue && <button type="button" className="crm-outline" style={{ padding: '4px 9px', fontSize: 12 }} onClick={() => onIssue(s.name + ': ' + s.detail)}>Log issue</button>}</li>)}</ul>
+      </Panel>}
       {p && <Panel i={1}><h2>School pipeline<button type="button" onClick={() => go('leads')}>Open board<ArrowRight size={13} /></button></h2>
         <div className="crm-kpis"><div><strong><N v={p.open} /></strong><small>Open leads</small></div><div><strong><CountUp value={p.weightedMinor} format={(n) => money(Math.round(n))} /></strong><small>Weighted forecast</small></div><div><strong>{p.winRate === null ? '—' : p.winRate + '%'}</strong><small>Win rate</small></div><div><strong>{p.avgCycleDays === null ? '—' : p.avgCycleDays + 'd'}</strong><small>Average time to win</small></div></div>
         <div className="crm-funnel">{p.byStage.map((s: Row) => <div key={s.stage}><span>{s.title}</span><motion.i initial={{ width: 0 }} animate={{ width: `${(s.count / max) * 100}%` }} transition={{ duration: 0.8, ease, delay: 0.2 }} style={{ opacity: s.stage === 'lost' ? 0.35 : 1 }} /><span>{s.count}</span></div>)}</div>
@@ -109,6 +117,28 @@ export function ActivityFeed({ query, version }: { query: string; version: numbe
       <small>{new Date(r.at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' })}</small>
     </li> })}</ul>}
   </>
+}
+
+const AREAS: [string, string][] = [['family_app', 'Family app'], ['school_portal', 'School portal'], ['ops', 'Operations'], ['sign_in', 'Sign-in'], ['payments', 'Payments'], ['email', 'Email'], ['labels', 'Labels & QR'], ['other', 'Other']]
+/** Log a system issue, for example from a complaint email: paste the email, say who sent it. */
+export function IssueForm({ preset, onClose, onSaved }: { preset?: { title?: string; source?: string }; onClose: () => void; onSaved: (id: string) => void }) {
+  const [busy, setBusy] = useState(false)
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>
+    setBusy(true)
+    try { const r = await api<{ id: string }>('/company/crm/issues', { title: f.title, description: f.description, source: f.source, severity: f.severity || null, area: f.area, reporterName: f.reporterName, reporterEmail: f.reporterEmail }); notify('Issue logged.'); onSaved(r.id) } catch { /* toast shown */ } finally { setBusy(false) }
+  }
+  return <div className="crm-scrim is-center" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}><form className="crm-dialog crm-form" onSubmit={submit} role="dialog" aria-modal="true" aria-label="Log a system issue">
+    <header><h2>Log a system issue</h2><button type="button" className="crm-icon" aria-label="Close" onClick={onClose}><X size={18} /></button></header>
+    <fieldset disabled={busy} style={{ display: 'contents' }}>
+      <label>What is going wrong?<input name="title" required minLength={3} maxLength={200} defaultValue={preset?.title || ''} autoFocus placeholder="e.g. Parents cannot pay with M-Pesa" /></label>
+      <label>Details (paste the complaint email here)<textarea name="description" maxLength={6000} /></label>
+      <div className="crm-two"><label>Reported by<input name="reporterName" maxLength={120} placeholder="Name" /></label><label>Their email (they are told when it is fixed)<input name="reporterEmail" type="email" maxLength={254} /></label></div>
+      <div className="crm-two"><label>Where did it come from?<select name="source" defaultValue={preset?.source || 'email'}><option value="email">Complaint email</option><option value="support">Support request</option><option value="monitor">System monitoring</option><option value="internal">Noticed by the team</option></select></label><label>Area<select name="area" defaultValue="other">{AREAS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label></div>
+      <label>Severity, by customer impact (leave for the developer if unsure)<select name="severity" defaultValue=""><option value="">Not sure yet</option><option value="s1">S1 Critical: people cannot use FindBox, or data is at risk</option><option value="s2">S2 Major: an important feature is broken</option><option value="s3">S3 Minor: something is wrong but there is a way round it</option><option value="s4">S4 Cosmetic: looks wrong, works fine</option></select></label>
+      <div className="crm-actions"><button className="crm-primary">Log issue</button><button type="button" className="crm-outline" onClick={onClose}>Cancel</button></div>
+    </fieldset>
+  </form></div>
 }
 
 /** Add a school lead. Duplicates (same school or contact email) are refused by the server. */

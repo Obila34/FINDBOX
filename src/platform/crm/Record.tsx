@@ -30,6 +30,15 @@ export function RecordPanel({ target, team, isAdmin, onClose, onOpen, onChanged,
     if (s === 'won') { const sid = (document.getElementById('crm-won') as HTMLSelectElement | null)?.value; if (sid) body.schoolId = sid }
     void run(() => api('/company/crm/leads/' + l.id, body), `Moved to ${r!.stages.find((x: Row) => x.id === s)?.title}.`)
   }
+  function saveIssue(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault(); const f = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>, i = r!.issue
+    void run(() => api('/company/crm/issues/' + i.id, { revision: i.revision, severity: f.severity || null, area: f.area, assigneeId: f.assigneeId || null, steps: f.steps, resolution: f.resolution, rootCause: f.rootCause }), 'Issue saved.')
+  }
+  function issueStatus(s: string) {
+    const i = r!.issue, val = (idName: string) => (document.getElementById(idName) as HTMLTextAreaElement | null)?.value.trim() ?? ''
+    const sev = (document.querySelector('.crm-drawer select[name=severity]') as HTMLSelectElement | null)?.value || null, area = (document.querySelector('.crm-drawer select[name=area]') as HTMLSelectElement | null)?.value
+    void run(async () => { const x = await api<{ notified: number }>('/company/crm/issues/' + i.id, { revision: i.revision, status: s, severity: sev, ...(area ? { area } : {}), resolution: val('crm-resolution'), rootCause: val('crm-root') }); if (x.notified) notify(`${x.notified} reporter${x.notified === 1 ? ' has' : 's have'} been emailed that it is fixed.`) }, `Moved to ${r!.stages.find((x: Row) => x.id === s)?.title}.`)
+  }
   function addNote(e: FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = e.currentTarget, f = Object.fromEntries(new FormData(form)) as Record<string, string>
     void run(async () => { await api('/company/crm/notes', { entityType: target.type, entityId: target.id, kind: f.kind, body: f.body }); form.reset() }, 'Note added.')
@@ -91,6 +100,33 @@ export function RecordPanel({ target, team, isAdmin, onClose, onOpen, onChanged,
           {r.family.tickets?.length > 0 && <><p className="crm-sub">Support</p><ul className="crm-list">{r.family.tickets.map((t: Row) => <li key={t.id}><div><button type="button" className="crm-link" onClick={() => onOpen({ type: 'ticket', id: t.id })}>{t.subject}</button><small>{day(t.created_at)}</small></div><span className="crm-flag">{t.status.replace('_', ' ')}</span></li>)}</ul></>}
         </>}
 
+        {r.issue && <>
+          <div className="crm-steps" role="group" aria-label="Status">{r.stages.map((s: Row) => <button type="button" key={s.id} disabled={busy || !r.issue.canEdit} className={r.issue.status === s.id ? 'is-on' : ''} onClick={() => r.issue.status !== s.id && issueStatus(s.id)}>{s.title}</button>)}</div>
+          <div className="crm-flags">
+            <span className={'crm-flag' + (r.issue.severity === 's1' ? ' t-bad' : r.issue.severity === 's2' ? ' t-warn' : '')}>{r.issue.severity ? r.severities[r.issue.severity] : 'Needs triage'}</span><span className="crm-flag">{r.areas[r.issue.area]}</span>
+            {r.issue.sla.triageLate && <span className="crm-flag t-bad">Acknowledge overdue</span>}{r.issue.sla.fixLate && <span className="crm-flag t-bad">Fix overdue</span>}{r.issue.sla.onTime === true && <span className="crm-flag t-good">Fixed on time</span>}{r.issue.sla.onTime === false && <span className="crm-flag t-warn">Fixed late</span>}
+            {r.issue.targets && <span className="crm-flag">Target: acknowledge in {r.issue.targets.triage}h, fix in {r.issue.targets.fix >= 48 ? r.issue.targets.fix / 24 + ' days' : r.issue.targets.fix + 'h'}</span>}
+          </div>
+          {r.issue.description && <p className="crm-quote">{r.issue.description}</p>}
+          <p className="crm-sub">Reported by ({r.issue.reports.length})</p>
+          {r.issue.reports.length ? <ul className="crm-list">{r.issue.reports.map((p: Row) => <li key={p.id}><div><span>{p.name || p.email || 'Unknown'}</span><small>{[p.email, p.subject && '“' + p.subject + '”', day(p.created_at)].filter(Boolean).join(' · ')}</small></div>{p.notified_at && <span className="crm-flag t-good">Told it's fixed</span>}</li>)}</ul> : <p className="crm-empty">No reporter recorded.</p>}
+          <form className="crm-form" onSubmit={(e) => { e.preventDefault(); const form = e.currentTarget, f = Object.fromEntries(new FormData(form)) as Record<string, string>; void run(async () => { await api('/company/crm/issues/' + r.issue.id + '/reports', { name: f.name, email: f.email }); form.reset() }, 'Report added to this issue.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
+            <div className="crm-two"><label>Someone else reported this<input name="name" maxLength={120} placeholder="Name" /></label><label>Their email<input name="email" type="email" required maxLength={254} /></label></div>
+            <div className="crm-actions"><button className="crm-outline">Add report</button></div>
+          </fieldset></form>
+          {r.issue.canEdit ? <form className="crm-form" onSubmit={saveIssue} key={r.issue.revision}><fieldset disabled={busy} style={{ display: 'contents' }}>
+            <div className="crm-two"><label>Severity (by customer impact)<select name="severity" defaultValue={r.issue.severity || ''}><option value="">Not triaged</option>{Object.entries(r.severities).map(([k, v]) => <option key={k} value={k}>{String(v)}</option>)}</select></label><label>Area<select name="area" defaultValue={r.issue.area}>{Object.entries(r.areas).map(([k, v]) => <option key={k} value={k}>{String(v)}</option>)}</select></label></div>
+            <label>Assigned to<select name="assigneeId" defaultValue={r.issue.assignee_id || ''}><option value="">Unassigned</option>{team.filter((t) => t.role === 'developer').map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+            <label>Steps to reproduce<textarea name="steps" defaultValue={r.issue.steps} maxLength={3000} placeholder={'1. Sign in as a parent\n2. Open Scan\n3. …'} /></label>
+            <label>What was fixed (sent to everyone who reported it)<textarea id="crm-resolution" name="resolution" defaultValue={r.issue.resolution} maxLength={3000} /></label>
+            <label>Root cause (needed for S1 and S2)<textarea id="crm-root" name="rootCause" defaultValue={r.issue.root_cause} maxLength={3000} /></label>
+            <div className="crm-actions"><button className="crm-primary"><Check size={15} />Save issue</button></div>
+          </fieldset></form> : <>
+            <dl className="crm-facts"><Fact label="Assigned to">{r.issue.assignee}</Fact><Fact label="Logged by">{r.issue.logged_by}</Fact><Fact label="Logged">{when(r.issue.created_at)}</Fact><Fact label="Fixed">{r.issue.fixed_at ? when(r.issue.fixed_at) : 'Not yet'}</Fact></dl>
+            {r.issue.resolution && <p className="crm-quote">Fix: {r.issue.resolution}</p>}
+          </>}
+        </>}
+
         {r.ticket && <>
           <div className="crm-flags">{r.ticket.overdue && <span className="crm-flag t-bad">Overdue</span>}<span className="crm-flag">{r.ticket.kind}</span></div>
           <dl className="crm-facts"><Fact label="From">{r.ticket.user_id ? <button type="button" className="crm-link" onClick={() => onOpen({ type: 'family', id: r.ticket.user_id })}>{r.ticket.name}</button> : r.ticket.name}</Fact><Fact label="Email">{r.ticket.email}</Fact><Fact label="Received">{when(r.ticket.created_at)}</Fact><Fact label="Status">{r.ticket.status.replace('_', ' ')}</Fact></dl>
@@ -99,6 +135,7 @@ export function RecordPanel({ target, team, isAdmin, onClose, onOpen, onChanged,
             <label>Reply to {r.ticket.name} (emailed; leave empty to only change the status)<textarea name="reply" maxLength={4000} /></label>
             <div className="crm-two"><label>Status<select name="status" defaultValue={r.ticket.status === 'new' ? 'in_progress' : r.ticket.status}><option value="new">New</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option></select></label><div className="crm-actions" style={{ alignItems: 'end' }}><button className="crm-primary">Update ticket</button></div></div>
           </fieldset></form>
+          <div className="crm-actions">{r.ticket.issueId ? <button type="button" className="crm-outline" onClick={() => onOpen({ type: 'issue', id: r.ticket.issueId })}>Open the system issue</button> : <button type="button" className="crm-outline" disabled={busy} onClick={() => void run(async () => { const x = await api<{ id: string }>('/company/crm/issues/from-ticket/' + r.ticket.id, {}); onOpen({ type: 'issue', id: x.id }) }, 'Sent to the developer as a system issue.')}>Escalate to the developer</button>}</div>
           {r.ticket.kind === 'school' && <div className="crm-actions">{r.ticket.leadId ? <button type="button" className="crm-outline" onClick={() => onOpen({ type: 'lead', id: r.ticket.leadId })}>Open the lead</button> : <button type="button" className="crm-outline" disabled={busy} onClick={() => void run(async () => { const x = await api<{ id: string }>('/company/crm/leads/from-ticket/' + r.ticket.id, {}); onOpen({ type: 'lead', id: x.id }) }, 'Lead created from this enquiry.')}>Turn into a school lead</button>}</div>}
         </>}
 
@@ -118,7 +155,7 @@ export function RecordPanel({ target, team, isAdmin, onClose, onOpen, onChanged,
 
         <div className="crm-tabs" role="tablist"><button type="button" role="tab" aria-selected={tab === 'timeline'} className={tab === 'timeline' ? 'is-on' : ''} onClick={() => setTab('timeline')}>Timeline</button><button type="button" role="tab" aria-selected={tab === 'tasks'} className={tab === 'tasks' ? 'is-on' : ''} onClick={() => setTab('tasks')}>Tasks ({r.tasks.filter((t: Row) => t.status === 'open').length})</button></div>
         {tab === 'timeline' ? <>
-          {(isAdmin || ['school', 'family'].includes(target.type)) && <form className="crm-form" onSubmit={addNote}><fieldset disabled={busy} style={{ display: 'contents' }}>
+          {(isAdmin || ['school', 'family', 'issue'].includes(target.type)) && <form className="crm-form" onSubmit={addNote}><fieldset disabled={busy} style={{ display: 'contents' }}>
             <textarea name="body" required minLength={2} maxLength={4000} placeholder="Log a call, a meeting or a note…" aria-label="Note" />
             <div className="crm-actions"><select name="kind" aria-label="Kind of note" style={{ width: 'auto' }}><option value="note">Note</option><option value="call">Call</option><option value="meeting">Meeting</option><option value="email">Email</option></select><button className="crm-outline">Add to timeline</button></div>
           </fieldset></form>}

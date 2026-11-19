@@ -1617,3 +1617,47 @@ test("operations CRM: leads follow stage rules, records link everything, tasks a
   assert.equal((await req("POST", "/api/company/crm/leads/" + lead, { revision: 3, stage: "won", schoolId: "kids" }, admin)).statusCode, 200);
   assert.equal((await req("GET", "/api/company/crm/home", undefined, admin)).json().pipeline.winRate, 100);
 });
+
+test("system issues: complaints reach the developer, triage rules hold, and reporters hear when it is fixed", async () => {
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const admin = await token("crm-admin"), dev = await token("crm-dev");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.7", headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  // A bug sent through the app is picked up automatically; support can escalate anything else.
+  await pool.query("INSERT INTO support_tickets(id,name,email,kind,subject,message,request_key,scope) VALUES('bug-1','Ann Parent','ann@test.com','bug','Scanner shows a black screen','The camera never opens on my phone.','bug-1','test'),('gen-1','Ben Parent','ben@test.com','general','Camera is black for me too','Same problem when scanning.','gen-1','test')");
+  let board = (await req("GET", "/api/company/crm/board/issues", undefined, dev)).json();
+  const card = board.columns.find((c) => c.id === "new").cards.find((c) => c.title === "Scanner shows a black screen");
+  assert.ok(card, "bug tickets become issues");
+  assert.equal(card.chip.text, "Needs triage");
+  const issue = card.id;
+  let r = await req("POST", "/api/company/crm/issues/from-ticket/gen-1", { issueId: issue }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await req("POST", "/api/company/crm/issues/from-ticket/gen-1", {}, admin)).json().existing, true);
+  // Only the developer changes an issue, and the rules hold.
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged" }, admin)).statusCode, 403);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged" }, dev)).statusCode, 400, "needs a severity");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 1, status: "triaged", severity: "s2", area: "family_app" }, dev)).statusCode, 200);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 2, status: "in_progress" }, dev)).statusCode, 200);
+  assert.equal((await pool.query("SELECT assignee_id FROM crm_issues WHERE id=$1", [issue])).rows[0].assignee_id, "crm-dev", "starting work assigns it");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed" }, dev)).statusCode, 400, "needs the fix written down");
+  assert.equal((await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed", resolution: "Camera permission prompt now appears on first scan." }, dev)).statusCode, 400, "major issues need a root cause");
+  r = await req("POST", "/api/company/crm/issues/" + issue, { revision: 3, status: "fixed", resolution: "Camera permission prompt now appears on first scan.", rootCause: "The scanner started before permission was granted." }, dev);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().notified, 2, "both reporters are told");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM outbox WHERE subject='Fixed: Scanner shows a black screen' AND recipient_email IN ('ann@test.com','ben@test.com')")).rows[0].n, 2);
+  assert.equal((await pool.query("SELECT status FROM support_tickets WHERE id='bug-1'")).rows[0].status, "resolved");
+  // The record, logging by hand, and the dashboards.
+  const record = (await req("GET", "/api/company/crm/record/issue/" + issue, undefined, admin)).json();
+  assert.equal(record.issue.reports.length, 2);
+  assert.equal(record.issue.sla.onTime, true);
+  assert.equal(record.issue.canEdit, false, "admins read issues; developers change them");
+  r = await req("POST", "/api/company/crm/issues", { title: "Complaint email: cannot pay with M-Pesa", description: "Forwarded from hello@", source: "email", reporterEmail: "cara@test.com", severity: "s1", area: "payments" }, admin);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal((await req("POST", "/api/company/crm/issues/" + r.json().id + "/reports", { name: "Dan", email: "dan@test.com" }, admin)).statusCode, 200);
+  const home = (await req("GET", "/api/company/crm/home", undefined, dev)).json();
+  assert.equal(home.issues.critical, 1);
+  assert.equal(home.issues.onTimePct, 100);
+  assert.ok(home.signals.some((s) => s.name === "Email delivery"));
+  assert.equal((await req("GET", "/api/company/crm/home", undefined, admin)).json().signals, undefined);
+  assert.ok((await req("GET", "/api/company/crm/tasks", undefined, dev)).json().queue.length >= 0);
+  assert.equal((await req("GET", "/api/company/crm/record/ticket/gen-1", undefined, admin)).json().ticket.issueId, issue);
+});

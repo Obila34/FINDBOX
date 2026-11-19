@@ -124,6 +124,36 @@ Green is 70 and above, amber 40 to 69, red below 40. A school younger than 14 da
 instead of red, so onboarding schools do not raise false alarms. The weights are a starting point and
 should be checked against which schools actually stay.
 
+## 3b. The developer's side: system issues and signals
+
+Research inputs: bug-triage and severity guides, incident-management write-ups and support-to-engineering
+escalation playbooks. The findings that shaped the build:
+
+- **One issue per problem.** Every complaint about the same problem is linked to one issue, so the
+  developer sees how many people are affected instead of five separate tickets.
+- **Severity is set by customer impact,** not by how hard the fix is.
+- **Acknowledging and fixing are timed separately.** A fast "we have seen it" matters as much as the fix.
+- **Close the loop.** The most common failure is fixing a bug and never telling the person who reported it.
+- **Write down the cause** of serious problems, so the same failure is not repeated.
+
+| Requirement | Status | Notes |
+|---|---|---|
+| A single queue for system problems | Built | System issues board: New, Triaged, In progress, Fixed, Closed |
+| Complaints reach the developer without retyping | Built | A "bug" request from the app becomes an issue automatically; support can escalate any ticket in one click |
+| Complaint emails | Partly | Log an issue from an email by pasting it in ("Log issue", source "Complaint email"). FindBox cannot read the hello@ inbox itself yet; see below |
+| Several reports on one issue | Built | Add reporters by hand, or link more tickets to the same issue |
+| Severity S1 to S4 with targets | Built | Acknowledge within 1h / 4h / 24h / 72h; fix within 24h / 72h / 7 days / 30 days. Overdue issues are flagged and appear in Tasks |
+| Triage rules | Built | No moving on without a severity and area; Fixed needs the fix written down; S1 and S2 also need a root cause; Closed without a fix needs a reason |
+| Ownership | Built | Starting work assigns the issue; assignee can be changed |
+| Tell reporters when it is fixed | Built | Marking Fixed emails every reporter the fix and resolves their linked tickets |
+| Reproduction steps, notes, tasks, timeline | Built | On the issue panel |
+| System signals | Built | Background worker, email delivery, off-site backup, alerts and privacy requests, each green / amber / red, with "Log issue" on anything not green |
+| Developer dashboard | Built | Open, critical, overdue, average time to fix, issues by area, share fixed on time |
+| Who can do what | Built | Admins log, escalate and read issues; only developers triage, assign and close them |
+| Automatic error capture from the app | Later | Needs an error-reporting service or a self-hosted collector |
+| Reading the complaint inbox automatically | Later | Needs mailbox access (IMAP or a forwarding rule) to turn incoming emails into issues |
+| Public status page, on-call paging | Later | Not needed at the current size |
+
 ## 4. Layout
 
 Modelled on the reference the owner supplied: a calm, light workspace.
@@ -143,6 +173,11 @@ Modelled on the reference the owner supplied: a calm, light workspace.
 - Basedash, "How to build a customer health score": https://www.basedash.com/blog/how-to-build-a-customer-health-score-signals-weighting-and-sql
 - Enterpret, "The 5 inputs a customer health score needs beyond product usage": https://www.enterpret.com/guides/the-5-inputs-a-customer-health-score-needs-beyond-product-usage
 - Meritto, "CRM for EdTech": https://meritto.com/crm-for-edtech/
+- GitLab Handbook, "Issue triage": https://handbook.gitlab.com/handbook/product-development/how-we-work/issue-triage/
+- GitScrum, "How to manage bug triage and prioritization": https://docs.gitscrum.com/en/best-practices/how-to-manage-bug-triage-and-prioritization
+- Rootly, "Incident response severity levels": https://rootly.com/incident-response/support-levels.md
+- Supportbench, "How to write bug reports engineers love": https://www.supportbench.com/?p=25310
+- incident.io, "Best incident management tools for platform engineering teams": https://incident.io/blog/best-incident-management-tools-for-platform-engineering-teams
 - ODPC, Guidance Note for the Education Sector: https://www.odpc.go.ke/wp-content/uploads/2024/02/ODPC-Guidance-Note-for-the-Education-Sector.pdf
 - ODPC, Guidance Note for Processing Children's Data: https://www.odpc.go.ke/wp-content/uploads/2025/11/ODPC-–-Guidance-Note-for-Processing-Childrens-Data.pdf
 - DLA Piper, Data Protection in Kenya: https://www.dlapiperdataprotection.com/?c=KE&t=law

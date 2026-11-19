@@ -16,8 +16,9 @@ const HINTS: Record<string, string> = {
   onboarding: 'Partner schools by how far their rollout has got. Stages follow live data.',
   orders: 'Label orders from payment to delivery. Open an order to fulfil it or mark it delivered.',
   support: 'Requests from families and schools. New tickets older than a day are flagged.',
+  issues: 'Problems with the system, one card per problem. Every complaint about it is linked to the same card.',
 }
-export const BOARD_TITLES: Record<string, string> = { leads: 'School leads', onboarding: 'Onboarding', orders: 'Orders', support: 'Support' }
+export const BOARD_TITLES: Record<string, string> = { leads: 'School leads', onboarding: 'Onboarding', orders: 'Orders', support: 'Support', issues: 'System issues' }
 
 /** A kanban board: columns with a count, cards with one line of context, a date chip and note/task counts. */
 export function Board({ kind, query, open, onOpen, version, onChanged }: { kind: string; query: string; open: RecordRef | null; onOpen: (r: RecordRef) => void; version: number; onChanged: () => void }) {
@@ -33,6 +34,11 @@ export function Board({ kind, query, open, onOpen, version, onChanged }: { kind:
 
   async function move(card: Card, stage: string) {
     setMenu('')
+    if (card.type === 'issue') {
+      if (['fixed', 'closed'].includes(stage)) { onOpen({ type: 'issue', id: card.id }); notify(stage === 'fixed' ? 'Write what was fixed in the panel, then choose Fixed.' : 'Say why in the panel, then choose Closed.', 'info'); return }
+      try { await api('/company/crm/issues/' + card.id, { revision: card.revision, status: stage }); notify(`${card.title} moved.`); onChanged() } catch { onOpen({ type: 'issue', id: card.id }) }
+      return
+    }
     if (stage === 'lost') { onOpen({ type: 'lead', id: card.id }); notify('Add the reason in the panel, then choose Lost.', 'info'); return }
     try { await api('/company/crm/leads/' + card.id, { revision: card.revision, stage }); notify(`${card.title} moved.`); onChanged() } catch { onOpen({ type: 'lead', id: card.id }) }
   }
@@ -52,7 +58,7 @@ export function Board({ kind, query, open, onOpen, version, onChanged }: { kind:
           </header>
           {cards.map((card, n) => {
             const on = open?.id === card.id
-            return <motion.div key={card.id} layout={!still} initial={still ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease, delay: Math.min(n, 8) * 0.04 }}><article className={'crm-card' + (on ? ' is-on' : '') + (['won', 'delivered', 'resolved', 'live'].includes(col.id) && !on ? ' is-done' : '')} draggable={movable}
+            return <motion.div key={card.id} layout={!still} initial={still ? false : { opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease, delay: Math.min(n, 8) * 0.04 }}><article className={'crm-card' + (on ? ' is-on' : '') + (['won', 'delivered', 'resolved', 'live', 'fixed', 'closed'].includes(col.id) && !on ? ' is-done' : '')} draggable={movable}
               onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)} onClick={() => onOpen({ type: card.type, id: card.id })}
               tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onOpen({ type: card.type, id: card.id }) }}>
               <h3>{card.title}</h3>
@@ -60,7 +66,7 @@ export function Board({ kind, query, open, onOpen, version, onChanged }: { kind:
               {menu === card.id && <div className="crm-menu" onClick={(e) => e.stopPropagation()}>
                 <button type="button" onClick={() => { setMenu(''); onOpen({ type: card.type, id: card.id }) }}>Open</button>
                 {movable && data.columns.filter((c) => c.id !== col.id).map((c) => <button type="button" key={c.id} onClick={() => void move(card, c.id)}>Move to {c.title}</button>)}
-                {movable && !data.columns.some((c) => c.id === 'lost') && <button type="button" onClick={() => void move(card, 'lost')}>Mark lost</button>}
+                {movable && kind === 'leads' && !data.columns.some((c) => c.id === 'lost') && <button type="button" onClick={() => void move(card, 'lost')}>Mark lost</button>}
               </div>}
               <p>{card.line}</p>
               {on && card.detail.length > 0 && <ul>{card.detail.map((d) => <li key={d}>{d}</li>)}</ul>}
