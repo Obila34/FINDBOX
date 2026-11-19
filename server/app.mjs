@@ -9,6 +9,7 @@ import { passkeyRoutes } from "./passkeys.mjs";
 import { profileRoutes, validPhoto } from "./profile.mjs";
 import { assistantRoutes } from "./assistant/index.mjs";
 import { houseRoutes, awardStar } from "./houses.mjs";
+import { schoolDeskRoutes } from "./school-desk.mjs";
 import Fastify from "fastify";
 import cookie from "@fastify/cookie";
 import helmet from "@fastify/helmet";
@@ -289,6 +290,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
   await profileRoutes(app, { pool, user });
   await assistantRoutes(app, { pool, cfg, user });
   await houseRoutes(app, { pool, user });
+  await schoolDeskRoutes(app, { pool, user });
   await supportRoutes(app, { pool, cfg, user });
   await companyEmailRoutes(app,{pool,cfg,mailer});
   await companyRoutes(app, { pool, cfg, user, daraja });

@@ -3,7 +3,8 @@ import {PrivacyNotice} from './platform/PrivacyNotice'
 import {useSearchMetadata} from './lib/useSearchMetadata'
 import {SchoolInvitation,OwnershipTransfers} from './platform/SchoolWorkspace'
 import {FamilyChildren} from './platform/FamilyChildren'
-import {SchoolAdmin} from './platform/SchoolAdmin'
+import {SchoolDesk} from './platform/school/SchoolDesk'
+import {StaffApp} from './platform/school/StaffApp'
 import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { LoadBoundary } from '@/components/ui/LoadBoundary'
@@ -58,7 +59,8 @@ export function App() {
   if(['/app/school-invitation','/app/guardian-invitation'].includes(platformLocation.pathname)) return <SchoolInvitation/>
   if(platformLocation.pathname==='/app/transfers') return <OwnershipTransfers/>
   if(platformLocation.pathname==='/app/children') return <FamilyChildren/>
-  if(platformLocation.pathname==='/app/school-admin') return <SchoolAdmin/>
+  if(platformLocation.pathname==='/app/school-admin') return <SchoolDesk/>
+  if(/^\/manage(\/|$)/.test(platformLocation.pathname)) return <StaffApp/>
   if(Company&&/^\/company(\/|$)/.test(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening company workspace…</p>}><Company/></Suspense></LoadBoundary>
   if(['/contact','/refer','/app/help','/app/feedback','/app/refer','/manage/support'].includes(platformLocation.pathname)) return <LoadBoundary><Suspense fallback={<p>Opening support…</p>}><Support/></Suspense></LoadBoundary>
   if(/^\/school(\/sign-in)?\/?$/.test(platformLocation.pathname)){

@@ -63,6 +63,8 @@ const SCHOOL_SQL = `SELECT s.id,s.name,s.lifecycle,s.contact_name,s.contact_emai
 async function schools(db, where = '', params = []) {
   return (await db.query(SCHOOL_SQL + (where ? ' WHERE ' + where : '') + ' ORDER BY s.name', params)).rows.map((s) => ({ ...s, health: schoolHealth(s) }));
 }
+/** One school's live numbers and health, for the school's own workspace. */
+export async function schoolStats(db, schoolId) { return (await schools(db, 's.id=$1', [schoolId]))[0]; }
 async function counts(db, type) {
   const notes = new Map((await db.query("SELECT entity_id,count(*)::int n FROM crm_notes WHERE entity_type=$1 AND kind<>'stage' GROUP BY entity_id", [type])).rows.map((r) => [r.entity_id, r.n]));
   const tasks = new Map((await db.query("SELECT entity_id,count(*)::int n FROM crm_tasks WHERE entity_type=$1 AND status='open' GROUP BY entity_id", [type])).rows.map((r) => [r.entity_id, r.n]));

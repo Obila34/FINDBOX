@@ -1661,3 +1661,48 @@ test("system issues: complaints reach the developer, triage rules hold, and repo
   assert.ok((await req("GET", "/api/company/crm/tasks", undefined, dev)).json().queue.length >= 0);
   assert.equal((await req("GET", "/api/company/crm/record/ticket/gen-1", undefined, admin)).json().ticket.issueId, issue);
 });
+
+test("school desk: staff log and hand back with a custody trail; the principal sees what needs a decision and approves donations", async () => {
+  const pw = await passwordHash("testing-password-123");
+  await pool.query("INSERT INTO schools(id,name,join_hash,lifecycle,contact_name,contact_email,privacy_basis) VALUES('desk','Desk School','desk-hash','active','Head','head@desk.test','Policy v1')");
+  await pool.query("INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES('desk-box','desk','Reception','Main office','Mon-Fri 8-4')");
+  await pool.query("INSERT INTO users(id,email,name,password_hash,role,school_id,verified) VALUES('desk-head','desk-head@test.com','Desk Head',$1,'manager','desk',true),('desk-staff','desk-staff@test.com','Desk Teacher',$1,'staff','desk',true),('desk-parent','desk-parent@test.com','Desk Parent',$1,'parent','desk',true)", [pw]);
+  await pool.query("INSERT INTO memberships(user_id,school_id,role) VALUES('desk-head','desk','manager'),('desk-staff','desk','staff'),('desk-parent','desk','parent') ON CONFLICT DO NOTHING");
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com"), parent = await login("desk-parent@test.com");
+  const call2 = (method, url, b, cookie) => app.inject({ method, url, remoteAddress: "127.0.9.6", headers: { ...(b ? { "x-findbox-request": "1", "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}), origin: "http://localhost:5173" }, payload: b });
+  assert.equal((await call2("GET", "/api/school/desk/home", null, parent)).statusCode, 403);
+  // Staff log an item that has no QR.
+  let r = await call2("POST", "/api/staff/unclaimed", { title: "Grey hoodie, size 12", category: "clothing", boxId: "desk-box", privateNote: "Initials TK inside the collar" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  const caseId = r.json().id;
+  let home = (await call2("GET", "/api/school/desk/home", null, teacher)).json();
+  assert.equal(home.counts.unclaimed, 1);
+  assert.equal(home.stats, undefined, "teachers do not get the principal's figures");
+  const board = (await call2("GET", "/api/school/desk/board", null, teacher)).json();
+  assert.equal(board.columns.find((c) => c.id === "unclaimed").cards[0].title, "Grey hoodie, size 12");
+  let item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.equal(item.trail[0].text, "Logged without a QR");
+  assert.equal(item.trail[0].who, "Desk Teacher");
+  assert.equal(item.can.requestDisposal, false, "not held long enough yet");
+  // After the holding period a teacher may ask to donate it; only the principal, a different person, can approve.
+  await pool.query("UPDATE cases SET created_at=now()-interval '31 days' WHERE id=$1", [caseId]);
+  item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.equal(item.can.requestDisposal, true);
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_approved", note: "Approve the donation" }, head)).statusCode, 403, "nobody has requested it yet");
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_request", note: "Unclaimed for a month; donate to the uniform bank" }, teacher)).statusCode, 200);
+  home = (await call2("GET", "/api/school/desk/home", null, head)).json();
+  assert.equal(home.counts.disposals, 1);
+  assert.ok(home.attention.some((a) => a.title.includes("asked to donate")));
+  assert.equal(typeof home.stats.health.score, "number");
+  assert.equal((await call2("GET", "/api/school/desk/approvals", null, head)).json().disposals.length, 1);
+  item = (await call2("GET", "/api/school/desk/case/" + caseId, null, head)).json();
+  assert.equal(item.can.approveDisposal, true);
+  assert.equal((await call2("POST", "/api/school/case-reviews", { caseId, kind: "disposal_approved", note: "Approved: donate to the uniform bank" }, head)).statusCode, 200);
+  assert.equal((await pool.query("SELECT status FROM cases WHERE id=$1", [caseId])).rows[0].status, "closed");
+  // The term report is for the principal only.
+  assert.equal((await call2("GET", "/api/school/desk/report?days=90", null, teacher)).statusCode, 403);
+  const report = (await call2("GET", "/api/school/desk/report?days=90", null, head)).json();
+  assert.equal(report.total, 1);
+  assert.equal(report.byCategory[0].name, "Clothing");
+  assert.ok(report.staff.some((s) => s.name === "Desk Teacher" && s.received === 1));
+});
