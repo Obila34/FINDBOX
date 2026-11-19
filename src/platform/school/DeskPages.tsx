@@ -50,6 +50,13 @@ export function Overview({ home, go, onOpen }: { home: Row; go: (p: string) => v
           <div className="crm-parts">{parts.map(([k, label, max]) => <div key={k} style={{ gridTemplateColumns: '104px 1fr 40px' }}><span>{label}</span><i><b style={{ width: `${(s.health.parts[k] / max) * 100}%` }} /></i><span>{s.health.parts[k]}/{max}</span></div>)}</div></div>
         <div className="crm-legend"><span>{s.linked} of {s.students} students linked to a parent</span></div>
       </Panel>
+      <Panel i={3} title="Collection points" action={<button type="button" onClick={() => go('boxes')}>Manage<ArrowRight size={13} /></button>}>
+        {home.boxes.length ? <ul className="crm-list">{home.boxes.map((b: Row) => <li key={b.id}><div><span>{b.name}</span><small>{b.count ? `Oldest item has waited ${b.oldestDays} day${b.oldestDays === 1 ? '' : 's'}` : 'Empty'}</small></div><strong>{b.count}</strong></li>)}</ul> : <p className="crm-empty">No collection box yet.</p>}
+        <div className="crm-legend"><span>Today: {home.today.received} received, {home.today.handed} handed back</span>{c.valuables > 0 && <span>{c.valuables} valuable{c.valuables === 1 ? '' : 's'} held</span>}</div>
+      </Panel>
+      {home.classes.length > 0 && <Panel i={3} title="Classes to nudge" action={<button type="button" onClick={() => go('classes')}>All classes<ArrowRight size={13} /></button>}>
+        <ul className="crm-list">{home.classes.map((k: Row) => <li key={k.name}><div><span>{k.name}</span><small>{k.linked} of {k.students} students have a parent linked</small></div><span className={'crm-chip t-' + (k.linked / k.students >= 0.4 ? 'warn' : 'bad')}>{Math.round((k.linked / k.students) * 100)}%</span></li>)}</ul>
+      </Panel>}
       <Panel i={3} title="Houses" action={<button type="button" onClick={() => go('houses')}>Standings<ArrowRight size={13} /></button>}>
         <ul className="crm-list">{home.houses.map((h: Row) => <li key={h.house}><i className={'hs-dot is-' + h.house} style={{ width: 11, height: 11 }} /><div><span>{h.name}</span><small>{h.members} members · {h.lost} lost · {h.stars} stars</small></div><strong>{h.score}</strong></li>)}</ul>
       </Panel>
@@ -73,7 +80,7 @@ export function DeskBoard({ query, open, onOpen, version, compact = false }: { q
         <article className={'crm-card' + (open === card.id ? ' is-on' : '') + (col.id === 'returned' && open !== card.id ? ' is-done' : '')} tabIndex={0} onClick={() => onOpen(card.id)} onKeyDown={(e) => { if (e.key === 'Enter') onOpen(card.id) }}>
           <h3>{card.title}</h3><p>{card.line}</p>
           {card.flags.length > 0 && <div className="crm-flags">{card.flags.map((f: Row) => <span key={f.text} className={'crm-flag t-' + f.tone}>{f.text}</span>)}</div>}
-          <footer><span className={'crm-chip t-' + card.chip.tone}><CalendarDays size={13} />{card.chip.text}</span><span>{card.hasPhoto && <i title="Has a photo"><Camera size={13} /></i>}<i>{cap(card.category)}</i></span></footer>
+          <footer><span className={'crm-chip t-' + card.chip.tone}><CalendarDays size={13} />{card.chip.text}</span><span>{card.hasPhoto && <i title="Has a photo"><Camera size={13} /></i>}<i>{card.ref}</i><i>{cap(card.category)}</i></span></footer>
         </article></motion.div>)}
       {!col.cards.length && <p className="crm-empty">Nothing here</p>}
     </motion.section> })}</div>
@@ -114,7 +121,7 @@ function csvRows(text: string): string[][] {
   return out
 }
 
-export function Students({ query, version, onChanged, form, setForm }: { query: string; version: number; onChanged: () => void; form: string; setForm: (f: string) => void }) {
+export function Students({ query, version, onChanged, form, setForm, onOpen, editId, clearEdit }: { query: string; version: number; onChanged: () => void; form: string; setForm: (f: string) => void; onOpen: (id: string) => void; editId?: string; clearEdit?: () => void }) {
   const [page, setPage] = useState(0), [edit, setEdit] = useState<Row | null>(null), [busy, setBusy] = useState(false), [preview, setPreview] = useState<{ good: Row[]; bad: Row[] } | null>(null)
   const file = useRef<HTMLInputElement>(null)
   const params = new URLSearchParams(query), q = params.get('q') || '', status = params.get('filter') || 'all'
@@ -135,15 +142,28 @@ export function Students({ query, version, onChanged, form, setForm }: { query: 
     setBusy(true)
     try { const good: Row[] = [], bad: Row[] = []; for (let i = 0; i < rows.length; i += 100) { const r = await api<{ rows: Row[] }>('/school/students/preview', { rows: rows.slice(i, i + 100) }); r.rows.forEach((x, n) => (x.error ? bad.push({ ...rows[i + n], error: x.error, line: i + n + 2 }) : good.push(rows[i + n]!))) } setPreview({ good, bad }) } catch { /* toast shown */ } finally { setBusy(false) }
   }
+  useEffect(() => { if (editId && data) { const s = data.rows.find((x) => x.id === editId); if (s) setEdit(s); clearEdit?.() } }, [editId, data]) // eslint-disable-line react-hooks/exhaustive-deps
+  async function inviteAll() {
+    setBusy(true)
+    try {
+      const waiting: Row[] = []
+      for (let p = 0; p < 10; p++) { const r = await api<{ rows: Row[]; hasMore?: boolean }>(`/school/students?q=&status=unlinked&page=${p}`); waiting.push(...r.rows.filter((s) => s.guardian_email)); if (!r.hasMore) break }
+      if (!waiting.length) { notify('No unlinked students have a parent email on file. Add emails, or share the parent link.', 'info'); return }
+      if (!window.confirm(`Email an invitation to the parents of ${waiting.length} student${waiting.length === 1 ? '' : 's'}?`)) return
+      let sent = 0
+      for (const s of waiting) { try { await api('/school/students/' + s.id + '/guardian', { reason: REASON }); sent++ } catch { /* keep going */ } }
+      notify(`${sent} invitation${sent === 1 ? '' : 's'} sent.`); onChanged()
+    } catch { /* toast shown */ } finally { setBusy(false) }
+  }
   const showForm = form === 'student' || edit
   return <>
     <div className="crm-head"><div><h1>Students</h1><p>Your roster. A student linked to a parent gets a FindBox QR for their belongings.</p></div>
-      <div className="crm-actions"><button type="button" className="crm-outline" disabled={busy} onClick={() => file.current?.click()}><Upload size={14} />Import a list</button><a className="crm-outline" href="/api/school/students/export?format=csv" download><Download size={14} />Export</a>
+      <div className="crm-actions"><button type="button" className="crm-outline" disabled={busy} onClick={() => void inviteAll()}><Mail size={14} />Invite all parents</button><button type="button" className="crm-outline" disabled={busy} onClick={() => file.current?.click()}><Upload size={14} />Import a list</button><a className="crm-outline" href="/api/school/students/export?format=csv" download><Download size={14} />Export</a>
         <input ref={file} type="file" accept=".csv,text/csv" hidden onChange={(e) => { void pick(e.target.files?.[0]); e.target.value = '' }} /></div></div>
     {!data ? <p role="status" className="crm-empty">Loading…</p> : !data.rows.length ? <p className="crm-empty">{q || status !== 'all' ? 'No students match.' : 'No students yet. Add one, or import your class lists as a CSV file (admission number, name, class, parent email).'}</p> : <div className="crm-table-wrap"><table className="crm-table">
       <thead><tr>{['Student', 'Class', 'House', 'Parent', 'Status', ''].map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
       <tbody>{data.rows.slice(0, 50).map((s) => <tr key={s.id} style={{ cursor: 'default' }}>
-        <td><strong>{s.name}</strong><small>{s.school_reference}</small></td><td>{s.class_name}</td>
+        <td><button type="button" className="crm-link" onClick={() => onOpen(s.id)}><strong>{s.name}</strong></button><small>{s.school_reference}</small></td><td>{s.class_name}</td>
         <td><select aria-label={'House for ' + s.name} value={s.house || ''} disabled={busy || s.status !== 'active'} style={{ width: 'auto', padding: '5px 8px' }} onChange={(e) => void run(() => api('/school/houses/' + s.id, { house: e.target.value || null }), 'House updated.')}><option value="">None</option>{HOUSES.map((h) => <option key={h} value={h}>{cap(h)}</option>)}</select></td>
         <td>{s.guardian_id ? <span className="crm-chip t-good">Linked</span> : s.guardian_email ? <button type="button" className="crm-outline" style={{ padding: '4px 9px', fontSize: 12 }} disabled={busy} onClick={() => void run(() => api('/school/students/' + s.id + '/guardian', { reason: REASON }), `Invitation sent to ${s.guardian_email}.`)}><Mail size={12} />Invite</button> : <span className="crm-chip t-muted">No email</span>}</td>
         <td>{cap(s.status)}</td><td><button type="button" className="crm-icon" aria-label={'Edit ' + s.name} onClick={() => setEdit(s)}><Pencil size={15} /></button></td>
@@ -210,14 +230,14 @@ export function StaffPage({ version, onChanged, form, setForm }: { version: numb
   </>
 }
 
-export function Boxes({ version, onChanged, form, setForm }: { version: number; onChanged: () => void; form: string; setForm: (f: string) => void }) {
+export function Boxes({ version, onChanged, form, setForm, load = [] }: { version: number; onChanged: () => void; form: string; setForm: (f: string) => void; load?: Row[] }) {
   const data = useLoad<{ rows: Row[] }>('/school/boxes', version), [edit, setEdit] = useState<Row | null>(null), [busy, setBusy] = useState(false)
   const close = () => { setEdit(null); setForm('') }
   if (!data) return <p role="status" className="crm-empty">Loading…</p>
   return <>
     <div className="crm-head"><div><h1>Collection boxes</h1><p>Where found items wait for their owners. Staff choose a box when they receive an item.</p></div></div>
     {data.rows.length ? <div className="crm-grid">{data.rows.map((b, i) => <Panel key={b.id} i={i} title={b.name} action={<button type="button" onClick={() => setEdit(b)}><Pencil size={13} />Edit</button>}>
-      <p style={{ fontSize: 13.5 }}>{b.directions}</p><div className="crm-flags"><span className="crm-flag">{b.opening_hours}</span><span className={'crm-flag ' + (b.active ? 't-good' : 't-warn')}>{b.active ? 'In use' : 'Not in use'}</span></div>
+      <p style={{ fontSize: 13.5 }}>{b.directions}</p><div className="crm-flags"><span className="crm-flag">{b.opening_hours}</span><span className={'crm-flag ' + (b.active ? 't-good' : 't-warn')}>{b.active ? 'In use' : 'Not in use'}</span>{(() => { const l = load.find((x) => x.id === b.id); return l ? <span className="crm-flag">{l.count} item{l.count === 1 ? '' : 's'} inside{l.count ? `, oldest ${l.oldestDays} day${l.oldestDays === 1 ? '' : 's'}` : ''}</span> : null })()}</div>
     </Panel>)}</div> : <p className="crm-empty">No collection box yet. Add one so found items have somewhere to go.</p>}
     {(form === 'box' || edit) && <Dialog title={edit ? 'Edit ' + edit.name : 'Add a collection box'} onClose={close}><form className="crm-form" onSubmit={(e) => { const f = fields(e); setBusy(true); void api('/school/boxes', { ...(edit ? { id: edit.id } : {}), name: f.name, directions: f.directions, hours: f.hours, active: f.active === 'on', publicListing: false, reason: REASON }).then(() => { notify('Collection box saved.'); close(); onChanged() }).catch(() => {}).finally(() => setBusy(false)) }}><fieldset disabled={busy} style={{ display: 'contents' }}>
       <label>Name<input name="name" required maxLength={100} defaultValue={edit?.name} placeholder="e.g. Reception" autoFocus /></label>
@@ -243,7 +263,7 @@ export function Report({ school }: { school: string }) {
     {!r ? <p role="status" className="crm-empty">Loading…</p> : <div className="crm-grid">
       <Panel i={0} title="Summary"><div className="crm-kpis"><div><strong><CountUp value={r.total} /></strong><small>Items logged</small></div><div><strong><CountUp value={r.returned} /></strong><small>Back with owners</small></div><div><strong>{r.returnRate === null ? '—' : r.returnRate + '%'}</strong><small>Return rate</small></div><div><strong>{r.avgDays === null ? '—' : r.avgDays}</strong><small>Days to return</small></div></div>
         <div className="crm-legend"><span>{r.waiting} waiting in a box</span><span>{r.unclaimed} unclaimed</span><span>{r.closed} donated or closed</span></div></Panel>
-      {table('By kind of item', r.byCategory, 1)}{table('By class', r.byClass, 2)}{table('By house', r.byHouse, 3)}{table('By collection box', r.byBox, 4)}
+      {table('By kind of item', r.byCategory, 1)}{table('By class', r.byClass, 2)}{table('By house', r.byHouse, 3)}{table('By collection box', r.byBox, 4)}{r.byPlace.length > 0 && table('Where things are found', r.byPlace, 4)}
       <Panel i={5} title="Staff who handled items">{r.staff.length ? <ul className="crm-list">{r.staff.map((s: Row) => <li key={s.name}><div><span>{s.name}</span><small>{s.received} received · {s.handed} handed back</small></div></li>)}</ul> : <p className="crm-empty">No activity in this period.</p>}
         {r.finders.length > 0 && <div className="crm-legend">{r.finders.map((f: Row) => <span key={f.house}>{cap(f.house)} house: {f.stars} return{f.stars === 1 ? '' : 's'} by students</span>)}</div>}</Panel>
     </div>}

@@ -894,6 +894,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
         boxId: text(100),
         privateNote: text(500),
         photo: z.string().max(240000).nullable().default(null),
+        foundAt: z.string().trim().max(200).default(""),
+        valuable: z.boolean().default(false),
       }),
       req.body,
     );
@@ -908,8 +910,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
       requireThat(box, 400, "Invalid box");
       const caseId = id();
       await db.query(
-        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7)",
-        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo],
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo,found_at,valuable) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7,$8,$9)",
+        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo, d.foundAt, d.valuable],
       );
       await event(db, caseId, u.id, "found_unclaimed");
       return { id: caseId };

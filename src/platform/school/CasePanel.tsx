@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { motion } from 'motion/react'
-import { Check, Clock, HandHeart, PackageCheck, ShieldAlert, X } from 'lucide-react'
+import { ArrowLeftRight, BellRing, Check, Clock, HandHeart, PackageCheck, Search, ShieldAlert, UserRoundSearch, X } from 'lucide-react'
 import { api } from '../api'
 import { notify } from '../feedback'
 import { imagery } from '@/data/imagery'
@@ -18,33 +18,43 @@ const Fact = ({ label, children }: { label: string; children: React.ReactNode })
  * what can be done next, and the custody trail of everyone who handled it.
  */
 export function CasePanel({ id, boxes, onClose, onChanged }: { id: string; boxes: Row[]; onClose: () => void; onChanged: () => void }) {
-  const [c, setC] = useState<Row | null>(null), [busy, setBusy] = useState(false), [mode, setMode] = useState('')
+  const [c, setC] = useState<Row | null>(null), [busy, setBusy] = useState(false), [mode, setMode] = useState(''), [q, setQ] = useState(''), [found, setFound] = useState<Row[]>([])
   const load = () => api<Row>('/school/desk/case/' + encodeURIComponent(id)).then(setC).catch(() => onClose())
   useEffect(() => { setC(null); setMode(''); void load() }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc) }, [onClose])
-  async function run(fn: () => Promise<unknown>, done: string) { setBusy(true); try { await fn(); notify(done); setMode(''); await load(); onChanged() } catch { /* toast shown */ } finally { setBusy(false) } }
+  useEffect(() => { if (mode !== 'owner' || q.trim().length < 2) { setFound([]); return } const t = setTimeout(() => { api<{ rows: Row[] }>('/school/desk/students?q=' + encodeURIComponent(q.trim())).then((d) => setFound(d.rows)).catch(() => {}) }, 220); return () => clearTimeout(t) }, [q, mode])
+  async function run(fn: () => Promise<unknown>, done: string) { setBusy(true); try { await fn(); notify(done); setMode(''); setQ(''); await load(); onChanged() } catch { /* toast shown */ } finally { setBusy(false) } }
   const form = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); return Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string> }
   const review = (kind: string, note: string, done: string) => run(() => api('/school/case-reviews', { caseId: id, kind, note }), done)
+  const otherBoxes = boxes.filter((b) => b.id !== c?.boxId)
 
   return <motion.div className="crm-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
     <motion.aside className="crm-drawer" role="dialog" aria-modal="true" aria-label={c?.title || 'Item'} initial={{ x: 60, opacity: 0.6 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 60, opacity: 0 }} transition={spring}>
       {!c ? <p role="status">Opening…</p> : <>
-        <header><div><h2>{c.title}</h2><p>{c.stage}{c.box ? ' · ' + c.box : ''}</p></div><button type="button" className="crm-icon" aria-label="Close" onClick={onClose}><X size={18} /></button></header>
+        <header><div><h2>{c.title}</h2><p>{c.stage}{c.box ? ' · ' + c.box : ''} · shelf tag {c.ref}</p></div><button type="button" className="crm-icon" aria-label="Close" onClick={onClose}><X size={18} /></button></header>
         <div className="sd-item"><img src={c.photo || picture(c.category)} alt={c.photo ? 'Photo of the item' : ''} /><div className="crm-flags">
-          {c.overdue && <span className="crm-flag t-bad">Past collection date</span>}{c.holdOver && <span className="crm-flag t-warn">Held over {c.holdDays} days</span>}{c.dispute && <span className="crm-flag t-bad">Ownership disputed</span>}
-          <span className="crm-flag">{c.tagged ? 'Has a FindBox QR' : 'No QR'}</span>{c.disposal && c.status !== 'closed' && <span className="crm-flag t-warn">Donation requested by {c.disposal.requestedBy}</span>}
+          {c.valuable && <span className="crm-flag t-warn">Valuable: keep in the office</span>}{c.overdue && <span className="crm-flag t-bad">Past collection date</span>}{c.holdOver && <span className="crm-flag t-warn">Held over {c.holdDays} days</span>}{c.dispute && <span className="crm-flag t-bad">Ownership disputed</span>}
+          {c.toldToday && <span className="crm-flag t-good">Family told today</span>}<span className="crm-flag">{c.tagged ? 'Has a FindBox QR' : 'No QR'}</span>{c.disposal && c.status !== 'closed' && <span className="crm-flag t-warn">Donation requested by {c.disposal.requestedBy}</span>}
         </div></div>
+
+        <div className={'sd-owner' + (c.owner ? '' : ' is-unknown')}>
+          {c.owner ? <><small>Belongs to</small><strong>{c.owner.child}</strong><span>{[c.owner.className, c.owner.house && c.owner.house[0].toUpperCase() + c.owner.house.slice(1) + ' house'].filter(Boolean).join(' · ')}</span>
+            <span>{c.owner.guardian ? `Parent or guardian: ${c.owner.guardian}` : 'No parent on FindBox yet: give it to the student or their class teacher'}{c.namedByStaff ? ' · owner named by staff' : ''}</span></>
+            : <><small>Belongs to</small><strong>Not known yet</strong><span>If you recognise it, or there is a name on it, name the owner and their family is told.</span></>}
+        </div>
         <dl className="crm-facts">
-          {c.owner ? <><Fact label="Belongs to">{c.owner.child}</Fact><Fact label="Class">{[c.owner.className, c.owner.house && c.owner.house + ' house'].filter(Boolean).join(' · ')}</Fact><Fact label="Parent or guardian">{c.owner.guardian}</Fact></> : <Fact label="Belongs to">Not known yet</Fact>}
-          <Fact label="Logged">{when(c.createdAt)}</Fact>
-          {c.status === 'awaiting_collection' && <Fact label="Collect by">{day(c.dueAt)}</Fact>}{c.collectedAt && <Fact label="Handed back">{when(c.collectedAt)}</Fact>}
+          <Fact label="Logged">{when(c.createdAt)}</Fact>{c.foundAt && <Fact label="Found at">{c.foundAt}</Fact>}
+          {c.status === 'awaiting_collection' && <Fact label="Collect by">{day(c.dueAt)}</Fact>}{c.box && <Fact label="Collection point">{c.box}{c.hours ? ' · ' + c.hours : ''}</Fact>}{c.collectedAt && <Fact label="Handed back">{when(c.collectedAt)}</Fact>}
           {c.privateNote && <Fact label="Private detail (for checking ownership)">{c.privateNote}</Fact>}
         </dl>
 
         {mode === '' && <div className="crm-actions">
           {c.can.receive && <button type="button" className="crm-primary" onClick={() => setMode('receive')}><PackageCheck size={16} />Receive into a box</button>}
           {c.can.handBack && <button type="button" className="crm-primary" disabled={c.dispute} onClick={() => setMode('hand')}><Check size={16} />Hand back</button>}
+          {c.can.remind && <button type="button" className="crm-outline" disabled={busy} onClick={() => void run(() => api('/school/desk/case/' + id + '/remind', {}), `${c.owner.guardian} has been told to collect it.`)}><BellRing size={15} />Notify the family</button>}
+          {c.can.nameOwner && <button type="button" className={c.owner ? 'crm-outline' : 'crm-primary'} onClick={() => setMode('owner')}><UserRoundSearch size={15} />{c.owner ? 'Change the owner' : 'Name the owner'}</button>}
           {c.can.extend && <button type="button" className="crm-outline" onClick={() => setMode('extend')}><Clock size={15} />Give more time</button>}
+          {c.can.move && otherBoxes.length > 0 && <button type="button" className="crm-outline" onClick={() => setMode('move')}><ArrowLeftRight size={15} />Move to another box</button>}
           {c.can.requestDisposal && <button type="button" className="crm-outline" onClick={() => setMode('donate')}><HandHeart size={15} />Ask to donate</button>}
           {c.can.approveDisposal && <button type="button" className="crm-primary" onClick={() => setMode('approve')}><HandHeart size={16} />Approve donation</button>}
           {['awaiting_collection', 'unclaimed'].includes(c.status) && !c.dispute && <button type="button" className="crm-outline" onClick={() => setMode('dispute')}><ShieldAlert size={15} />Ownership is disputed</button>}
@@ -54,11 +64,22 @@ export function CasePanel({ id, boxes, onClose, onChanged }: { id: string; boxes
 
         {mode === 'receive' && <form className="crm-form" onSubmit={(e) => { const f = form(e); void run(() => api('/staff/cases/' + id + '/receive', { boxId: f.boxId }), 'Received. The family has been told where to collect it.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
           <label>Which box is it going into?<select name="boxId" required>{boxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+          <p className="crm-legend">Write {c.ref} on its shelf tag so it is easy to find later.</p>
           <div className="crm-actions"><button className="crm-primary">Confirm it is in the box</button><button type="button" className="crm-outline" onClick={() => setMode('')}>Cancel</button></div>
         </fieldset></form>}
-        {mode === 'hand' && <form className="crm-form" onSubmit={(e) => { const f = form(e); void run(() => api('/staff/cases/' + id + '/collect', { verification: f.verification }), 'Handed back and recorded.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
-          <label>Who collected it, and how did you check? (kept on the record)<textarea name="verification" required minLength={3} maxLength={500} placeholder={c.owner ? `e.g. ${c.owner.child} collected it; matched the name on the label` : 'e.g. Parent described the initials inside the collar'} /></label>
+        {mode === 'hand' && <form className="crm-form" onSubmit={(e) => { const f = form(e); void run(() => api('/staff/cases/' + id + '/collect', { verification: `Collected by ${f.who}. ${f.verification}` }), 'Handed back and recorded.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
+          <label>Who is collecting it?<select name="who" defaultValue={c.owner ? 'the student' : 'a parent or guardian'}><option value="the student">The student</option><option value="a parent or guardian">A parent or guardian</option><option value="someone the family sent">Someone the family sent</option><option value="the class teacher, for the student">The class teacher, for the student</option></select></label>
+          <label>How did you check it is theirs? (kept on the record)<textarea name="verification" required minLength={3} maxLength={440} placeholder={c.privateNote ? 'e.g. They described the private detail correctly' : c.owner ? 'e.g. Name on the label matched' : 'e.g. Described the initials inside the collar'} /></label>
           <div className="crm-actions"><button className="crm-primary">Record hand-back</button><button type="button" className="crm-outline" onClick={() => setMode('')}>Cancel</button></div>
+        </fieldset></form>}
+        {mode === 'owner' && <div className="crm-form">
+          <label>Whose is it? Search your students<span className="sd-find"><Search size={15} /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or admission number" autoFocus /></span></label>
+          {found.length > 0 ? <ul className="crm-list">{found.map((s) => <li key={s.id}><div><span>{s.name}</span><small>{s.class_name}{s.linked ? ' · parent on FindBox' : ' · no parent linked'}</small></div><button type="button" className="crm-primary" disabled={busy} onClick={() => void run(async () => { const r = await api<{ notified: boolean }>('/school/desk/case/' + id + '/owner', { studentId: s.id }); if (!r.notified) notify(`${s.name} has no parent on FindBox yet: give it to them or their class teacher.`, 'info') }, `Owner set to ${s.name}.`)}>This is theirs</button></li>)}</ul> : q.trim().length >= 2 ? <p className="crm-empty">No student matches.</p> : null}
+          <div className="crm-actions"><button type="button" className="crm-outline" onClick={() => { setMode(''); setQ('') }}>Cancel</button></div>
+        </div>}
+        {mode === 'move' && <form className="crm-form" onSubmit={(e) => { const f = form(e); void run(() => api('/school/desk/case/' + id + '/move', { boxId: f.boxId }), 'Moved.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
+          <label>Move it to<select name="boxId" required>{otherBoxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+          <div className="crm-actions"><button className="crm-primary">Move</button><button type="button" className="crm-outline" onClick={() => setMode('')}>Cancel</button></div>
         </fieldset></form>}
         {mode === 'extend' && <form className="crm-form" onSubmit={(e) => { const f = form(e); void run(() => api('/staff/cases/' + id + '/extend', { days: Number(f.days), reason: f.reason }), 'Collection date extended. The family has been told.') }}><fieldset disabled={busy} style={{ display: 'contents' }}>
           <div className="crm-two"><label>Extra days<input name="days" type="number" min={1} max={30} defaultValue={7} required /></label><label>Why?<input name="reason" required minLength={3} maxLength={500} placeholder="e.g. Family is away this week" /></label></div>
@@ -66,7 +87,7 @@ export function CasePanel({ id, boxes, onClose, onChanged }: { id: string; boxes
         </fieldset></form>}
         {['donate', 'approve', 'dispute', 'resolve'].includes(mode) && <form className="crm-form" onSubmit={(e) => { const f = form(e); void (mode === 'donate' ? review('disposal_request', f.note!, 'Sent to the principal to approve.') : mode === 'approve' ? review('disposal_approved', f.note!, 'Donation approved. The item is closed.') : mode === 'dispute' ? review('dispute', f.note!, 'Dispute recorded. Hand-back is on hold.') : review('correction', f.note!, 'Dispute resolved.')) }}><fieldset disabled={busy} style={{ display: 'contents' }}>
           <label>{mode === 'donate' ? 'Where should it go, and why? (the principal approves)' : mode === 'approve' ? 'Confirm where it is going' : mode === 'dispute' ? 'What is disputed?' : 'How was it resolved?'}<textarea name="note" required minLength={8} maxLength={500} placeholder={mode === 'donate' || mode === 'approve' ? 'e.g. Unclaimed for a month; donate to the uniform bank' : ''} defaultValue={mode === 'approve' ? c.disposal?.note : ''} /></label>
-          {mode === 'approve' && <p className="hs-note" style={{ fontSize: 12.5 }}>Requested by {c.disposal?.requestedBy}. Two different people must agree before anything is donated.</p>}
+          {mode === 'approve' && <p className="crm-legend">Requested by {c.disposal?.requestedBy}. Two different people must agree before anything is donated.</p>}
           <div className="crm-actions"><button className="crm-primary">{mode === 'donate' ? 'Ask the principal' : mode === 'approve' ? 'Approve donation' : mode === 'dispute' ? 'Record dispute' : 'Mark resolved'}</button><button type="button" className="crm-outline" onClick={() => setMode('')}>Cancel</button></div>
         </fieldset></form>}
 

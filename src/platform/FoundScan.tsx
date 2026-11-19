@@ -8,7 +8,7 @@ import { notify } from "./feedback";
 import "./houses.css";
 
 type Box = { id: string; name: string; opening_hours: string };
-type Scan = { code: string; mine: boolean; studentId?: string | null; labels?: { delivered: number; used: number; remaining: number } | null; child: string; items: { id: string; name: string; category: string; status: string; open: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
+type Scan = { code: string; mine: boolean; studentId?: string | null; labels?: { delivered: number; used: number; remaining: number } | null; child: string; items: { id: string; name: string; category: string; status: string; open: string | null; caseId?: string | null }[]; boxes: { id: string; name: string; opening_hours: string }[] };
 
 const CATEGORIES: [string, string][] = [["clothing", "Clothing"], ["bottle", "Bottle"], ["lunchbox", "Lunchbox"], ["book", "Book"], ["sports", "Sports kit"], ["electronics", "Gadget"], ["keys", "Keys"], ["other", "Other"]];
 
@@ -25,7 +25,7 @@ export const codeFrom = (text: string) => {
  *  - Someone else's label: their family is told at once; hand it back or drop it at a box.
  *  - "Add a belonging" opens the same scanner with its own wording and goes straight to adding.
  */
-export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boolean; boxes?: Box[]; onDone?: () => void }) {
+export function FoundScan({ staff = false, boxes = [], onDone, onCase }: { staff?: boolean; boxes?: Box[]; onDone?: () => void; onCase?: (caseId: string) => void }) {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const [adding, setAdding] = useState(!staff && params.get("mode") === "add");
@@ -59,7 +59,7 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
     setBusy(true);
     try {
       const r = await api<{ message: string }>(staff ? "/staff/unclaimed" : "/found/untagged", staff
-        ? { title: d.title, category: d.category, boxId: d.boxId, privateNote: d.where || "Logged by school staff", photo }
+        ? { title: d.title, category: d.category, boxId: d.boxId, privateNote: d.where || "Logged by school staff", photo, foundAt: d.foundAt || "", valuable: d.valuable === "on" }
         : { title: d.title, category: d.category, where: d.where || "", boxId: d.boxId || "", photo });
       setDone({ mine: false, message: staff ? "Logged in the unclaimed gallery. Families can now claim it." : r.message }); onDone?.();
     } catch { /* toast shown */ } finally { setBusy(false); }
@@ -139,7 +139,7 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
           ) : staff ? (
             <>
               <label className="fp-field"><span>Stored in</span><select value={box} onChange={(e) => setBox(e.target.value)}>{scan.boxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
-              <button type="button" className="fp-primary" disabled={busy || !pick || !box} onClick={() => void submit(box)}>Log drop-off</button>
+              {chosen?.caseId && onCase ? <button type="button" className="fp-primary" onClick={() => onCase(chosen.caseId!)}>Open this item to hand it back</button> : <button type="button" className="fp-primary" disabled={busy || !pick || !box} onClick={() => void submit(box)}>Put it in the box</button>}
             </>
           ) : (
             <>
@@ -170,6 +170,8 @@ export function FoundScan({ staff = false, boxes = [], onDone }: { staff?: boole
       <label className="fp-field"><span>What is it?</span><input name="title" required minLength={3} maxLength={100} placeholder="e.g. Blue Grade 4 sweater, size 10" /></label>
       <label className="fp-field"><span>Kind</span><select name="category" defaultValue="clothing">{CATEGORIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
       <label className="fp-field"><span>{staff ? "Private detail for ownership checks" : "Where did you find it? (optional)"}</span><input name="where" maxLength={200} required={staff} placeholder={staff ? "e.g. name written inside the collar" : "e.g. Sports field, after PE"} /></label>
+      {staff && <><label className="fp-field"><span>Where was it found? (optional)</span><input name="foundAt" maxLength={200} placeholder="e.g. Sports field, Grade 4 corridor" /></label>
+        <label className="fs-check"><input type="checkbox" name="valuable" /><span>It is a valuable (phone, money, glasses, watch). Keep it in the office.</span></label></>}
       <div className="fs-photo">
         {photo ? <><img src={photo} alt="Your photo of the item" /><button type="button" className="fs-link" onClick={() => setPhoto(null)}><X size={14} />Remove photo</button></>
           : <label className="fs-ghost"><ImagePlus size={16} />Add a photo<input type="file" accept="image/*" capture="environment" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; try { setPhoto(await squarePhoto(f, 480)); } catch (err) { notify((err as Error).message, "error"); } }} /></label>}

@@ -69,3 +69,17 @@
 
 /* Keep the floating updates bell clear of the staff dock. */
 body:has(.sf-root) .fb-notification-center { bottom: 108px; }
+
+/* Owner block on an item, the student finder, and the staff log groups */
+.sd-owner { display: grid; gap: 3px; padding: 14px 16px; border-radius: 14px; background: var(--c-soft); }
+.sd-owner small { font-size: 11.5px; color: var(--c-mute); }
+.sd-owner strong { font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+.sd-owner span { font-size: 13px; line-height: 1.4; }
+.sd-owner.is-unknown { border: 1px dashed var(--c-line); background: transparent; }
+.sd-find { display: flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid var(--c-line); border-radius: 9px; color: var(--c-mute); }
+.crm-drawer .sd-find input { border: 0; padding: 9px 0; }
+.sf-group { display: grid; gap: 8px; }
+.sf-group h2 { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--c-mute); padding: 4px 2px 0; }
+.sf-group h2 span { margin-left: auto; padding: 1px 8px; border-radius: 99px; background: var(--c-soft); color: var(--fb-text); font-size: 12px; }
+.sf-item .crm-flags { margin-top: 2px; }
+@media print { .crm-band, .crm-head .crm-tabs, .crm-actions { display: none !important; } }

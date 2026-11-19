@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowDownWideNarrow, ArrowRight, BarChart3, ClipboardCheck, GraduationCap, LayoutDashboard, LogOut, MapPin, Menu, PackageSearch, Plus, RefreshCw, Search, Settings as Cog, SlidersHorizontal, Trophy, UserCog, Users, type LucideIcon } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowRight, BarChart3, ClipboardCheck, GraduationCap, History, LayoutDashboard, LayoutGrid, LogOut, MapPin, Menu, PackageSearch, Plus, RefreshCw, Search, Settings as Cog, SlidersHorizontal, Trophy, UserCog, Users, type LucideIcon } from 'lucide-react'
 import { api, ApiError } from '../api'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { SwirlMark } from '@/components/brand/Logo'
@@ -9,19 +9,20 @@ import { Houses } from '../Houses'
 import { CountUp, ease, spring } from '../crm/fx'
 import { CasePanel, type Row } from './CasePanel'
 import { Approvals, Boxes, DeskBoard, Families, Overview, Report, Settings, StaffPage, Students } from './DeskPages'
+import { ActivityLog, Classes, ItemLog, StudentPanel } from './DeskMore'
 import '../crm/crm.css'
 import './school.css'
 
 type NavItem = [page: string, label: string, Icon: LucideIcon, badge?: string]
 const NAV: [string, NavItem[]][] = [
   ['', [['overview', 'Overview', LayoutDashboard], ['board', 'Lost and found', PackageSearch, 'board'], ['approvals', 'Approvals', ClipboardCheck, 'approvals']]],
-  ['People', [['students', 'Students', GraduationCap], ['families', 'Families', Users], ['staff', 'Staff', UserCog], ['houses', 'Houses', Trophy]]],
-  ['School', [['boxes', 'Collection boxes', MapPin], ['report', 'Report', BarChart3], ['settings', 'Settings', Cog]]],
+  ['People', [['students', 'Students', GraduationCap], ['classes', 'Classes', LayoutGrid], ['families', 'Families', Users], ['staff', 'Staff', UserCog], ['houses', 'Houses', Trophy]]],
+  ['School', [['boxes', 'Collection boxes', MapPin], ['activity', 'Activity', History], ['report', 'Report', BarChart3], ['settings', 'Settings', Cog]]],
 ]
 const CATEGORIES: [string, string][] = [['clothing', 'Clothing'], ['bottle', 'Bottles'], ['lunchbox', 'Lunchboxes'], ['book', 'Books'], ['sports', 'Sports kit'], ['electronics', 'Gadgets'], ['other', 'Other']]
 const TOOLS: Record<string, { sorts: [string, string][]; filters: [string, string][]; search: string }> = {
-  board: { search: 'Search items, students or classes…', sorts: [['recent', 'Newest'], ['oldest', 'Oldest first'], ['due', 'Collection date'], ['name', 'Name']], filters: [['overdue', 'Overdue only'], ...CATEGORIES] },
-  students: { search: 'Search students, classes or admission numbers…', sorts: [], filters: [['active', 'Active'], ['left', 'Left'], ['transferred', 'Transferred'], ['archived', 'Archived']] },
+  board: { search: 'Search items, students or classes…', sorts: [['recent', 'Newest'], ['oldest', 'Oldest first'], ['due', 'Collection date'], ['name', 'Name']], filters: [['overdue', 'Overdue only'], ['valuable', 'Valuables'], ...CATEGORIES] },
+  students: { search: 'Search students, classes or admission numbers…', sorts: [], filters: [['unlinked', 'No parent linked'], ['active', 'Active'], ['left', 'Left'], ['transferred', 'Transferred'], ['archived', 'Archived']] },
 }
 const initials = (name: string) => name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 
@@ -30,7 +31,7 @@ export function SchoolDesk() {
   const navigate = useNavigate(), still = useReducedMotion()
   const [home, setHome] = useState<Row | null>(null), [denied, setDenied] = useState(''), [version, setVersion] = useState(0)
   const [page, setPage] = useState('overview'), [search, setSearch] = useState(''), [q, setQ] = useState(''), [sort, setSort] = useState(''), [filter, setFilter] = useState(''), [menu, setMenu] = useState(''), [open, setOpen] = useState(false)
-  const [item, setItem] = useState<string | null>(null), [form, setForm] = useState('')
+  const [item, setItem] = useState<string | null>(null), [form, setForm] = useState(''), [view, setView] = useState<'board' | 'log'>('board'), [student, setStudent] = useState<string | null>(null), [editId, setEditId] = useState('')
   const bump = () => setVersion((v) => v + 1)
   useEffect(() => { document.title = 'FindBox · School workspace'; try { if (!localStorage.getItem('fb-theme')) document.documentElement.dataset.theme = 'light' } catch { /* keep the current theme */ } }, [])
   useEffect(() => {
@@ -93,18 +94,25 @@ export function SchoolDesk() {
       <AnimatePresence mode="wait">
         <motion.div key={page} initial={still ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={still ? undefined : { opacity: 0, y: -6 }} transition={{ duration: 0.28, ease }}>
           {page === 'overview' ? <Overview home={home} go={go} onOpen={setItem} />
-            : page === 'board' ? <DeskBoard query={query} open={item} onOpen={setItem} version={version} />
+            : page === 'board' ? <>
+              <div className="crm-head"><div><h1>Lost and found</h1><p>{view === 'board' ? 'Every item, from the moment it is reported or found until it is back with its owner.' : 'Everything that has not reached its owner yet, by where it is.'}</p></div>
+                <div className="crm-tabs"><button type="button" className={view === 'board' ? 'is-on' : ''} onClick={() => setView('board')}>Board</button><button type="button" className={view === 'log' ? 'is-on' : ''} onClick={() => setView('log')}>Not yet home</button></div></div>
+              {view === 'board' ? <DeskBoard compact query={query} open={item} onOpen={setItem} version={version} /> : <ItemLog query={query} version={version} onOpen={setItem} onChanged={bump} />}
+            </>
             : page === 'approvals' ? <Approvals version={version} onOpen={setItem} onChanged={bump} isManager />
-            : page === 'students' ? <Students query={query} version={version} onChanged={bump} form={form} setForm={setForm} />
+            : page === 'students' ? <Students query={query} version={version} onChanged={bump} form={form} setForm={setForm} onOpen={setStudent} editId={editId} clearEdit={() => setEditId('')} />
+            : page === 'classes' ? <Classes version={version} onPick={(name) => { go('students'); setSearch(name) }} />
+            : page === 'activity' ? <ActivityLog version={version} onOpen={setItem} />
             : page === 'families' ? <Families home={home} version={version} onChanged={bump} />
             : page === 'staff' ? <StaffPage version={version} onChanged={bump} form={form} setForm={setForm} />
             : page === 'houses' ? <div className="sd-houses"><Houses /></div>
-            : page === 'boxes' ? <Boxes version={version} onChanged={bump} form={form} setForm={setForm} />
+            : page === 'boxes' ? <Boxes version={version} onChanged={bump} form={form} setForm={setForm} load={home.boxes} />
             : page === 'report' ? <Report school={home.school.name} />
             : <Settings version={version} onChanged={bump} onLogout={() => void logout()} />}
         </motion.div>
       </AnimatePresence>
     </main>
+    <AnimatePresence>{student && !item && <StudentPanel key="student" id={student} onClose={() => setStudent(null)} onOpenCase={(cid) => setItem(cid)} onEdit={() => { setEditId(student); setStudent(null) }} />}</AnimatePresence>
     <AnimatePresence>{item && <CasePanel key="case" id={item} boxes={home.boxes} onClose={() => setItem(null)} onChanged={bump} />}</AnimatePresence>
   </div>
 }

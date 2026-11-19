@@ -92,3 +92,6 @@
 
 .fs-add-main { border-top: 0; padding-top: 0; }
 .fs-have p { margin-top: 4px; font-size: 14px; }
+
+.fs-check { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.4; }
+.fs-check input { width: 18px !important; height: 18px; flex: none; margin-top: 2px; }

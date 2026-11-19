@@ -1223,7 +1223,7 @@ test('complimentary demo tags enforce owner, school, expiry and private activati
  const scan=await call('GET','/api/tags/FB-demo-main');assert.equal(scan.statusCode,200);assert(!scan.body.includes('demo-owner@test.com'));assert(!scan.body.includes('demo-private'));
  const found=await call('POST','/api/found',{code:payload.code,boxId:'box-a'},operator);assert.equal(found.statusCode,200,found.body);
  const caseId=found.json().id;
- const receipt=await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator);assert.equal(receipt.statusCode,200,receipt.body);
+ assert.equal(found.json().received,true,'staff put it straight into the box');assert.equal((await call('POST','/api/staff/cases/'+caseId+'/receive',{boxId:'box-a'},operator)).statusCode,409);
  const collection=await call('POST','/api/staff/cases/'+caseId+'/collect',{verification:'Presenter checked the fictional demo ownership record'},operator);assert.equal(collection.statusCode,200,collection.body);
  assert.equal((await pool.query('SELECT status FROM cases WHERE id=$1',[caseId])).rows[0].status,'returned');
  assert.equal(Number((await pool.query('SELECT count(*) FROM orders')).rows[0].count),before);
@@ -1705,4 +1705,74 @@ test("school desk: staff log and hand back with a custody trail; the principal s
   assert.equal(report.total, 1);
   assert.equal(report.byCategory[0].name, "Clothing");
   assert.ok(report.staff.some((s) => s.name === "Desk Teacher" && s.received === 1));
+});
+
+test("school desk, deeper: the not-yet-home log, one-step receive by staff, reminders, moving boxes, classes and a student record", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com");
+  const call2 = (method, url, b, cookie) => app.inject({ method, url, remoteAddress: "127.0.9.5", headers: { ...(b ? { "x-findbox-request": "1", "content-type": "application/json" } : {}), ...(cookie ? { cookie } : {}), origin: "http://localhost:5173" }, payload: b });
+  await pool.query("INSERT INTO boxes(id,school_id,name,directions,opening_hours) VALUES('desk-box2','desk','Library','Upstairs','Mon-Fri 9-3')");
+  await pool.query("INSERT INTO students(id,school_id,school_reference,name,class_name,guardian_id,guardian_email,guardian_verified_at,consent_reference) VALUES('desk-kid','desk','D-1','Tumaini Desk','Grade 2','desk-parent','desk-parent@test.com',now(),'test'),('desk-kid2','desk','D-2','Unlinked Desk','Grade 2',NULL,'',NULL,'test')");
+  await pool.query("INSERT INTO tags(id,code,activation_hash,format,owner_id,status,student_id) VALUES('desk-tag','FB-DESK-KID','x','child','desk-parent','active','desk-kid')");
+  await pool.query("INSERT INTO items(id,tag_id,owner_id,school_id,name,category,child_name,student_id) VALUES('desk-item','desk-tag','desk-parent','desk','Green lunchbox','lunchbox','Tumaini Desk','desk-kid')");
+  // A teacher holding the item scans it and puts it straight into a box: one step.
+  let r = await call2("POST", "/api/found", { code: "FB-DESK-KID", itemId: "desk-item", boxId: "desk-box" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().received, true);
+  const caseId = r.json().id;
+  assert.equal((await pool.query("SELECT status FROM cases WHERE id=$1", [caseId])).rows[0].status, "awaiting_collection");
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Green lunchbox is ready at Reception%'")).rowCount);
+  // Scanning again leads staff to the item's record, to hand it back.
+  assert.equal((await call2("GET", "/api/scan/FB-DESK-KID", null, teacher)).json().items[0].caseId, caseId);
+  // The log lists everything not yet home, with where it is.
+  const log = (await call2("GET", "/api/school/desk/log", null, teacher)).json();
+  const row = log.rows.find((x) => x.id === caseId);
+  assert.equal(row.where, "Reception");
+  assert.equal(row.owner, "Tumaini Desk · Grade 2");
+  assert.equal(row.atBox, true);
+  // Remind once a day; move between boxes; both land on the custody trail.
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/remind", {}, teacher)).statusCode, 200);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/remind", {}, teacher)).statusCode, 409);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/move", { boxId: "desk-box" }, teacher)).statusCode, 400);
+  assert.equal((await call2("POST", "/api/school/desk/case/" + caseId + "/move", { boxId: "desk-box2" }, teacher)).statusCode, 200);
+  const item = (await call2("GET", "/api/school/desk/case/" + caseId, null, teacher)).json();
+  assert.deepEqual(item.trail.map((t) => t.text), ["Received into the box", "Family told to collect it", "Moved to another box"]);
+  assert.equal(item.box, "Library");
+  // The principal's extra views.
+  const home = (await call2("GET", "/api/school/desk/home", null, head)).json();
+  assert.equal(home.boxes.find((b) => b.id === "desk-box2").count, 1);
+  assert.ok(home.today.received >= 1);
+  assert.ok(home.classes.some((c) => c.name === "Grade 2" && c.linked === 1 && c.students === 2));
+  const classes = (await call2("GET", "/api/school/desk/classes", null, head)).json().rows;
+  assert.deepEqual(classes.find((c) => c.name === "Grade 2"), { name: "Grade 2", students: 2, linked: 1, items: 1, open: 1, lost90: 1 });
+  assert.equal((await call2("GET", "/api/school/desk/classes", null, teacher)).statusCode, 403);
+  const student = (await call2("GET", "/api/school/desk/student/desk-kid", null, head)).json();
+  assert.equal(student.hasQr, true);
+  assert.equal(student.items.length, 1);
+  assert.equal(student.cases[0].stage, "In the box");
+  assert.ok((await call2("GET", "/api/school/desk/activity", null, head)).json().rows.some((a) => a.text === "Moved to another box"));
+  assert.equal((await call2("GET", "/api/school/students?status=unlinked", null, head)).json().rows.map((s) => s.name).join(), "Unlinked Desk");
+  // An item with no QR: staff log it as a valuable, with where it was found, then name its owner.
+  r = await call2("POST", "/api/staff/unclaimed", { title: "Silver watch", category: "other", boxId: "desk-box", privateNote: "Scratched strap", foundAt: "Swimming pool", valuable: true }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  const watch = r.json().id;
+  let sheet = (await call2("GET", "/api/school/desk/case/" + watch, null, teacher)).json();
+  assert.equal(sheet.valuable, true);
+  assert.equal(sheet.foundAt, "Swimming pool");
+  assert.match(sheet.ref, /^#[A-Z0-9]{5}$/);
+  assert.equal(sheet.can.nameOwner, true);
+  assert.ok((await call2("GET", "/api/school/desk/home", null, head)).json().attention.some((a) => a.title === "Valuable waiting: Silver watch"));
+  assert.equal((await call2("GET", "/api/school/desk/students?q=Tum", null, teacher)).json().rows[0].name, "Tumaini Desk");
+  r = await call2("POST", "/api/school/desk/case/" + watch + "/owner", { studentId: "desk-kid" }, teacher);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().notified, true);
+  sheet = (await call2("GET", "/api/school/desk/case/" + watch, null, teacher)).json();
+  assert.equal(sheet.status, "awaiting_collection");
+  assert.equal(sheet.owner.child, "Tumaini Desk");
+  assert.equal(sheet.owner.guardian, "Desk Parent");
+  assert.ok((await pool.query("SELECT 1 FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Silver watch belonging to Tumaini%'")).rowCount);
+  assert.ok((await call2("GET", "/api/school/desk/report?days=90", null, head)).json().byPlace.some((p) => p.name === "Swimming pool"));
+  r = await call2("POST", "/api/school/desk/remind-families", {}, head);
+  assert.equal(r.statusCode, 200, r.body);
+  assert.equal(r.json().families, 1);
+  assert.equal((await call2("POST", "/api/school/desk/remind-families", {}, head)).statusCode, 409, "at most once a week");
 });

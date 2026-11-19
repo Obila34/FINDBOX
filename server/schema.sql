@@ -210,3 +210,7 @@ CREATE TABLE IF NOT EXISTS crm_issues(id text PRIMARY KEY,title text NOT NULL,de
 CREATE INDEX IF NOT EXISTS crm_issues_status_idx ON crm_issues(status,severity,created_at);
 CREATE TABLE IF NOT EXISTS crm_issue_reports(id text PRIMARY KEY,issue_id text NOT NULL REFERENCES crm_issues(id) ON DELETE CASCADE,ticket_id text UNIQUE REFERENCES support_tickets(id),name text NOT NULL DEFAULT '',email text NOT NULL DEFAULT '',created_at timestamptz NOT NULL DEFAULT now(),notified_at timestamptz);
 CREATE INDEX IF NOT EXISTS crm_issue_reports_issue_idx ON crm_issue_reports(issue_id);
+-- Found items: where it was found, whether it is a valuable, and an owner named by staff when there is no QR.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS found_at text NOT NULL DEFAULT '';
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS valuable boolean NOT NULL DEFAULT false;
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);

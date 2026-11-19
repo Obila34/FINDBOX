@@ -46,7 +46,16 @@ Sources are listed at the end.
 | Collection boxes | Add and edit boxes, opening hours, in use or not | Built |
 | Report | 30 days, term or year: items logged, returned, return rate, days to return; by kind, class, house and box; staff activity; export and print | Built |
 | Settings | School contact, privacy basis, setup checklist, password and security, sign out | Built |
-| Messages to parents from the school | Later | The company sends announcements today; school-sent messages need moderation rules first |
+| Not yet home | A log of every item that has not reached its owner, grouped by collection point, with days waiting; export and print | Built |
+| Remind all families | One fixed reminder to every parent that items are waiting; at most once a week | Built |
+| Classes | Per class: students, parents linked, items labelled, not yet home, lost in 90 days | Built |
+| Student record | Parent, QR, labelled belongings, anything not yet home, earlier returns | Built |
+| Invite all parents | Emails every unlinked student's parent in one go | Built |
+| Activity | Who received, handed back, reminded or decided what, newest first | Built |
+| Collection point load | Items in each box and how long the oldest has waited | Built |
+| Valuables | Phones, money, glasses and watches are flagged, kept in the office and shown to the principal | Built |
+| Where things are found | The report shows the places items are most often found | Built |
+| Free-text messages to parents from the school | Later | The company sends announcements today; school-sent messages need moderation rules first |
 | Per-student loss history | Later | Left out on purpose for now: the report goes down to class level so no child is singled out |
 
 ## 3. The staff app
@@ -61,6 +70,15 @@ Sources are listed at the end.
 | Custody trail | Every step with who did it and when | Built |
 | Inbox | Notifications, mark all read | Built |
 | Me | Role, school, light or dark, password and security, sign out; administrators get a link to the school workspace | Built |
+| Not yet home | Every item that has not reached its owner, grouped by collection point, with the owner, shelf tag and days waiting. Filters: at collection points, still missing, overdue, owner not known, valuables | Built |
+| Who it belongs to | Every item shows the student, class, house and parent | Built |
+| Notify the family | One tap tells the parent to collect it; once a day per item, and recorded | Built |
+| Name the owner | For an item with no QR that staff recognise: pick the student, and the parent is told where to collect it | Built |
+| One-step receive | Staff scanning an item put it straight into a box and the family is told | Built |
+| Scan to hand back | Scanning an item that is in a box opens it, ready to hand back | Built |
+| Shelf tag | A short reference for each item to write on its tag; searchable | Built |
+| Who collected | Hand-back records whether the student, a parent, someone sent, or the class teacher took it | Built |
+| Move between boxes | Recorded on the trail | Built |
 | Works offline | Later | Needs a local queue that syncs when the phone is back online |
 | Signature capture at hand-back | Later | The written check covers the need today |
 
