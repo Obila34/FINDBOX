@@ -83,3 +83,15 @@ body:has(.sf-root) .fb-notification-center { bottom: 108px; }
 .sf-group h2 span { margin-left: auto; padding: 1px 8px; border-radius: 99px; background: var(--c-soft); color: var(--fb-text); font-size: 12px; }
 .sf-item .crm-flags { margin-top: 2px; }
 @media print { .crm-band, .crm-head .crm-tabs, .crm-actions { display: none !important; } }
+
+/* Offline notice, the send queue and the end-of-term clear-out */
+.sf-offline { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 14px; padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--c-warn) 45%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--c-warn) 10%, transparent); font-size: 13px; line-height: 1.4; }
+.sf-offline svg { flex: none; margin-top: 1px; color: var(--c-warn); }
+.sf-clear { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 14px; padding: 13px 14px; border: 1px solid var(--c-line); border-radius: 14px; background: var(--c-page); text-align: left; }
+.sf-clear div { flex: 1; display: grid; gap: 2px; } .sf-clear small { color: var(--c-mute); font-size: 12px; }
+.co-root { display: grid; gap: 14px; }
+.co-list li { align-items: flex-start; }
+.co-list input[type=checkbox] { flex: none; width: 20px; height: 20px; margin-top: 2px; accent-color: var(--c-ink); }
+.co-list input[type=checkbox]:disabled { opacity: .35; }
+.co-note { display: grid; gap: 5px; font-size: 12px; color: var(--c-mute); }
+.co-note input { padding: 10px 12px; border: 1px solid var(--c-line); border-radius: 10px; background: transparent; color: var(--c-ink); font: inherit; font-size: 13.5px; }

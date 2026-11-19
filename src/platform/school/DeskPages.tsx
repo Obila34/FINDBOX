@@ -6,6 +6,7 @@ import { notify } from '../feedback'
 import { QRCode } from '@/components/ui/qr-code'
 import { CountUp, ease } from '../crm/fx'
 import type { Row } from './CasePanel'
+import { ClearOut } from './ClearOut'
 
 const REASON = 'School administrator update'
 const day = (d?: string | null) => (d ? new Date(d).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' }) : '—')
@@ -109,6 +110,7 @@ export function Approvals({ version, onOpen, onChanged, isManager }: { version: 
         {data.disposals.length ? <ul className="crm-list">{data.disposals.map((d) => <li key={d.case_id}><div><button type="button" className="crm-link" onClick={() => onOpen(d.case_id)}>{d.title}</button><small>{d.requested_by}: {d.note}</small></div><button type="button" className="crm-outline" onClick={() => onOpen(d.case_id)}>Review</button></li>)}</ul> : <p className="crm-empty">Nothing is waiting to be donated.</p>}
       </Panel>}
     </div>
+    <div style={{ marginTop: 16 }}><Panel i={3} title="End-of-term clear-out"><ClearOut version={version} onChanged={onChanged} onOpen={onOpen} /></Panel></div>
   </>
 }
 

@@ -1,0 +1,53 @@
+name: FindBox uptime
+# Watches the live site from outside the server, so an outage is noticed even when the whole server is down.
+# A failed run emails the repository owner. Nothing private is sent or read: only the public health pages.
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # is the site up?
+    - cron: "20 5 * * *"     # daily: background work, backups and certificate
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: findbox-uptime-${{ github.event.schedule || 'manual' }}
+  cancel-in-progress: true
+jobs:
+  up:
+    if: github.event.schedule != '20 5 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Family site, school portal and operations portal answer
+        run: |
+          check() {
+            for attempt in 1 2 3 4; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$1" || true)
+              # 403 on the operations portal means it is up and limited to known networks.
+              if [ "$code" = "200" ] || { [ "$2" = "allow403" ] && [ "$code" = "403" ]; }; then echo "ok   $1 ($code)"; return 0; fi
+              echo "try $attempt: $1 answered $code"; sleep 20
+            done
+            echo "::error::$1 is not answering"; return 1
+          }
+          fail=0
+          check https://findbox.africa/api/health strict || fail=1
+          check https://findbox.africa/ strict || fail=1
+          check https://school.findbox.africa/api/health strict || fail=1
+          check https://ops.findbox.africa/api/health allow403 || fail=1
+          exit $fail
+  daily:
+    if: github.event.schedule == '20 5 * * *' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Background work and backups are fresh
+        run: |
+          body=$(curl -s --max-time 20 https://findbox.africa/api/health/deep)
+          echo "$body"
+          echo "$body" | grep -q '"status":"ok"' || { echo "::error::Background work or backups need attention: $body"; exit 1; }
+      - name: Certificates have more than 14 days left
+        run: |
+          for host in findbox.africa school.findbox.africa ops.findbox.africa; do
+            end=$(echo | openssl s_client -servername "$host" -connect "$host:443" 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)
+            days=$(( ( $(date -d "$end" +%s) - $(date +%s) ) / 86400 ))
+            echo "$host: $days days"
+            [ "$days" -gt 14 ] || { echo "::error::The certificate for $host expires in $days days"; exit 1; }
+          done

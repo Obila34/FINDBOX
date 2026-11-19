@@ -109,7 +109,15 @@ async function systemSignals(db) {
   const backup = (await db.query("SELECT last_ok FROM runtime_heartbeat WHERE name='offsite_backup'")).rows[0];
   const bAge = backup ? hours(backup.last_ok) : null;
   out.push({ name: 'Off-site backup', state: bAge === null ? 'warn' : bAge > 36 ? 'bad' : 'ok', detail: bAge === null ? 'No backup reported yet' : `Last copy ${Math.round(bAge)} hours ago`, page: 'legacy:overview' });
-  for (const a of (await db.query("SELECT name,state FROM runtime_alerts WHERE state<>'ok' ORDER BY name LIMIT 10")).rows) out.push({ name: 'Alert: ' + a.name.replaceAll('_', ' '), state: 'bad', detail: 'State: ' + a.state, page: 'legacy:overview' });
+  const beat = new Map((await db.query("SELECT name,last_ok FROM runtime_heartbeat")).rows.map((r) => [r.name, r.last_ok]));
+  const lAge = beat.has('local_backup') ? hours(beat.get('local_backup')) : null, tAge = beat.has('backup_restore_test') ? hours(beat.get('backup_restore_test')) : null;
+  out.push({ name: 'Server backup', state: lAge === null ? 'warn' : lAge > 26 ? 'bad' : 'ok', detail: lAge === null ? 'No backup reported yet' : `Last backup ${Math.round(lAge)} hours ago`, page: 'legacy:overview' });
+  out.push({ name: 'Restore test', state: tAge === null ? 'warn' : tAge > 50 ? 'bad' : 'ok', detail: tAge === null ? 'No restore test reported yet' : `Latest backup restored cleanly ${Math.round(tAge)} hours ago`, page: 'legacy:overview' });
+  const apis = [...beat].filter(([n, t]) => n.startsWith('api:') && hours(t) * 60 < 3).length;
+  out.push({ name: 'API instances', state: apis >= 2 ? 'ok' : apis === 1 ? 'warn' : 'bad', detail: apis >= 2 ? `${apis} running; one can fail without an outage` : apis === 1 ? 'One running; no spare' : 'None reporting', page: 'legacy:overview' });
+  const errs = (await db.query("SELECT count(*)::int n,(SELECT method||' '||route FROM runtime_errors ORDER BY at DESC LIMIT 1) AS last FROM runtime_errors WHERE at>now()-interval '24 hours'")).rows[0];
+  out.push({ name: 'Server errors', state: errs.n >= 20 ? 'bad' : errs.n ? 'warn' : 'ok', detail: errs.n ? `${errs.n} in the last 24 hours. Latest: ${errs.last}` : 'None in the last 24 hours', page: 'legacy:overview' });
+  for (const a of (await db.query("SELECT name,state FROM runtime_alerts WHERE state NOT IN ('ok','healthy') ORDER BY name LIMIT 10")).rows) out.push({ name: 'Alert: ' + a.name.replaceAll('_', ' '), state: 'bad', detail: 'State: ' + a.state, page: 'legacy:overview' });
   const privacy = (await db.query("SELECT count(*)::int n,min(created_at) oldest FROM privacy_requests WHERE status='pending'")).rows[0];
   out.push({ name: 'Privacy requests', state: privacy.n ? (hours(privacy.oldest) > 14 * 24 ? 'bad' : 'warn') : 'ok', detail: privacy.n ? `${privacy.n} waiting for review` : 'None waiting', page: 'legacy:privacy' });
   return out;

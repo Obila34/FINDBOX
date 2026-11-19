@@ -3,7 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { Camera, Check, Home, ImagePlus, MapPin, Plus, RotateCcw, ScanLine, X } from "lucide-react";
 import { squarePhoto } from "./profile";
 import { useScanner } from "@/lib/useScanner";
-import { api } from "./api";
+import { api, ApiError } from "./api";
+import { queueFound } from "./school/offline";
 import { notify } from "./feedback";
 import "./houses.css";
 
@@ -56,13 +57,22 @@ export function FoundScan({ staff = false, boxes = [], onDone, onCase }: { staff
   async function handIn(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
+    const staffBody = { title: d.title, category: d.category, boxId: d.boxId, privateNote: d.where || "Logged by school staff", photo, foundAt: d.foundAt || "", valuable: d.valuable === "on" };
+    // Staff can log with no connection: the item waits on this phone, and its key stops it being logged twice.
+    const key = staff && window.crypto?.randomUUID ? window.crypto.randomUUID() : "";
+    const keep = () => {
+      const kept = queueFound(staffBody, d.title, key);
+      if (kept === "full") { notify("This phone is holding as many unsent items as it can. Connect to send them first.", "error"); return; }
+      setDone({ mine: false, message: kept === "saved" ? "Saved on this phone. It is sent to FindBox as soon as you are back online." : "Saved on this phone without the photo. It is sent as soon as you are back online." });
+    };
+    if (staff && key && !navigator.onLine) { keep(); return; }
     setBusy(true);
     try {
       const r = await api<{ message: string }>(staff ? "/staff/unclaimed" : "/found/untagged", staff
-        ? { title: d.title, category: d.category, boxId: d.boxId, privateNote: d.where || "Logged by school staff", photo, foundAt: d.foundAt || "", valuable: d.valuable === "on" }
+        ? { ...staffBody, ...(key ? { clientKey: key } : {}) }
         : { title: d.title, category: d.category, where: d.where || "", boxId: d.boxId || "", photo });
       setDone({ mine: false, message: staff ? "Logged in the unclaimed gallery. Families can now claim it." : r.message }); onDone?.();
-    } catch { /* toast shown */ } finally { setBusy(false); }
+    } catch (err) { if (staff && key && err instanceof ApiError && err.status === 0) keep(); } finally { setBusy(false); }
   }
   async function addBelonging(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

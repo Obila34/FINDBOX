@@ -164,6 +164,55 @@ export async function schoolDeskRoutes(app, { pool, user }) {
     })) };
   });
 
+  // ---- End-of-term clear-out: many items at once, still under the two-person rule ----
+  async function clearoutRows(db, sid, uid) {
+    const rows = (await db.query(CASES + " AND c.status IN ('awaiting_collection','unclaimed') ORDER BY c.created_at LIMIT 1000", [sid])).rows.filter((c) => overdue(c) || holdOver(c));
+    if (!rows.length) return [];
+    const ids = rows.map((c) => c.id);
+    const asked = new Map((await db.query("SELECT DISTINCT ON (r.case_id) r.case_id,r.actor_id,a.name FROM case_reviews r JOIN users a ON a.id=r.actor_id WHERE r.case_id=ANY($1) AND r.kind='disposal_request' AND NOT EXISTS(SELECT 1 FROM case_reviews x WHERE x.case_id=r.case_id AND x.kind='disposal_approved' AND x.created_at>r.created_at) ORDER BY r.case_id,r.created_at DESC", [ids])).rows.map((r) => [r.case_id, r]));
+    const claimed = new Set((await db.query("SELECT case_id FROM claims WHERE case_id=ANY($1) AND status='submitted'", [ids])).rows.map((r) => r.case_id));
+    return rows.map((c) => { const a = asked.get(c.id); return {
+      id: c.id, itemId: c.item_id, ref: ref(c), title: c.title, valuable: c.valuable, where: c.box || 'No box recorded', ageDays: Math.floor(days(c.created_at)),
+      owner: c.child ? `${c.child}${c.class_name ? ' · ' + c.class_name : ''}` : 'Owner not known', why: holdOver(c) ? `Held over ${HOLD_DAYS} days` : 'Past collection date',
+      claimed: claimed.has(c.id), requestedBy: a?.name || null, requestedByMe: a?.actor_id === uid,
+    }; });
+  }
+  app.get('/api/school/desk/clearout', async (req) => {
+    const u = await desk(req);
+    return { holdDays: HOLD_DAYS, canApprove: u.role === 'manager', rows: (await clearoutRows(pool, u.school_id, u.id)).map(({ itemId, ...r }) => r) };
+  });
+  app.post('/api/school/desk/clearout', async (req) => {
+    const u = await desk(req);
+    const d = z.object({ action: z.enum(['request', 'approve']), caseIds: z.array(z.string().max(100)).min(1).max(200), note: z.string().trim().min(8).max(1000) }).strict().parse(req.body);
+    if (d.action === 'approve') requireThat(u.role === 'manager', 403, 'School administrator approval required');
+    return transaction(pool, async (db) => {
+      await db.query('SELECT id FROM cases WHERE id=ANY($1) AND school_id=$2 FOR UPDATE', [d.caseIds, u.school_id]);
+      const eligible = new Map((await clearoutRows(db, u.school_id, u.id)).map((r) => [r.id, r]));
+      let done = 0; const skipped = [];
+      for (const cid of [...new Set(d.caseIds)]) {
+        const r = eligible.get(cid), skip = (why) => skipped.push({ title: r?.title || 'An item', why });
+        if (!r) { skip('It is no longer waiting past its date'); continue; }
+        if (r.claimed) { skip('Someone has claimed it: review the claim first'); continue; }
+        if (d.action === 'request') {
+          if (r.requestedBy) { skip('Donation already requested by ' + r.requestedBy); continue; }
+        } else {
+          // The same safeguards as approving one item: a second person, and valuables one at a time.
+          if (r.valuable) { skip('Valuables are decided one at a time'); continue; }
+          if (!r.requestedBy) { skip('No one has requested its donation yet'); continue; }
+          if (r.requestedByMe) { skip('Someone else must approve what you requested'); continue; }
+          await db.query("UPDATE cases SET status='closed' WHERE id=$1", [r.id]);
+          if (r.itemId) await db.query("UPDATE items SET status='closed' WHERE id=$1", [r.itemId]);
+        }
+        const kind = d.action === 'request' ? 'disposal_request' : 'disposal_approved';
+        await db.query('INSERT INTO case_reviews(id,case_id,school_id,kind,note,actor_id) VALUES($1,$2,$3,$4,$5,$6)', [id(), r.id, u.school_id, kind, d.note, u.id]);
+        await db.query('INSERT INTO events(id,case_id,actor_id,action,note) VALUES($1,$2,$3,$4,$5)', [id(), r.id, u.id, kind, d.note]);
+        await operationAudit(db, u, 'case_' + kind, r.id, d.note, { bulk: true });
+        done++;
+      }
+      return { done, skipped };
+    });
+  });
+
   // ---- Small actions staff need at the box ----
   app.post('/api/school/desk/case/:id/remind', async (req) => {
     const u = await desk(req);

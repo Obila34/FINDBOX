@@ -67,7 +67,7 @@ export async function companyRoutes(app, { pool, cfg, user, daraja }) {
       alerts:(await pool.query('SELECT name,state,notified_at FROM runtime_alerts ORDER BY name')).rows,
       worker: (await pool.query("SELECT last_ok,now()-last_ok AS age FROM runtime_heartbeat WHERE name='worker'")).rows[0]||null,
       integrations: { payments: !!cfg.paystackKey, darajaSandbox: darajaConfigured(cfg), email: mailReady(cfg), google: !!(cfg.googleClientId && cfg.googleClientSecret) },
-      note: 'Process metrics reset on restart. Email acceptance does not prove inbox delivery. Off-site laptop backups require sign-in, network and SSH agent; off-site backup, failed-email and disk checks send state-change alerts to hello@findbox.africa. This is not a 24/7 independent uptime service.'
+      note: 'Process metrics reset on restart. Email acceptance does not prove inbox delivery. Backups run every six hours and are restore-tested daily; disk, memory, errors, backups and API instances are checked every five minutes and a change sends an alert email. An outside check watches the public site every ten minutes.'
     };
   });
   await darajaRoutes(app,{pool,cfg,operator,daraja});

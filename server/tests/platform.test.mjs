@@ -1927,3 +1927,107 @@ test("the assistant works the CRM: pipeline, tasks, health and system issues, ea
   assert.equal(done.statusCode, 200, done.body);
   assert.deepEqual(Object.values((await pool.query("SELECT status,severity FROM crm_issues WHERE title='assistant checkout is down'")).rows[0]), ["triaged", "s1"]);
 });
+
+test("production hardening: consent on next sign-in, bulk clear-out under the two-person rule, offline-safe logging and monitoring checks", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com"), parent = await login("desk-parent@test.com");
+  const req = (method, url, payload, cookie, portal = "school") => app.inject({ method, url, payload, remoteAddress: "127.0.9.6", headers: { origin: "http://localhost:5173", ...(portal ? { "x-findbox-portal": portal } : {}), ...(payload ? { "x-findbox-request": "1" } : {}), ...(cookie ? { cookie } : {}) } });
+
+  // A parent who joined before the Terms existed is asked once, and the answer is recorded with its version.
+  await pool.query("UPDATE users SET consent_at=NULL,consent_version=NULL WHERE id='desk-parent'");
+  let me = (await req("GET", "/api/auth/me", undefined, parent, "family")).json();
+  assert.equal(me.needsConsent, true);
+  assert.equal((await req("POST", "/api/account/consent", { agree: false }, parent, "family")).statusCode, 400);
+  assert.equal((await req("POST", "/api/account/consent", { agree: true }, parent, "family")).statusCode, 200);
+  me = (await req("GET", "/api/auth/me", undefined, parent, "family")).json();
+  assert.equal(me.needsConsent, false);
+  assert.ok((await pool.query("SELECT consent_at FROM users WHERE id='desk-parent' AND consent_version IS NOT NULL")).rows[0].consent_at);
+  assert.equal((await req("GET", "/api/auth/me", undefined, teacher)).json().needsConsent, false, "staff are covered by the school's agreement");
+  assert.equal((await req("POST", "/api/account/consent", { agree: true }, teacher)).statusCode, 400);
+
+  // End-of-term clear-out: many items at once, and the safeguards for one item still hold for each.
+  await pool.query(`INSERT INTO cases(id,school_id,box_id,title,category,status,created_at,valuable) VALUES
+    ('clear-1','desk','desk-box','Old blue cap','clothing','unclaimed',now()-interval '45 days',false),
+    ('clear-2','desk','desk-box','Old lunch bag','other','unclaimed',now()-interval '50 days',false),
+    ('clear-3','desk','desk-box','Old phone','other','unclaimed',now()-interval '60 days',true),
+    ('clear-4','desk','desk-box','Fresh scarf','clothing','unclaimed',now()-interval '3 days',false)`);
+  await pool.query("INSERT INTO cases(id,school_id,box_id,title,category,status,created_at,due_at,student_id) VALUES('clear-5','desk','desk-box','Uncollected jumper','clothing','awaiting_collection',now()-interval '20 days',now()-interval '2 days','desk-kid')");
+  let list = (await req("GET", "/api/school/desk/clearout", undefined, teacher)).json();
+  assert.equal(list.canApprove, false);
+  const mine = (id) => list.rows.find((r) => r.id === id);
+  assert.ok(mine("clear-1") && mine("clear-2") && mine("clear-3") && mine("clear-5") && !mine("clear-4"), "only items past their date are listed");
+  assert.equal(mine("clear-5").why, "Past collection date");
+  assert.match(mine("clear-5").owner, /Tumaini Desk/);
+  const ids = ["clear-1", "clear-2", "clear-3", "clear-4", "clear-5"];
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "End of term clear-out" }, teacher)).statusCode, 403, "only the administrator approves");
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ids, note: "short" }, teacher)).statusCode, 400, "a reason is required");
+  // Nothing has been requested yet, so there is nothing the administrator can approve.
+  let r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ids, note: "End of term clear-out" }, teacher)).json();
+  assert.equal(r.done, 4);
+  assert.deepEqual(r.skipped.map((x) => x.why), ["It is no longer waiting past its date"]);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ["clear-1"], note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0, "an item is requested once");
+  list = (await req("GET", "/api/school/desk/clearout", undefined, head)).json();
+  assert.equal(list.canApprove, true);
+  assert.equal(list.rows.find((x) => x.id === "clear-1").requestedBy, "Desk Teacher");
+  assert.equal(list.rows.find((x) => x.id === "clear-1").requestedByMe, false);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ids, note: "Approved for the charity collection" }, head)).json();
+  assert.equal(r.done, 3);
+  assert.ok(r.skipped.some((x) => x.title === "Old phone" && /one at a time/.test(x.why)), "valuables are never approved in bulk");
+  assert.deepEqual((await pool.query("SELECT id,status FROM cases WHERE id LIKE 'clear-%' ORDER BY id")).rows.map((c) => c.status), ["closed", "closed", "unclaimed", "unclaimed", "closed"]);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM case_reviews WHERE case_id LIKE 'clear-%' AND kind='disposal_approved'")).rows[0].n, 3);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM events WHERE case_id='clear-1' AND action IN ('disposal_request','disposal_approved')")).rows[0].n, 2, "each item keeps its own trail");
+  // Nobody approves their own request.
+  await pool.query("INSERT INTO cases(id,school_id,box_id,title,category,status,created_at) VALUES('clear-6','desk','desk-box','Old ruler','other','unclaimed',now()-interval '40 days')");
+  assert.equal((await req("POST", "/api/school/desk/clearout", { action: "request", caseIds: ["clear-6"], note: "End of term clear-out" }, head)).json().done, 1);
+  r = (await req("POST", "/api/school/desk/clearout", { action: "approve", caseIds: ["clear-6"], note: "End of term clear-out" }, head)).json();
+  assert.equal(r.done, 0);
+  assert.match(r.skipped[0].why, /Someone else must approve/);
+
+  // A phone that lost its connection sends the same log twice; it is recorded once.
+  const key = crypto.randomUUID(), body = { title: "Offline water bottle", category: "bottle", boxId: "desk-box", privateNote: "Logged offline", clientKey: key };
+  const first = await req("POST", "/api/staff/unclaimed", body, teacher);
+  assert.equal(first.statusCode, 200, first.body);
+  const again = await req("POST", "/api/staff/unclaimed", body, teacher);
+  assert.equal(again.statusCode, 200, again.body);
+  assert.equal(again.json().id, first.json().id);
+  assert.equal(again.json().alreadyLogged, true);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM cases WHERE title='Offline water bottle'")).rows[0].n, 1);
+  assert.equal((await req("POST", "/api/staff/unclaimed", { ...body, clientKey: "not-a-key" }, teacher)).statusCode, 400);
+
+  // The outside uptime check reads this: no private detail, only whether background work and backups are fresh.
+  let deep = (await req("GET", "/api/health/deep", undefined, undefined, "")).json();
+  assert.equal(deep.status, "degraded", "no backup has reported yet");
+  assert.deepEqual(Object.keys(deep.checks).sort(), ["backup", "database", "offsiteBackup", "restoreTest", "worker"]);
+  await pool.query("INSERT INTO runtime_heartbeat(name,last_ok) VALUES('worker',now()),('local_backup',now()),('backup_restore_test',now()),('api:api-1',now()),('api:api-2',now()) ON CONFLICT(name) DO UPDATE SET last_ok=now()");
+  deep = (await req("GET", "/api/health/deep", undefined, undefined, "")).json();
+  assert.equal(deep.status, "ok");
+
+  // Monitoring: each check reports a problem or not; a problem opens one issue for the developer and recovery clears the alert.
+  const { operationalChecks, operationalAlerts } = await import("../operational-alerts.mjs");
+  let checks = new Map((await operationalChecks(pool, { apiInstances: 2 })).map(([name, problem]) => [name, problem]));
+  assert.equal(checks.get("local_backup"), false);
+  assert.equal(checks.get("backup_restore_test"), false);
+  assert.equal(checks.get("api_instances"), false);
+  assert.equal(checks.get("server_errors"), false);
+  assert.equal(checks.get("offsite_backup"), true, "nothing has copied a backup off the server in this test");
+  await pool.query("UPDATE runtime_heartbeat SET last_ok=now()-interval '10 minutes' WHERE name='api:api-2'");
+  await pool.query("INSERT INTO runtime_errors(method,route,message) SELECT 'GET','/api/test','boom' FROM generate_series(1,12)");
+  checks = new Map((await operationalChecks(pool, { apiInstances: 2 })).map(([name, problem]) => [name, problem]));
+  assert.equal(checks.get("api_instances"), true);
+  assert.equal(checks.get("server_errors"), true);
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT state FROM runtime_alerts WHERE name='server_errors'")).rows[0].state, "attention");
+  assert.equal((await pool.query("SELECT count(*)::int n FROM crm_issues WHERE source='monitor' AND title='Monitoring: server errors' AND severity='s1'")).rows[0].n, 1);
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT count(*)::int n FROM crm_issues WHERE source='monitor' AND title='Monitoring: server errors'")).rows[0].n, 1, "one issue, not one per check");
+  await pool.query("DELETE FROM runtime_errors");
+  await pool.query("UPDATE runtime_heartbeat SET last_ok=now() WHERE name='api:api-2'");
+  await operationalAlerts(pool, { apiInstances: 2 });
+  assert.equal((await pool.query("SELECT state FROM runtime_alerts WHERE name='server_errors'")).rows[0].state, "healthy");
+
+  // A failed request is kept for the developer.
+  const { modelLoad } = await import("../assistant/llm.mjs");
+  assert.deepEqual({ active: modelLoad().active, waiting: modelLoad().waiting }, { active: 0, waiting: 0 }, "no model call is left holding the queue");
+});

@@ -414,7 +414,7 @@ const pickOne = (list, query, label) => {
 }
 const SEVERITIES = ['s1', 's2', 's3', 's4'], LEAD_STAGES = ['contacted', 'demo', 'proposal', 'won', 'new']
 const MORE_TOOLS = [
-  { name: 'what_can_you_do', roles: ['admin', 'developer', 'principal'], kind: 'read', label: 'Listing what I can do',
+  { name: 'what_can_you_do', roles: ['admin', 'developer', 'principal'], kind: 'read', label: 'Listing what I can do', plain: true,
     desc: 'Help: everything this assistant can look up or prepare for you.',
     keywords: [/^help\b|what can you (do|help)|what do you do|your (tools|abilities|capabilities)|how (do|can) (i|you) use (you|this)/i], params: {},
     async run(ctx) {

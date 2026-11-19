@@ -233,3 +233,10 @@ CREATE INDEX IF NOT EXISTS claims_status_idx ON claims(status);
 CREATE INDEX IF NOT EXISTS house_stars_user_idx ON house_stars(user_id);
 CREATE INDEX IF NOT EXISTS crm_tasks_entity_idx ON crm_tasks(entity_type,entity_id);
 CREATE INDEX IF NOT EXISTS operation_audit_entity_idx ON operation_audit(entity_id,created_at DESC);
+
+-- Offline-safe logging: a phone that retries after losing signal never logs the same item twice.
+ALTER TABLE cases ADD COLUMN IF NOT EXISTS client_key text;
+CREATE UNIQUE INDEX IF NOT EXISTS cases_client_key_idx ON cases(client_key) WHERE client_key IS NOT NULL;
+-- Server errors are kept for two weeks so the developer can see what failed without reading logs.
+CREATE TABLE IF NOT EXISTS runtime_errors(id bigserial PRIMARY KEY,at timestamptz NOT NULL DEFAULT now(),method text NOT NULL,route text NOT NULL,message text NOT NULL,instance text NOT NULL DEFAULT 'api');
+CREATE INDEX IF NOT EXISTS runtime_errors_at_idx ON runtime_errors(at DESC);

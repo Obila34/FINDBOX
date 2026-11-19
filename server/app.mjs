@@ -142,6 +142,8 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
           : err.statusCode || 500;
     if (status >= 500) {
       req.log.error({ err }, "Request failed");
+      // Kept for the developer's system signals and the monitoring alert; never blocks the reply.
+      pool.query("INSERT INTO runtime_errors(method,route,message,instance) VALUES($1,$2,$3,$4)", [req.method, String(req.routeOptions?.url || req.url.split("?")[0]).slice(0, 200), String(err.message || "").slice(0, 500), process.env.INSTANCE_NAME || "api"]).catch(() => {});
       if (process.env.FINDBOX_TEST_DEBUG === "1") console.error(err);
     }
     reply.code(status).send({
@@ -306,6 +308,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
     await pool.query("SELECT 1");
     return { status: "ok" };
   });
+  // For the outside uptime check: is the background work running, and are backups fresh? No private detail.
+  app.get("/api/health/deep", async () => {
+    const beat = new Map((await pool.query("SELECT name,last_ok FROM runtime_heartbeat")).rows.map((r) => [r.name, r.last_ok]));
+    const fresh = (name, hours) => beat.has(name) && Date.now() - new Date(beat.get(name)).getTime() < hours * 3600000;
+    const checks = { database: true, worker: fresh("worker", 0.1), backup: fresh("local_backup", 26), restoreTest: fresh("backup_restore_test", 50), offsiteBackup: fresh("offsite_backup", 36) };
+    return { status: checks.worker && checks.backup ? "ok" : "degraded", checks };
+  });
   app.get("/api/products", async () => ({
     products: (
       await pool.query(
@@ -382,6 +391,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
   );
   app.get("/api/auth/me", async (req) => ({
     user: publicUser(await user(req, true)),
+    // Parents who joined before the Terms existed are asked to agree the next time they open the app.
+    needsConsent: await (async () => { const u = await user(req, true); return u.role === "parent" && !u.company_role && u.consent_version !== LEGAL_VERSION; })(),
     security: await (async () => {
       const u = await user(req, true);
       return {
@@ -395,6 +406,13 @@ If this was you, there is nothing to do. If not, change your password and sign o
       };
     })(),
   }));
+  app.post("/api/account/consent", async (req) => {
+    const u = await user(req, true);
+    const d = z.object({ agree: z.literal(true) }).strict().parse(req.body);
+    requireThat(d.agree && u.role === "parent", 400, "Only a parent or guardian account agrees to the Terms");
+    await pool.query("UPDATE users SET consent_at=now(),consent_version=$1 WHERE id=$2", [LEGAL_VERSION, u.id]);
+    return { ok: true, version: LEGAL_VERSION };
+  });
   app.post("/api/auth/logout", async (req, reply) => {
     const p = requestPortal(req), names = p ? [COOKIE[p]] : Object.values(COOKIE);
     for (const name of names) {
@@ -904,6 +922,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
         photo: z.string().max(240000).nullable().default(null),
         foundAt: z.string().trim().max(200).default(""),
         valuable: z.boolean().default(false),
+        clientKey: z.string().uuid().optional(),
       }),
       req.body,
     );
@@ -916,10 +935,15 @@ If this was you, there is nothing to do. If not, change your password and sign o
         )
       ).rows[0];
       requireThat(box, 400, "Invalid box");
+      // A phone that was offline sends the same log again until it hears back; the key makes that harmless.
+      if (d.clientKey) {
+        const before = (await db.query("SELECT id FROM cases WHERE client_key=$1 AND school_id=$2", [d.clientKey, u.school_id])).rows[0];
+        if (before) return { id: before.id, alreadyLogged: true };
+      }
       const caseId = id();
       await db.query(
-        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo,found_at,valuable) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7,$8,$9)",
-        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo, d.foundAt, d.valuable],
+        "INSERT INTO cases(id,school_id,box_id,title,category,private_note,status,photo,found_at,valuable,client_key) VALUES($1,$2,$3,$4,$5,$6,'unclaimed',$7,$8,$9,$10)",
+        [caseId, u.school_id, box.id, d.title, d.category, d.privateNote, d.photo, d.foundAt, d.valuable, d.clientKey || null],
       );
       await event(db, caseId, u.id, "found_unclaimed");
       return { id: caseId };

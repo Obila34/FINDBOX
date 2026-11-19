@@ -187,6 +187,14 @@ Known schools: ${schools.join(', ')}` : ''}` },
   return { tool, args: validate(tool, args) }
 }
 
+const asked = new Map(), USE_WINDOW = 5 * 60000, USE_LIMIT = Number(process.env.ASSISTANT_USER_LIMIT || 15)
+function overUse(userId) {
+  const now = Date.now(), recent = (asked.get(userId) || []).filter((t) => t > now - USE_WINDOW)
+  recent.push(now); asked.set(userId, recent)
+  if (asked.size > 2000) asked.delete(asked.keys().next().value)
+  return recent.length > USE_LIMIT
+}
+
 export async function assistantRoutes(app, { pool, cfg, user }) {
   const call = (req) => async (method, url, body) => {
     const r = await app.inject({ method, url, payload: body, remoteAddress: req.ip, headers: {
@@ -276,7 +284,9 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
     const tools = toolsFor(a.role)
     const ctx = { pool, api: call(req), role: a.role, memory, schools: a.role === 'principal' ? [] : await schoolNames(), reason: ('FindBox assistant: ' + message).slice(0, 480), requestKey: randomUUID() }
     let online = true
-    const llm = async (fn) => { if (!online) return null; try { return await fn() } catch (e) { if (abort.signal.aborted) throw e; online = false; send('status', { text: 'The AI model is offline, so I am answering from rules only.', offline: true }); return null } }
+    const llm = async (fn) => { if (!online) return null; try { return await fn() } catch (e) { if (abort.signal.aborted) throw e; online = false; send('status', { text: e.busy ? 'The AI model is busy right now, so I am answering from rules only.' : 'The AI model is offline, so I am answering from rules only.', offline: true }); return null } }
+    // Fair use: one person asking very quickly cannot keep the model to themselves.
+    if (overUse(a.userId)) { online = false; send('status', { text: 'You have asked a lot in a few minutes, so I am answering from rules for now.', offline: true }) }
     let text = '', data = {}
     try {
       const planned = await plan({ message, tools, history, memory, schools: ctx.schools, ask: llm, cfg, signal: abort.signal, onStatus: (t) => send('status', { text: t }) })
@@ -309,7 +319,9 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
         }
         const msgs = [{ role: 'system', content: systemPrompt(a) + (lead ? ' The user already sees this first line: "' + lead + '" Do not repeat it. Add at most three short bullets of insight from the DATA, or reply with nothing if there is nothing useful to add.' : '') }, ...history.slice(-5, -1).map(h => ({ role: h.role, content: h.content.slice(0, 400) }))]
         msgs.push({ role: 'user', content: result ? `DATA from ${tool.name}:\n${compact(result)}\n\nQuestion: ${message}` : `${message}\n\n(You can look up: ${tools.filter(t => t.kind === 'read').map(t => t.desc.split(':')[0].split('.')[0].toLowerCase()).slice(0, 8).join('; ')}. You can also prepare changes for confirmation.)` })
-        const streamed = await llm(() => stream(cfg, msgs, (piece) => send('token', { text: piece }), { signal: abort.signal }))
+        // Nothing to add to an empty result or a plain list, so the model is not asked.
+        const plain = result && (!result.rows.length || tool.plain)
+        const streamed = plain ? '' : await llm(() => stream(cfg, msgs, (piece) => send('token', { text: piece }), { signal: abort.signal }))
         if (lead) text = lead + (streamed ? '\n\n' + streamed : '')
         else if (streamed) text = streamed
         else {

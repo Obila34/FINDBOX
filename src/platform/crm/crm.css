@@ -254,3 +254,92 @@ li.is-done > div { text-decoration: line-through; opacity: .55; }
   #crm-labels figure { display: grid; justify-items: center; gap: 1.5mm; margin: 0; padding: 2mm; border: .2mm dashed #9aa; border-radius: 2mm; break-inside: avoid; }
   #crm-labels figcaption { font: 700 8pt Arial, sans-serif; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
 }
+
+/* ===== Older sections (invoices, accounts, system health and the rest), dressed as the rest of the CRM =====
+   Same markup and behaviour; only the look changes: calm headings, bordered cards, one dark primary button. */
+.crm-root .cx-bare { color: var(--c-ink); font-size: 14px; }
+.crm-root .cx-bare .cx-content { padding: 0 !important; max-width: none; }
+.crm-root .cx-bare .cx-section { display: grid; gap: 16px; padding: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+.crm-root .cx-bare .co-eyebrow { display: none; }
+.crm-root .cx-bare .cx-section-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 6px 0 4px; padding: 0; border: 0; background: none; }
+.crm-root .cx-bare .cx-section-header h1 { margin: 0; font-size: 26px; font-weight: 500; letter-spacing: -.02em; color: var(--c-ink); }
+.crm-root .cx-bare .cx-section-header p { margin: 4px 0 0; color: var(--c-mute); font-size: 13.5px; }
+/* Buttons: one dark primary, everything else outlined. */
+.crm-root .cx-bare .co-button, .crm-root .cx-modal .co-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 0; padding: 9px 16px; border: 0 !important; border-radius: 10px !important; background: var(--c-ink) !important; color: var(--c-page) !important; font-size: 13.5px; font-weight: 600; box-shadow: 0 6px 18px rgba(0, 0, 0, .16); transition: transform .15s ease, box-shadow .2s ease; }
+.crm-root .cx-bare .co-button:hover:not(:disabled), .crm-root .cx-modal .co-button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(0, 0, 0, .22); }
+.crm-root .cx-bare .co-button:disabled, .crm-root .cx-modal .co-button:disabled { opacity: .5; }
+.crm-root .cx-bare .cx-section-header button:not(.co-button), .crm-root .cx-bare .cx-record-actions button, .crm-root .cx-bare .cx-pagination button, .crm-root .cx-bare .cx-download button, .crm-root .cx-bare .cx-banner button {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 0; padding: 8px 13px; border: 1px solid var(--c-line) !important; border-radius: 10px !important; background: transparent !important; color: var(--c-ink) !important; font-size: 13px; font-weight: 500; box-shadow: none !important; }
+.crm-root .cx-bare .cx-section-header button:not(.co-button):hover, .crm-root .cx-bare .cx-record-actions button:hover:not(:disabled), .crm-root .cx-bare .cx-pagination button:hover:not(:disabled) { background: var(--c-soft) !important; border-color: var(--c-ink) !important; }
+.crm-root .cx-bare .cx-pagination button:disabled, .crm-root .cx-bare .cx-record-actions button:disabled { opacity: .45; }
+/* Search: a plain field, not a card. */
+.crm-root .cx-bare .cx-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; }
+.crm-root .cx-bare .cx-toolbar > label, .crm-root .cx-bare .cx-toolbar > div:first-child { display: flex; align-items: center; gap: 8px; flex: 1 1 280px; max-width: 420px; padding: 0 12px !important; border: 1px solid var(--c-line) !important; border-radius: 10px !important; background: transparent !important; box-shadow: none !important; }
+.crm-root .cx-bare .cx-toolbar input { flex: 1; min-width: 0; padding: 9px 0 !important; border: 0 !important; background: transparent !important; color: var(--c-ink); font-size: 13.5px; box-shadow: none !important; outline: 0; }
+.crm-root .cx-bare .cx-toolbar svg { color: var(--c-mute); }
+/* Records: the same bordered rows as the customer tables. */
+.crm-root .cx-bare .cx-records { display: grid; gap: 0; border: 1px solid var(--c-line); border-radius: 14px; overflow: hidden; background: var(--c-page); }
+.crm-root .cx-bare .cx-record { display: flex; align-items: center; gap: 14px; margin: 0 !important; padding: 13px 16px !important; border: 0 !important; border-bottom: 1px solid var(--c-line) !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; transition: background .15s ease; }
+.crm-root .cx-bare .cx-record:last-child { border-bottom: 0 !important; }
+.crm-root .cx-bare .cx-record:hover { background: var(--c-soft) !important; transform: none !important; }
+.crm-root .cx-bare .cx-record-icon { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px !important; background: var(--c-soft) !important; color: var(--c-ink) !important; }
+.crm-root .cx-bare .cx-record-icon svg { width: 17px; height: 17px; color: var(--c-ink) !important; stroke: currentColor; }
+.crm-root .cx-bare .cx-record-data { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.crm-root .cx-bare .cx-record-data strong, .crm-root .cx-bare .cx-record-data h3 { font-size: 14px; font-weight: 600; color: var(--c-ink); }
+.crm-root .cx-bare .cx-record-data span, .crm-root .cx-bare .cx-record-data small, .crm-root .cx-bare .cx-record-data p { color: var(--c-mute); font-size: 12.5px; }
+.crm-root .cx-bare .cx-record-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; color: var(--c-mute); font-size: 12px; }
+.crm-root .cx-bare .cx-empty { display: grid; justify-items: center; gap: 6px; padding: 34px 18px !important; border: 1px dashed var(--c-line) !important; border-radius: 14px !important; background: transparent !important; color: var(--c-mute); text-align: center; }
+.crm-root .cx-bare .cx-empty svg { color: var(--c-mute) !important; }
+.crm-root .cx-bare .cx-empty h2, .crm-root .cx-bare .cx-empty h3, .crm-root .cx-bare .cx-empty strong { font-size: 15.5px; font-weight: 500; color: var(--c-ink) !important; }
+.crm-root .cx-bare .cx-empty p { font-size: 13px; color: var(--c-mute); }
+.crm-root .cx-bare .cx-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; font-size: 13px; color: var(--c-mute); }
+.crm-root .cx-bare .cx-banner, .crm-root .cx-bare .co-panel, .crm-root .cx-bare .cx-download { padding: 16px 18px !important; border: 1px solid var(--c-line) !important; border-radius: 14px !important; background: var(--c-page) !important; color: var(--c-ink) !important; box-shadow: none !important; }
+.crm-root .cx-bare .cx-new-pill { padding: 3px 8px; border: 1px solid var(--c-line); border-radius: 7px; background: transparent; color: var(--c-good); font-size: 11.5px; font-weight: 600; }
+.crm-root .cx-bare .co-error { padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--c-bad) 40%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--c-bad) 8%, transparent); color: var(--c-bad); font-size: 13px; }
+/* Dialogs and forms. */
+.crm-root .cx-modal > section { border: 1px solid var(--c-line) !important; border-radius: 18px !important; background: var(--c-page) !important; color: var(--c-ink) !important; box-shadow: 0 30px 80px rgba(0, 0, 0, .28) !important; }
+.crm-root .cx-modal h2 { font-size: 19px; font-weight: 500; letter-spacing: -.02em; color: var(--c-ink); }
+.crm-root .cx-modal label, .crm-root .cx-bare .cx-fieldset label { font-size: 12px; color: var(--c-mute); }
+.crm-root .cx-modal input:not([type=checkbox]):not([type=radio]), .crm-root .cx-modal select, .crm-root .cx-modal textarea { padding: 10px 12px; border: 1px solid var(--c-line) !important; border-radius: 10px !important; background: transparent !important; color: var(--c-ink) !important; font-size: 13.5px; box-shadow: none !important; }
+.crm-root .cx-modal input:focus, .crm-root .cx-modal select:focus, .crm-root .cx-modal textarea:focus, .crm-root .cx-bare .cx-toolbar > label:focus-within { border-color: var(--c-ink) !important; outline: 0; }
+.crm-root .cx-modal .cx-close { border: 1px solid var(--c-line); border-radius: 10px; background: transparent; color: var(--c-ink); }
+.crm-root .cx-modal .cx-form-note, .crm-root .cx-bare .cx-form-note { color: var(--c-mute); font-size: 12.5px; }
+.crm-root .cx-modal .cx-check input, .crm-root .cx-bare .cx-check input { accent-color: var(--c-ink); }
+
+/* System health and Sales & stock: the same cards, no coloured hero. */
+.crm-root .cx-bare .db-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; padding: 22px 24px !important; border: 1px solid var(--c-line) !important; border-radius: 16px !important; background: var(--c-band) !important; color: var(--c-ink) !important; box-shadow: none !important; overflow: hidden; }
+.crm-root .cx-bare .db-hero::before, .crm-root .cx-bare .db-hero::after, .crm-root .cx-bare .db-hero-art { display: none !important; }
+.crm-root .cx-bare .db-hero h1 { margin: 10px 0 4px; font-size: 26px; font-weight: 500; letter-spacing: -.02em; color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-hero p, .crm-root .cx-bare .db-hero .db-updated { color: var(--c-mute) !important; font-size: 13.5px; }
+.crm-root .cx-bare .db-hero .db-count, .crm-root .cx-bare .db-hero .db-clear { border: 1px solid var(--c-line) !important; border-radius: 7px !important; background: var(--c-page) !important; color: var(--c-ink) !important; font-size: 11.5px; font-weight: 600; }
+.crm-root .cx-bare .db-hero button, .crm-root .cx-bare .db-hero a { border: 1px solid var(--c-line) !important; border-radius: 10px !important; background: var(--c-page) !important; color: var(--c-ink) !important; font-size: 13px; font-weight: 500; box-shadow: none !important; }
+.crm-root .cx-bare .db-hero button:hover, .crm-root .cx-bare .db-hero a:hover { border-color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-card, .crm-root .cx-bare .db-kpis > *, .crm-root .cx-bare .db-services > * { border: 1px solid var(--c-line) !important; border-top: 1px solid var(--c-line) !important; border-left: 1px solid var(--c-line) !important; border-radius: 14px !important; background: var(--c-page) !important; color: var(--c-ink) !important; box-shadow: none !important; transition: box-shadow .25s ease, border-color .25s ease; }
+.crm-root .cx-bare .db-card:hover, .crm-root .cx-bare .db-kpis > *:hover { box-shadow: 0 16px 40px rgba(0, 0, 0, .08) !important; border-color: color-mix(in srgb, var(--c-ink) 22%, transparent) !important; transform: none !important; }
+.crm-root .cx-bare .db-kpis > *::before, .crm-root .cx-bare .db-card::before { display: none !important; }
+.crm-root .cx-bare .db-kpi-icon, .crm-root .cx-bare .db-service-icon, .crm-root .cx-bare .db-att-icon, .crm-root .cx-bare .db-avatar { border-radius: 10px !important; background: var(--c-soft) !important; color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-kpi-icon svg, .crm-root .cx-bare .db-service-icon svg, .crm-root .cx-bare .db-att-icon svg { color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-kpi-label, .crm-root .cx-bare .db-kpi-foot, .crm-root .cx-bare .db-muted, .crm-root .cx-bare .db-note, .crm-root .cx-bare .db-empty-line { color: var(--c-mute) !important; font-size: 12.5px; }
+.crm-root .cx-bare .db-kpis strong, .crm-root .cx-bare .db-kpis b { font-size: 28px; font-weight: 500 !important; letter-spacing: -.03em; color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-card h2, .crm-root .cx-bare .db-card h3 { font-size: 15.5px; font-weight: 500 !important; letter-spacing: -.02em; color: var(--c-ink) !important; }
+.crm-root .cx-bare .db-card .co-eyebrow { display: none; }
+.crm-root .cx-bare .db-attention li, .crm-root .cx-bare .db-attention a, .crm-root .cx-bare .db-attention button { border: 1px solid var(--c-line) !important; border-left: 1px solid var(--c-line) !important; border-radius: 12px !important; background: transparent !important; color: var(--c-ink) !important; box-shadow: none !important; }
+.crm-root .cx-bare .db-attention li:hover, .crm-root .cx-bare .db-attention a:hover, .crm-root .cx-bare .db-attention button:hover { background: var(--c-soft) !important; }
+.crm-root .cx-bare .db-filters, .crm-root .cx-bare .db-filters > div { border-radius: 10px !important; background: var(--c-soft) !important; }
+.crm-root .cx-bare .db-filters button { border: 0 !important; border-radius: 8px !important; background: transparent !important; color: var(--c-mute) !important; font-size: 12.5px; box-shadow: none !important; }
+.crm-root .cx-bare .db-filters button[aria-pressed="true"], .crm-root .cx-bare .db-filters button.active, .crm-root .cx-bare .db-filters button.is-on { background: var(--c-ink) !important; color: var(--c-page) !important; }
+.crm-root .cx-bare .db-link { color: var(--c-ink) !important; text-decoration: underline; text-underline-offset: 3px; }
+.crm-root .cx-bare .db-integrations span, .crm-root .cx-bare .db-integrations li { border: 1px solid var(--c-line) !important; border-radius: 7px !important; background: transparent !important; color: var(--c-ink) !important; font-size: 11.5px; }
+.crm-root .cx-bare .db-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.crm-root .cx-bare .db-table th { padding: 10px 14px; border-bottom: 1px solid var(--c-line); color: var(--c-mute); font-size: 11.5px; font-weight: 500; text-align: left; }
+.crm-root .cx-bare .db-table td { padding: 11px 14px; border-bottom: 1px solid var(--c-line); }
+.crm-root .cx-bare .db-spark-line { stroke: var(--c-ink) !important; }
+.crm-root .cx-bare .db-spark-fill { fill: var(--c-soft) !important; }
+
+.crm-root .cx-bare .cx-record-data { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 2px; }
+.crm-root .cx-bare .cx-record-data > strong, .crm-root .cx-bare .cx-record-data > h3 { flex-basis: 100%; margin: 0; }
+.crm-root .cx-bare .co-chart-controls [role=group] { padding: 3px; border: 0 !important; border-radius: 10px !important; background: var(--c-soft) !important; }
+.crm-root .cx-bare .co-chart-controls button { border: 0 !important; border-radius: 8px !important; background: transparent !important; color: var(--c-mute) !important; font-size: 12.5px; box-shadow: none !important; }
+.crm-root .cx-bare .co-chart-controls button[aria-pressed="true"] { background: var(--c-ink) !important; color: var(--c-page) !important; }
+.crm-root .cx-bare .co-trends h2 { font-size: 15.5px; font-weight: 500 !important; color: var(--c-ink) !important; }
+.crm-root .cx-bare .co-trends p { color: var(--c-mute) !important; font-size: 12.5px; }

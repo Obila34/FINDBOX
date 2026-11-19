@@ -2,6 +2,7 @@ import { FoundScan } from "./FoundScan";
 import { Houses } from "./Houses";
 import { useBackgroundRefresh } from '@/lib/useBackgroundRefresh'
 import { HomeDashboard } from './HomeDashboard'
+import { ConsentGate } from './ConsentGate'
 import { FamilyItems } from './FamilyItems'
 import './dashboard.css'
 import './school-admin.css'
@@ -26,7 +27,6 @@ import {
   Clock3,
   Check,
   School,
-  PackageCheck,
   Trophy,
   ShieldCheck,
   LifeBuoy,
@@ -123,8 +123,7 @@ export function Platform() {
       boxes: Workspace["boxes"];
     } | null>(null);
   const [packMode, setPackMode] = useState(true);
-  const [selectedCase, setSelectedCase] = useState(""),
-    [action, setAction] = useState("receive");
+  const [needsConsent, setNeedsConsent] = useState(false);
 
   const staff = !!user && ["staff", "manager"].includes(user.role);
   const auth = [
@@ -139,10 +138,10 @@ export function Platform() {
   const markRefreshed=useBackgroundRefresh(async()=>{const d=await api<Workspace>('/workspace');const changed=JSON.stringify(d)!==JSON.stringify(workspace);setWorkspace(d);setUser(d.user);return changed},!!user&&!auth&&!publicScan&&!busy,path,()=>setNotice('Your workspace updated in the background.'));
   const tabs = staff
     ? ([
-        ["/manage", "Queue", House],
-        ["/manage/log", "Receive", ScanLine],
-        ["/manage/collect", "Hand back", PackageCheck],
-        ["/app/inbox", "Inbox", Bell],
+        ["/manage", "Home", House],
+        ["/manage/box", "Items", Package],
+        ["/manage/scan", "Scan", ScanLine],
+        ["/manage/inbox", "Inbox", Bell],
         ...(user?.role === "manager" ? [["/app/school-admin", "School", School]] as const : []),
       ] as const)
     : user?.role === "student"
@@ -160,23 +159,6 @@ export function Platform() {
         ["/app/shop", "Shop", ShoppingBag],
         ["/app/inbox", "Inbox", Bell],
       ] as const);
-  useEffect(() => {
-    if (!selectedCase) return;
-    const previous = document.activeElement as HTMLElement | null;
-    const dialog = document.querySelector<HTMLElement>('[role="dialog"]');
-    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not([disabled]), input, select, a[href]') || []);
-    focusable()[0]?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSelectedCase('');
-      if (event.key === 'Tab') {
-        const elements = focusable(), first = elements[0], last = elements[elements.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
-  }, [selectedCase]);
   async function reload() {
     const d = await api<Workspace>("/workspace");
     setWorkspace(d);
@@ -187,7 +169,7 @@ export function Platform() {
     let live = true;
     api<{ user: User }>("/auth/me")
       .then((d) => {
-        if (live) { if ((d as {security?:{requiresMfa:boolean}}).security?.requiresMfa) {navigate("/app/sign-in");return} setUser(d.user); }
+        if (live) { if ((d as {security?:{requiresMfa:boolean}}).security?.requiresMfa) {navigate("/app/sign-in");return} setUser(d.user); setNeedsConsent(!!(d as {needsConsent?:boolean}).needsConsent); }
       })
       .catch((e) => {
         if (live && !(e instanceof ApiError && e.status === 401))
@@ -203,7 +185,6 @@ export function Platform() {
   useEffect(() => {
     setError("");
     setNotice("");
-    setSelectedCase("");
     if (user) {
       reload().catch((e) => {
         if (e.status === 401) {
@@ -280,18 +261,6 @@ export function Platform() {
                 <Countdown due={c.due_at} />
               )}
             </div>
-            {staff && c.status !== "returned" && (
-              <button
-                onClick={() => {
-                  setSelectedCase(c.id);
-                  setAction(
-                    c.status === "awaiting_collection" ? "collect" : "receive",
-                  );
-                }}
-              >
-                Manage <ArrowUpRight size={16} />
-              </button>
-            )}
           </article>
         ))}
       </div>
@@ -382,26 +351,6 @@ export function Platform() {
             {["/app/home", "/manage", "/manage/dashboard"].includes(path) && (
               <>
                 <HomeDashboard user={user} workspace={workspace} staff={staff} />
-                {staff && <>
-                <div className="fp-section-heading">
-                  <h2>The recovery queue</h2>
-                  <Link to="/app/gallery">
-                    Unclaimed items <ArrowUpRight size={17} />
-                  </Link>
-                </div>
-                {caseCards(
-                  workspace.cases.filter(
-                    (c) => !["returned", "closed"].includes(c.status),
-                  ),
-                )}
-                </>}
-              </>
-            )}
-            {path === "/manage/collect" && (
-              <>
-                <div className="fp-section-heading"><h2>Ready to hand back</h2><Link to="/manage">Full queue <ArrowUpRight size={17} /></Link></div>
-                <p className="fp-muted">Check the collector, then choose Manage and record the hand-back. The family is told straight away.</p>
-                {caseCards(workspace.cases.filter((c) => c.status === "awaiting_collection"))}
               </>
             )}
             {(path === "/app/items" || path.startsWith("/app/items/")) && (
@@ -688,134 +637,10 @@ export function Platform() {
                 <p className="fp-account-meta">{user.email}{user.verified ? "" : " · check your email to verify"}</p>
               </section>
             )}
-            {staff &&
-              workspace.claims.some((c) => c.status === "submitted") &&
-              path === "/manage" && (
-                <section>
-                  <h2>Claims to review</h2>
-                  {workspace.claims
-                    .filter((c) => c.status === "submitted")
-                    .map((c) => (
-                      <article key={c.id} className="fp-panel">
-                        <h3>
-                          {
-                            workspace.cases.find((x) => x.id === c.case_id)
-                              ?.title
-                          }
-                        </h3>
-                        <p>{c.evidence}</p>
-                        <div className="fp-actions">
-                          {["approved", "rejected"].map((decision) => (
-                            <button
-                              key={decision}
-                              disabled={busy}
-                              onClick={() =>
-                                run(async () => {
-                                  await api("/staff/claims/" + c.id, {
-                                    decision,
-                                  });
-                                  await reload();
-                                  setNotice("Claim " + decision);
-                                })
-                              }
-                            >
-                              {decision === "approved"
-                                ? "Verify ownership"
-                                : "Reject claim"}
-                            </button>
-                          ))}
-                        </div>
-                      </article>
-                    ))}
-                </section>
-              )}
-            {selectedCase && staff && (
-              <div className="fp-modal">
-                <section
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="case-title"
-                  className="fp-panel"
-                >
-                  <button
-                    onClick={() => setSelectedCase("")}
-                    className="fp-close"
-                    aria-label="Close case actions"
-                  >
-                    ×
-                  </button>
-                  <h2 id="case-title">
-                    {workspace.cases.find((c) => c.id === selectedCase)?.title}
-                  </h2>
-                  <p>
-                    Confirm physical receipt or check ownership before release.
-                  </p>
-                  <form
-                    onSubmit={(e) => {
-                      const d = fields(e);
-                      run(async () => {
-                        await api(
-                          "/staff/cases/" + selectedCase + "/" + action,
-                          action === "extend"
-                            ? { ...d, days: Number(d.days) }
-                            : d,
-                        );
-                        setSelectedCase("");
-                        await reload();
-                        setNotice("Case updated.");
-                      });
-                    }}
-                  >
-                    {action === "receive" ? (
-                      <label className="fp-field">
-                        <span>Confirmed collection box</span>
-                        <select name="boxId">
-                          {workspace.boxes.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : action === "collect" ? (
-                      <Field
-                        name="verification"
-                        label="How did you verify the collector’s ownership?"
-                        maxLength={500}
-                      />
-                    ) : (
-                      <>
-                        <Field
-                          name="days"
-                          label="Extra days (1–30)"
-                          type="number"
-                        />
-                        <Field
-                          name="reason"
-                          label="Reason for extension"
-                          maxLength={500}
-                        />
-                      </>
-                    )}
-                    <button className="fp-primary" disabled={busy}>
-                      {action === "receive"
-                        ? "Confirm receipt & notify owner"
-                        : action === "collect"
-                          ? "Confirm safe collection"
-                          : "Extend deadline"}
-                    </button>
-                  </form>
-                  {action === "collect" && (
-                    <button onClick={() => setAction("extend")}>
-                      Extend the collection deadline instead
-                    </button>
-                  )}
-                </section>
-              </div>
-            )}
           </>
         )}
       </main>
+      {user && needsConsent && !auth && !publicScan && <ConsentGate onAgreed={() => setNeedsConsent(false)} onLogout={() => void run(async () => { await api("/auth/logout", {}); setUser(null); setWorkspace(null); setNeedsConsent(false); navigate("/app/sign-in", { replace: true }); })} />}
       {user && !staff && !auth && !publicScan && <AppDock role={user.role} unread={workspace?.notifications.filter(n=>!n.read_at).length}/>}
       {user && staff && !auth && !publicScan && (
         <nav className="fp-dock" aria-label="App navigation">

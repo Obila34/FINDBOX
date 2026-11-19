@@ -142,7 +142,7 @@ export function CompanyDashboard({ role, name, overview, health, busy, onRefresh
       if (health.queue.failed) list.push({ id: 'mail', severity: 'critical', icon: <Mail size={18} />, title: `${health.queue.failed} ${health.queue.failed === 1 ? 'email' : 'emails'} failed after all retries`, detail: 'People did not receive these messages.', action: { label: 'Inspect delivery', tab: 'mail' } })
       if (health.serverErrors) list.push({ id: 'errors', severity: 'warning', icon: <Zap size={18} />, title: `${health.serverErrors} server ${health.serverErrors === 1 ? 'error' : 'errors'} since the last restart`, detail: 'Check the server logs for the failing requests.' })
       if (!health.worker) list.push({ id: 'worker', severity: 'warning', icon: <Clock size={18} />, title: 'Background worker has not reported yet', detail: 'Reminders and emails depend on it.' })
-      if (!health.offsiteBackup) list.push({ id: 'backup', severity: 'warning', icon: <HardDriveDownload size={18} />, title: 'No off-site backup reported yet', detail: 'Run the laptop backup and confirm it arrives.' })
+      if (!health.offsiteBackup) list.push({ id: 'backup', severity: 'warning', icon: <HardDriveDownload size={18} />, title: 'No off-site backup reported yet', detail: 'Connect off-site storage, or run the laptop backup, so a copy exists away from the server.' })
       const missing = Object.entries(health.integrations).filter(([, v]) => !v).map(([k]) => nice(k))
       if (missing.length) list.push({ id: 'integrations', severity: 'info', icon: <Plug size={18} />, title: `${missing.length} ${missing.length === 1 ? 'integration' : 'integrations'} not configured`, detail: missing.join(', ') })
     }
