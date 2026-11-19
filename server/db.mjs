@@ -4,7 +4,7 @@ export function connect() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required");
   return new pg.Pool({
     connectionString: process.env.DATABASE_URL,
-    max: Math.max(1, Math.min(50, Number(process.env.DB_POOL_SIZE)||10)),
+    max: Math.max(1, Math.min(50, Number(process.env.DB_POOL_SIZE)||20)),
     statement_timeout: 10000,
     idle_in_transaction_session_timeout: 15000,
     connectionTimeoutMillis: 5000,

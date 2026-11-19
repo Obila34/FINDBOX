@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ArrowDownWideNarrow, ArrowRight, BarChart3, ClipboardCheck, GraduationCap, History, LayoutDashboard, LayoutGrid, LogOut, MapPin, Menu, PackageSearch, Plus, RefreshCw, Search, Settings as Cog, SlidersHorizontal, Trophy, UserCog, Users, type LucideIcon } from 'lucide-react'
+import { ArrowDownWideNarrow, ArrowRight, BarChart3, ClipboardCheck, GraduationCap, History, Sparkles, LayoutDashboard, LayoutGrid, LogOut, MapPin, Menu, PackageSearch, Plus, RefreshCw, Search, Settings as Cog, SlidersHorizontal, Trophy, UserCog, Users, type LucideIcon } from 'lucide-react'
 import { api, ApiError } from '../api'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { SwirlMark } from '@/components/brand/Logo'
 import { Houses } from '../Houses'
+import { Assistant } from '../assistant/Assistant'
 import { CountUp, ease, spring } from '../crm/fx'
 import { CasePanel, type Row } from './CasePanel'
 import { Approvals, Boxes, DeskBoard, Families, Overview, Report, Settings, StaffPage, Students } from './DeskPages'
@@ -15,7 +16,7 @@ import './school.css'
 
 type NavItem = [page: string, label: string, Icon: LucideIcon, badge?: string]
 const NAV: [string, NavItem[]][] = [
-  ['', [['overview', 'Overview', LayoutDashboard], ['board', 'Lost and found', PackageSearch, 'board'], ['approvals', 'Approvals', ClipboardCheck, 'approvals']]],
+  ['', [['overview', 'Overview', LayoutDashboard], ['board', 'Lost and found', PackageSearch, 'board'], ['approvals', 'Approvals', ClipboardCheck, 'approvals'], ['assistant', 'Assistant', Sparkles]]],
   ['People', [['students', 'Students', GraduationCap], ['classes', 'Classes', LayoutGrid], ['families', 'Families', Users], ['staff', 'Staff', UserCog], ['houses', 'Houses', Trophy]]],
   ['School', [['boxes', 'Collection boxes', MapPin], ['activity', 'Activity', History], ['report', 'Report', BarChart3], ['settings', 'Settings', Cog]]],
 ]
@@ -99,6 +100,7 @@ export function SchoolDesk() {
                 <div className="crm-tabs"><button type="button" className={view === 'board' ? 'is-on' : ''} onClick={() => setView('board')}>Board</button><button type="button" className={view === 'log' ? 'is-on' : ''} onClick={() => setView('log')}>Not yet home</button></div></div>
               {view === 'board' ? <DeskBoard compact query={query} open={item} onOpen={setItem} version={version} /> : <ItemLog query={query} version={version} onOpen={setItem} onChanged={bump} />}
             </>
+            : page === 'assistant' ? <Assistant />
             : page === 'approvals' ? <Approvals version={version} onOpen={setItem} onChanged={bump} isManager />
             : page === 'students' ? <Students query={query} version={version} onChanged={bump} form={form} setForm={setForm} onOpen={setStudent} editId={editId} clearEdit={() => setEditId('')} />
             : page === 'classes' ? <Classes version={version} onPick={(name) => { go('students'); setSearch(name) }} />

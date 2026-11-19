@@ -151,14 +151,14 @@ export function Assistant() {
       <header className="as-top">
         <button type="button" className="as-icon as-history-toggle" aria-label="Show conversations" onClick={() => setHistory(v => !v)}><History size={17} /></button>
         <div className="as-title"><span className="as-orb"><SwirlMark size={22} /></span><div><strong>FindBox Assistant</strong><small className={'is-' + status.tone}><i />{status.text}</small></div></div>
-        <span className="as-role">{meta?.role === 'developer' ? 'Developer' : meta?.role === 'admin' ? 'Admin' : ''}</span>
+        <span className="as-role">{meta?.role === 'developer' ? 'Developer' : meta?.role === 'admin' ? 'Admin' : meta?.role === 'principal' ? 'School' : ''}</span>
         <button type="button" className="as-icon" aria-label="New chat" onClick={fresh}><MessageSquarePlus size={17} /></button>
       </header>
       <div className="as-scroll">
         {!msgs.length ? <div className="as-empty">
           <motion.span className="as-hero-orb" animate={still ? undefined : { rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}><SwirlMark size={64} still /></motion.span>
           <h2>{hello}</h2>
-          <p>Ask about {meta?.role === 'developer' ? 'system health, accounts, sessions, schools, emails and privacy requests' : 'orders, invoices, support, clients, schools and platform numbers'}. I look things up instantly and prepare changes for you to confirm.</p>
+          <p>Ask about {meta?.role === 'principal' ? 'items not yet home, overdue items, students, classes, staff, houses, approvals and your term report' : meta?.role === 'developer' ? 'system health, accounts, sessions, schools, emails and privacy requests' : 'orders, invoices, support, clients, schools and platform numbers'}. I look things up instantly and prepare changes for you to confirm.</p>
           <div className="as-suggest">{meta?.suggestions.map((s, i) => <motion.button key={s} type="button" onClick={() => void send(s)} initial={still ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 * i }}><Zap size={14} />{s}</motion.button>)}</div>
           <small className="as-privacy"><ShieldCheck size={13} />Runs on FindBox's own server. Nothing you ask leaves it.</small>
         </div> : <div className="as-thread">

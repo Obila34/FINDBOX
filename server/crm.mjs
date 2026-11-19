@@ -465,9 +465,9 @@ export async function crmRoutes(app, { pool, operator }) {
       const issue = (await pool.query('SELECT issue_id FROM crm_issue_reports WHERE ticket_id=$1', [rid])).rows[0];
       record = { title: t.subject, subtitle: `Ticket · ${t.kind} · ${t.status.replace('_', ' ')}`, ticket: { id: t.id, name: t.name, email: t.email, kind: t.kind, status: t.status, message: t.message, created_at: t.created_at, user_id: t.user_id, overdue: ticketOverdue(t), leadId: lead?.id || null, issueId: issue?.issue_id || null } };
     } else {
-      const o = (await pool.query('SELECT o.*,p.name AS customer,s.name AS school,(SELECT name FROM students WHERE id=o.student_id) AS child FROM orders o JOIN users p ON p.id=o.user_id LEFT JOIN schools s ON s.id=o.school_id WHERE o.id=$1', [rid])).rows[0];
+      const o = (await pool.query('SELECT o.*,p.name AS customer,s.name AS school,(SELECT name FROM students WHERE id=o.student_id) AS child,(SELECT code FROM tags WHERE student_id=o.student_id AND status=$2 LIMIT 1) AS child_qr FROM orders o JOIN users p ON p.id=o.user_id LEFT JOIN schools s ON s.id=o.school_id WHERE o.id=$1', [rid, 'active'])).rows[0];
       requireThat(o, 404, 'Order not found');
-      record = { title: 'Order for ' + o.customer, subtitle: `Order · ${o.status}${o.delivered_at ? ' · delivered' : ''}`, order: { id: o.id, status: o.status, amount_minor: Number(o.amount_minor), lines: o.lines, delivery: o.delivery, delivery_address: o.delivery_address, delivered_at: o.delivered_at, created_at: o.created_at, customer: o.customer, customer_id: o.user_id, school: o.school, child: o.child } };
+      record = { title: 'Order for ' + o.customer, subtitle: `Order · ${o.status}${o.delivered_at ? ' · delivered' : ''}`, order: { id: o.id, status: o.status, amount_minor: Number(o.amount_minor), lines: o.lines, delivery: o.delivery, delivery_address: o.delivery_address, delivered_at: o.delivered_at, created_at: o.created_at, customer: o.customer, customer_id: o.user_id, school: o.school, child: o.child, childQr: o.child_qr } };
     }
     timeline.sort((a, b) => new Date(b.at) - new Date(a.at));
     // Opening a customer record is itself recorded.

@@ -1508,7 +1508,7 @@ test("assistant routes questions to role-scoped tools, proposes changes for conf
     assert.equal(count.status, 200);
     assert.equal(count.get("result")[0].tool, "platform_stats");
     assert.ok(count.get("result")[0].rows.some((r) => /User accounts/.test(r.metric)));
-    assert.equal(count.text, "Here is the answer.");
+    assert.ok(count.text.endsWith("Here is the answer.") && count.text.startsWith("Platform numbers:"), "the first line comes from the data, then the model adds to it");
     const signedIn = await chat(smart, dev, "Who is signed in right now?");
     assert.equal(signedIn.get("result")[0].tool, "who_is_signed_in");
 
@@ -1775,4 +1775,155 @@ test("school desk, deeper: the not-yet-home log, one-step receive by staff, remi
   assert.equal(r.statusCode, 200, r.body);
   assert.equal(r.json().families, 1);
   assert.equal((await call2("POST", "/api/school/desk/remind-families", {}, head)).statusCode, 409, "at most once a week");
+});
+
+test("the principal gets the assistant for their own school only", async () => {
+  const head = await login("desk-head@test.com"), teacher = await login("desk-staff@test.com");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.4", headers: { origin: "http://localhost:5173", "x-findbox-portal": "school", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  const meta = (await req("GET", "/api/company/assistant", undefined, head)).json();
+  assert.equal(meta.role, "principal");
+  const names = meta.tools.map((t) => t.name);
+  assert.ok(["school_overview", "items_not_home", "overdue_items", "find_student", "unlinked_students", "collection_points", "valuables_held", "loss_hotspots", "notify_family", "add_collection_box", "what_can_you_do"].every((n) => names.includes(n)), "school tools");
+  assert.ok(!names.some((n) => ["platform_stats", "find_users", "lead_pipeline", "system_issues", "school_health", "my_tasks", "add_lead", "disable_user"].includes(n)), "no company tools");
+  assert.equal((await req("GET", "/api/company/assistant", undefined, teacher)).statusCode, 403, "teachers do not get it");
+  const chat = async (message) => { const r = await req("POST", "/api/company/assistant/chat", { message }, head); const events = r.body.split(String.fromCharCode(10, 10)).filter(Boolean).map((b) => ({ event: /event: (.*)/.exec(b)?.[1], data: JSON.parse(/data: (.*)/.exec(b)?.[1] || "{}") })); return events; };
+  let ev = await chat("Which items are not yet home?");
+  const result = ev.find((e) => e.event === "result").data;
+  assert.equal(result.tool, "items_not_home");
+  assert.ok(result.rows.every((r) => typeof r.item === "string"));
+  ev = await chat("How are the classes doing?");
+  assert.equal(ev.find((e) => e.event === "result").data.tool, "class_progress");
+  // Changes are only proposed; nothing is sent until the principal confirms.
+  const sentBefore = (await pool.query("SELECT count(*)::int n FROM operation_audit WHERE action='school_families_reminded'")).rows[0].n;
+  ev = await chat("Remind all families please");
+  const proposal = ev.find((e) => e.event === "proposal").data;
+  assert.match(proposal.summary, /Remind every family at Desk School/);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM operation_audit WHERE action='school_families_reminded'")).rows[0].n, sentBefore);
+
+  // More tools: each question reaches its own tool and reads this school only.
+  const ask = async (message) => { const e = await chat(message); return { result: e.find((x) => x.event === "result")?.data, proposal: e.find((x) => x.event === "proposal")?.data, text: e.filter((x) => x.event === "token" || x.event === "error").map((x) => x.data.text).join("") }; };
+  let a = await ask("Any valuables in the box?");
+  assert.equal(a.result.tool, "valuables_held");
+  assert.ok(a.result.rows.some((r) => r.item === "Silver watch" && /Tumaini Desk/.test(r.owner)));
+  a = await ask("Where do things get lost?");
+  assert.equal(a.result.tool, "loss_hotspots");
+  assert.ok(a.result.rows.some((r) => r.kind === "Place" && r.name === "Swimming pool"));
+  a = await ask("Find student Tumaini Desk");
+  assert.equal(a.result.tool, "find_student");
+  assert.equal(a.result.rows[0].name, "Tumaini Desk");
+  assert.equal(a.result.rows[0].parent, "Linked");
+  assert.equal((await ask("Which students have no parent linked?")).result.tool, "unlinked_students");
+  assert.equal((await ask("Which items are overdue?")).result.tool, "overdue_items");
+  a = await ask("How full are the collection points?");
+  assert.equal(a.result.tool, "collection_points");
+  assert.ok(a.result.rows.some((r) => r.name === "Reception") && a.result.rows.some((r) => r.name === "Library"));
+  assert.equal((await ask("Which items are not yet home for Tumaini?")).result.rows.every((r) => /Tumaini/.test(r.owner)), true, "the log can be narrowed by name");
+  a = await ask("What can you do?");
+  assert.equal(a.result.tool, "what_can_you_do");
+  assert.ok(a.result.rows.some((r) => r.kind === "Prepare a change") && a.result.rows.length === names.length - 1);
+  assert.equal((await ask("What is waiting for my approval?")).result.tool, "pending_approvals");
+
+  // One family is reminded only after the principal confirms.
+  const confirm = (card) => req("POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, head);
+  const before = (await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n;
+  a = await ask("Notify the family about the Silver watch");
+  assert.match(a.proposal.summary, /Tell the family to collect Silver watch \(Tumaini Desk/);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n, before);
+  let done = await confirm(a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM notifications WHERE user_id='desk-parent' AND message LIKE 'Reminder: Silver watch%'")).rows[0].n, before + 1);
+  a = await ask("Notify the family of Nobody Here");
+  assert.equal(a.proposal, undefined);
+  assert.match(a.text, /Nothing waiting in a box/);
+  a = await ask("Add a collection box called Sports Hall");
+  assert.match(a.proposal.summary, /Add a collection box called Sports Hall/);
+  done = await confirm(a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT count(*)::int n FROM boxes WHERE school_id='desk' AND name='Sports Hall' AND active")).rows[0].n, 1);
+  assert.match((await ask("Add a collection box")).text, /need/i, "a missing name is asked for");
+});
+
+test("the assistant works the CRM: pipeline, tasks, health and system issues, each change confirmed first", async () => {
+  const token = async (uid) => { const t = crypto.randomUUID(); await pool.query("INSERT INTO sessions(token_hash,user_id,expires_at,mfa_verified,portal) VALUES($1,$2,now()+interval '1 hour',true,'ops')", [hash(t), uid]); return "findbox_ops_session=" + t; };
+  const admin = await token("crm-admin"), dev = await token("crm-dev");
+  const req = (method, url, payload, cookie) => app.inject({ method, url, payload, remoteAddress: "127.0.9.5", headers: { origin: "http://localhost:5173", "x-findbox-portal": "ops", ...(payload ? { "x-findbox-request": "1" } : {}), cookie } });
+  const ask = async (cookie, message) => {
+    const r = await req("POST", "/api/company/assistant/chat", { message }, cookie);
+    const e = r.body.split(String.fromCharCode(10, 10)).filter(Boolean).map((b) => ({ event: /event: (.*)/.exec(b)?.[1], data: JSON.parse(/data: (.*)/.exec(b)?.[1] || "{}") }));
+    return { result: e.find((x) => x.event === "result")?.data, proposal: e.find((x) => x.event === "proposal")?.data, text: e.filter((x) => x.event === "token" || x.event === "error").map((x) => x.data.text).join("") };
+  };
+  const confirm = (cookie, card) => req("POST", `/api/company/assistant/actions/${card.id}/confirm`, {}, cookie);
+  const meta = (await req("GET", "/api/company/assistant", undefined, admin)).json(), devMeta = (await req("GET", "/api/company/assistant", undefined, dev)).json();
+  assert.ok(["lead_pipeline", "add_lead", "move_lead", "family_accounts", "mark_order_delivered", "my_tasks", "school_health", "system_issues", "log_issue"].every((n) => meta.tools.some((t) => t.name === n)));
+  assert.ok(["system_signals", "triage_issue", "my_tasks", "system_issues"].every((n) => devMeta.tools.some((t) => t.name === n)));
+  assert.ok(!devMeta.tools.some((t) => ["lead_pipeline", "add_lead", "move_lead", "family_accounts", "mark_order_delivered"].includes(t.name)), "sales tools are the admin's");
+  assert.ok(!meta.tools.some((t) => ["triage_issue", "system_signals"].includes(t.name)), "triage is the developer's");
+
+  // A lead is added, then moved, each only after confirmation; the stage rules still hold.
+  let a = await ask(admin, "Add a lead for Assistant Academy");
+  assert.match(a.proposal.summary, /Add Assistant Academy as a school lead/);
+  assert.equal((await pool.query("SELECT 1 FROM crm_leads WHERE school_name='Assistant Academy'")).rowCount, 0);
+  assert.equal((await confirm(dev, a.proposal)).statusCode, 409, "only the person who asked can confirm");
+  let done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT stage FROM crm_leads WHERE school_name='Assistant Academy'")).rows[0].stage, "new");
+  a = await ask(admin, "Show the school pipeline for Assistant Academy");
+  assert.equal(a.result.tool, "lead_pipeline");
+  assert.deepEqual(a.result.rows.map((r) => [r.title, r.stage]), [["Assistant Academy", "New"]]);
+  a = await ask(admin, "Move the Assistant Academy lead to contacted");
+  assert.match(a.proposal.summary, /Move Assistant Academy from New to contacted/);
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 400, "no contact yet, so the stage rule refuses");
+  await pool.query("UPDATE crm_leads SET contact_name='Head Teacher' WHERE school_name='Assistant Academy'");
+  a = await ask(admin, "Move the Assistant Academy lead to contacted");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.equal((await pool.query("SELECT stage FROM crm_leads WHERE school_name='Assistant Academy'")).rows[0].stage, "contacted");
+  assert.match((await ask(admin, "Move the Nowhere School lead to demo")).text, /No lead matches/);
+
+  // Tasks: added with a due date read from the sentence, then listed with the work queue.
+  a = await ask(admin, "Add a task to call Assistant Academy by tomorrow");
+  assert.equal(a.proposal.summary, "Add a task: call Assistant Academy");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  const task = (await pool.query("SELECT due_at,assignee_id FROM crm_tasks WHERE title='call Assistant Academy'")).rows[0];
+  assert.equal(task.assignee_id, "crm-admin");
+  assert.ok(task.due_at, "the due date was read from the sentence");
+  a = await ask(admin, "What should I work on?");
+  assert.equal(a.result.tool, "my_tasks");
+  assert.ok(a.result.rows.some((r) => r.kind === "Task" && r.what === "call Assistant Academy"));
+
+  // Health and families are read from the CRM.
+  a = await ask(admin, "Which schools are at risk?");
+  assert.equal(a.result.tool, "school_health");
+  assert.ok(a.result.rows.length > 0 && a.result.rows.every((r) => typeof r.health === "string"));
+  assert.equal((await ask(admin, "Show top spending families")).result.tool, "family_accounts");
+  assert.equal((await ask(admin, "List schools")).result.tool, "find_schools", "the plain list still works");
+
+  // System issues: support logs one, the developer triages it.
+  a = await ask(admin, "Log an issue: assistant labels print blank, reported by mum@assistant.test");
+  assert.equal(a.proposal.summary, "Log a system issue: assistant labels print blank");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  const issue = (await pool.query("SELECT id,status,severity FROM crm_issues WHERE title='assistant labels print blank'")).rows[0];
+  assert.deepEqual([issue.status, issue.severity], ["new", null]);
+  assert.equal((await pool.query("SELECT email FROM crm_issue_reports WHERE issue_id=$1", [issue.id])).rows[0].email, "mum@assistant.test");
+  a = await ask(dev, "Show open system issues");
+  assert.equal(a.result.tool, "system_issues");
+  assert.ok(a.result.rows.some((r) => r.title === "assistant labels print blank" && r.severity === "Needs triage"));
+  a = await ask(dev, "Triage the assistant labels issue as major");
+  assert.match(a.proposal.summary, /Triage "assistant labels print blank" as S2/);
+  done = await confirm(dev, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.deepEqual(Object.values((await pool.query("SELECT status,severity FROM crm_issues WHERE id=$1", [issue.id])).rows[0]), ["triaged", "s2"]);
+  a = await ask(dev, "Show system signals");
+  assert.equal(a.result.tool, "system_signals");
+  assert.ok(a.result.rows.length > 0);
+  a = await ask(dev, "What can you do?");
+  assert.equal(a.result.rows.length, devMeta.tools.length - 1);
+  assert.notEqual((await ask(dev, "Show the school pipeline")).result?.tool, "lead_pipeline");
+  a = await ask(admin, "Log a critical issue: assistant checkout is down");
+  done = await confirm(admin, a.proposal);
+  assert.equal(done.statusCode, 200, done.body);
+  assert.deepEqual(Object.values((await pool.query("SELECT status,severity FROM crm_issues WHERE title='assistant checkout is down'")).rows[0]), ["triaged", "s1"]);
 });

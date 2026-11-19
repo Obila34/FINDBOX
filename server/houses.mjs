@@ -278,7 +278,7 @@ export async function houseRoutes(app, { pool, user }) {
   });
 
   // No QR on it: describe it (and add a photo if you can), then hand it in. The school is told at once.
-  app.post("/api/found/untagged", { config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (req) => {
+  app.post("/api/found/untagged", { bodyLimit: 320000, config: { rateLimit: { max: 20, timeWindow: "1 hour" } } }, async (req) => {
     const u = await verified(req);
     requireThat(u.school_id, 409, "Join your school first, so we know where the item is.");
     const d = z.object({

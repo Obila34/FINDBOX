@@ -111,3 +111,8 @@
   .fb-site-nav.is-bar:has(.fb-nav-pill-app) { height: 64px; }
 }
 @media (min-width: 768px) { .fb-site-nav-row { padding: 14px 24px 0; } }
+
+/* Sign-up consent */
+.fs-consent { display: flex !important; align-items: flex-start; gap: 10px; font-size: 12.5px; line-height: 1.45; text-align: left; }
+.fs-consent input { width: 18px !important; height: 18px; flex: none; margin-top: 2px; }
+.fs-consent a { text-decoration: underline; }

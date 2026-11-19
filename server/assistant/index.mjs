@@ -12,16 +12,17 @@ import { structured, stream, status as llmStatus, ensureModel, warm } from './ll
 
 const EMAIL = /[\w.+-]+@[\w-]+(\.[\w-]+)+/g
 const ROLE_WORDS = { teacher: 'staff', staff: 'staff', parent: 'parent', student: 'student', admin: 'manager', manager: 'manager' }
-const SMALLTALK = /^(hi|hello|hey|thanks|thank you|ok|okay|good (morning|afternoon|evening)|who are you|what can you do|help)\b/i
+const SMALLTALK = /^(hi|hello|hey|thanks|thank you|ok|okay|good (morning|afternoon|evening)|who are you)\b/i
 
 const SUGGESTIONS = {
-  admin: ['How many users do we have?', 'Show orders waiting to be fulfilled', "What's in the support inbox?", 'Show unpaid invoices', 'Give me today\'s overview', 'Draft an announcement to all families'],
-  developer: ['Is everything healthy?', 'Who is signed in right now?', 'Any failed emails?', 'Show pending school admin invitations', 'How many students are on rosters?', 'Show the latest audit history'],
+  admin: ['What should I work on?', 'Show the school pipeline', 'Which schools are at risk?', 'Show orders waiting to be fulfilled', "What's in the support inbox?", 'Show unpaid invoices', 'Give me today\'s overview', 'Draft an announcement to all families'],
+  principal: ['How is the school doing?', 'Which items are not yet home?', 'Which items are overdue?', 'Which students have no parent linked?', 'Where do things get lost?', 'What can you do?'],
+  developer: ['What should I work on?', 'Show open system issues', 'Is everything healthy?', 'Who is signed in right now?', 'Any failed emails?', 'Show pending school admin invitations', 'How many students are on rosters?', 'Show the latest audit history'],
 }
 
 function systemPrompt(access) {
   // Kept short on purpose: the server reads about 24 tokens a second, so every word here costs time.
-  return `You are the FindBox assistant for ${access.name} (company ${access.role}). FindBox is a school lost-and-found platform in Kenya.
+  return `You are the FindBox assistant for ${access.name} (${access.role === 'principal' ? 'school administrator; answer only about their own school' : 'company ' + access.role}). FindBox is a school lost-and-found platform in Kenya.
 Use only the DATA and conversation; never invent names, numbers or events. Start with a one-sentence answer, then at most three short bullets. The table is shown below your answer. Never say you changed anything. Money is KSh; times are Nairobi.`
 }
 
@@ -38,7 +39,7 @@ function score(message, tools, schools = []) {
   const m = message.toLowerCase()
   const hasEmail = /[\w.+-]+@[\w-]+(\.[\w-]+)+/.test(message)
   const hasSchool = schools.some(s => m.includes(s.toLowerCase()))
-  const command = /^(please |can you |could you |kindly )?(disable|enable|re-?enable|block|unblock|suspend|archive|activate|reactivate|invite|create|add|onboard|rename|rotate|reset|retry|resend|send|issue|void|record|fulfil|fulfill|reply|mark|announce|post|sign|log|make|set|change|restore)\b/i.test(m)
+  const command = /^(please |can you |could you |kindly )?(disable|enable|re-?enable|block|unblock|suspend|archive|activate|reactivate|invite|create|add|onboard|rename|rotate|reset|retry|resend|send|issue|void|record|fulfil|fulfill|reply|mark|announce|post|sign|log|make|set|change|restore|move|triage|notify|remind)\b/i.test(m)
   const question = /^(how many|show|list|what|who|which|find|search|look|is |are |any |give me|get )/i.test(m)
   return tools.map(t => {
     let s = 0
@@ -51,6 +52,41 @@ function score(message, tools, schools = []) {
     if (hasSchool && t.params?.school) s += 2
     return { tool: t, s }
   }).filter(x => x.s > 0).sort((a, b) => b.s - a.s)
+}
+
+// ----- reading a field straight from the sentence, for tools that allow it -----
+const CAPS = /^([A-Z][\w'’.-]*(?:\s+(?:[A-Z][\w'’.-]*|\d+[A-Za-z]?)){0,3})/
+const SKIP = "(?:the |a |an |student |pupil |learner |lead |issue |item |family of |parents? of |family |parents? |for |about )*"
+/** "for Hillcrest", "find student Amina Otieno", "move the Hillcrest lead to demo", "remind the family about the blue sweater". */
+export function looseQuery(message) {
+  const m = message.match(new RegExp("\\b(?:for|about|of|find|search for|look ?up|student|pupil|learner|lead|issue|move|triage|notify|remind)\\s+" + SKIP + "(.*)$", 'i'))
+  const caps = m && m[1].match(CAPS)
+  if (caps) return caps[1].replace(/[.'’-]+$/, '')
+  const about = message.match(/\babout\s+(?:the |a |an |their |her |his )?(.+?)[.?!]*$/i)
+  if (about) return about[1].trim()
+  const mid = message.match(/\b(?:move|triage|notify|remind)\s+(?:the |a |an )?(?:family of |parents? of )?(.+?)\s+(?:to|as)\b/i)
+  return mid ? mid[1].replace(/\s*\b(lead|issue|bug|problem|family|parents?)$/i, '').trim() : ''
+}
+const DUE_TAIL = /[,;]?\s+(?:(?:by|due|on|before)\s+)?(?:tomorrow|today|next week|\d{4}-\d{2}-\d{2}|in \d{1,2} days?)[.!]*$/i
+export function ruleTitle(message) {
+  const dq = message.match(/["“]([^"”]{3,180})["”]/)
+  const t = dq ? dq[1] : (message.match(/\b(?:tasks?|reminder|to-?do|issue|problem|bug|complaint|remind me)\b(?:\s+(?:to|that|about|for|saying))?\s*[:–-]?\s+(.{4,180})$/i) || [])[1]
+  return t ? t.replace(/[,;]?\s*(?:reported by|from)\s+\S+@\S+\s*$/i, '').replace(DUE_TAIL, '').replace(/[.\s]+$/, '').trim() : ''
+}
+export function ruleName(message) {
+  const dq = message.match(/["“]([^"”]{2,150})["”]/)
+  if (dq) return dq[1]
+  // The clearest wording wins: "called X", then "for X", then the word right after "lead" or "box".
+  for (const lead of ['named|called', 'for|at', 'lead|prospect|box|point']) {
+    const m = message.match(new RegExp("\\b(?:" + lead + ")\\s+(?:the |a |an )?([A-Z][\\w'’.&-]*(?:\\s+(?:[A-Z][\\w'’.&-]*|of|\\d+[A-Za-z]?)){0,5})"))
+    if (m) return m[1].replace(/[.'’-]+$/, '')
+  }
+  return ''
+}
+export function ruleDue(message, now = Date.now()) {
+  const iso = (n) => new Date(now + 3 * 3600000 + n * 864e5).toISOString().slice(0, 10)
+  const m = message.match(/\b(\d{4}-\d{2}-\d{2})\b/), inDays = message.match(/\bin (\d{1,2}) days?\b/i)
+  return m ? m[1] : /\btomorrow\b/i.test(message) ? iso(1) : /\btoday\b/i.test(message) ? iso(0) : /\bnext week\b/i.test(message) ? iso(7) : inDays ? iso(Number(inDays[1])) : ''
 }
 
 /** Rule-based argument extraction: emails, schools, ids, amounts, quoted text, enums. */
@@ -80,6 +116,11 @@ function extract(message, tool, ctx) {
     if (k === 'status' && !args.status && /\bresolv/i.test(message)) args.status = tool.params.status.enum?.includes('resolved') ? 'resolved' : args.status
     if (k === 'name' && tool.name === 'create_school' && quoted[0]) args.name = quoted[0]
     if (k === 'new_name' && quoted[0]) args.new_name = quoted[quoted.length - 1]
+    if (k === 'query' && !args.query && tool.looseQuery) { const q = looseQuery(message); if (q) args.query = q }
+    if (k === 'title' && tool.ruleTitle) { const t = ruleTitle(message); if (t) args.title = t }
+    if (k === 'name' && tool.ruleName) { const n = ruleName(message); if (n) args.name = n }
+    if (k === 'due') { const d = ruleDue(message); if (d) args.due = d }
+    if (k === 'severity' && !args.severity) { if (/\b(critical|outage|down for everyone)\b/i.test(message)) args.severity = 's1'; else if (/\bmajor\b/i.test(message)) args.severity = 's2'; else if (/\bminor\b/i.test(message)) args.severity = 's3'; else if (/\bcosmetic\b/i.test(message)) args.severity = 's4' }
   }
   return args
 }
@@ -128,7 +169,7 @@ ${candidates.map(t => `- ${t.name}: ${t.desc}`).join('\n')}` },
   if (!tool) return { tool: null, args: {} }
   const ctx = { schools, memory }
   const args = extract(message, tool, ctx)
-  const free = Object.entries(tool.params || {}).filter(([k, d]) => args[k] === undefined && (d.required || ['query', 'reply', 'message', 'title', 'name', 'new_name', 'resolution', 'reference', 'box', 'directions', 'hours'].includes(k))).map(([k]) => k)
+  const free = Object.entries(tool.params || {}).filter(([k, d]) => args[k] === undefined && (d.required || !tool.quick && ['query', 'reply', 'message', 'title', 'name', 'new_name', 'resolution', 'reference', 'box', 'directions', 'hours'].includes(k))).map(([k]) => k)
   if (free.length) {
     onStatus('Reading the details')
     const got = await ask(() => structured(cfg, [
@@ -150,7 +191,7 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
   const call = (req) => async (method, url, body) => {
     const r = await app.inject({ method, url, payload: body, remoteAddress: req.ip, headers: {
       cookie: req.headers.cookie || '', 'user-agent': req.headers['user-agent'] || 'FindBox assistant',
-      'x-findbox-portal': 'ops', origin: req.headers.origin || cfg.opsOrigin || cfg.origin,
+      'x-findbox-portal': req.headers['x-findbox-portal'] || 'ops', origin: req.headers.origin || cfg.opsOrigin || cfg.origin,
       ...(body ? { 'x-findbox-request': '1', 'content-type': 'application/json' } : {}),
     } })
     let data = {}; try { data = r.json() } catch { /* empty */ }
@@ -159,8 +200,13 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
   }
   // The company access endpoint enforces the ops portal, MFA and company role; user() gives the session's account.
   async function access(req) {
-    const a = await call(req)('GET', '/api/company/access')
     const u = await user(req)
+    // A school administrator signed in to the school portal gets the assistant for their own school only.
+    if (u.role === 'manager' && u.school_id && u.session_portal !== 'ops' && !(await pool.query('SELECT 1 FROM company_access WHERE user_id=$1', [u.id])).rowCount) {
+      if (!u.verified) throw new ToolError('Verify your email before using the assistant', 403)
+      return { role: 'principal', name: u.name, userId: u.id, schoolId: u.school_id }
+    }
+    const a = await call(req)('GET', '/api/company/access')
     return { ...a, userId: u.id }
   }
   const schoolNames = async () => (await pool.query("SELECT name FROM schools WHERE lifecycle<>'archived' ORDER BY length(name) DESC")).rows.map(r => r.name)
@@ -228,7 +274,7 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
     req.raw.on('close', () => abort.abort())
     send('conversation', { id: convo.id })
     const tools = toolsFor(a.role)
-    const ctx = { pool, api: call(req), role: a.role, memory, schools: await schoolNames(), reason: ('FindBox assistant: ' + message).slice(0, 480), requestKey: randomUUID() }
+    const ctx = { pool, api: call(req), role: a.role, memory, schools: a.role === 'principal' ? [] : await schoolNames(), reason: ('FindBox assistant: ' + message).slice(0, 480), requestKey: randomUUID() }
     let online = true
     const llm = async (fn) => { if (!online) return null; try { return await fn() } catch (e) { if (abort.signal.aborted) throw e; online = false; send('status', { text: 'The AI model is offline, so I am answering from rules only.', offline: true }); return null } }
     let text = '', data = {}
@@ -256,13 +302,19 @@ export async function assistantRoutes(app, { pool, cfg, user }) {
       // 4. Answer.
       if (!text) {
         send('status', { text: 'Writing the answer' })
-        const msgs = [{ role: 'system', content: systemPrompt(a) }, ...history.slice(-7, -1).map(h => ({ role: h.role, content: h.content.slice(0, 600) }))]
+        let lead = ''
+        if (result) {
+          lead = result.rows.length ? `${result.title}: ${result.rows.length} ${result.rows.length === 1 ? 'result' : 'results'}${result.facts?.length ? '. ' + result.facts.slice(0, 3).join('. ') : ''}.` : `Nothing found for ${result.title.toLowerCase()}.`
+          send('token', { text: lead + '\n\n' })
+        }
+        const msgs = [{ role: 'system', content: systemPrompt(a) + (lead ? ' The user already sees this first line: "' + lead + '" Do not repeat it. Add at most three short bullets of insight from the DATA, or reply with nothing if there is nothing useful to add.' : '') }, ...history.slice(-5, -1).map(h => ({ role: h.role, content: h.content.slice(0, 400) }))]
         msgs.push({ role: 'user', content: result ? `DATA from ${tool.name}:\n${compact(result)}\n\nQuestion: ${message}` : `${message}\n\n(You can look up: ${tools.filter(t => t.kind === 'read').map(t => t.desc.split(':')[0].split('.')[0].toLowerCase()).slice(0, 8).join('; ')}. You can also prepare changes for confirmation.)` })
         const streamed = await llm(() => stream(cfg, msgs, (piece) => send('token', { text: piece }), { signal: abort.signal }))
-        if (streamed) text = streamed
+        if (lead) text = lead + (streamed ? '\n\n' + streamed : '')
+        else if (streamed) text = streamed
         else {
           text = result ? (result.rows.length ? `Here is ${result.title.toLowerCase()}: ${result.rows.length} ${result.rows.length === 1 ? 'row' : 'rows'}.` : `I found nothing for ${result.title.toLowerCase()}.`)
-            : `I can help with ${a.role === 'admin' ? 'orders, invoices, support, clients, announcements and platform numbers' : 'system health, accounts, sessions, schools, emails, privacy requests and platform numbers'}. Try one of the suggestions.`
+            : `I can help with ${a.role === 'principal' ? 'items not yet home, classes, staff, houses, approvals and your term report' : a.role === 'admin' ? 'orders, invoices, support, clients, announcements and platform numbers' : 'system health, accounts, sessions, schools, emails, privacy requests and platform numbers'}. Try one of the suggestions.`
           send('token', { text })
         }
       }

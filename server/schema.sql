@@ -214,3 +214,22 @@ CREATE INDEX IF NOT EXISTS crm_issue_reports_issue_idx ON crm_issue_reports(issu
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS found_at text NOT NULL DEFAULT '';
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS valuable boolean NOT NULL DEFAULT false;
 ALTER TABLE cases ADD COLUMN IF NOT EXISTS student_id text REFERENCES students(id);
+-- Production readiness: consent on record, and indexes for the lookups that grow with schools and families.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_at timestamptz;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS consent_version text;
+CREATE INDEX IF NOT EXISTS events_case_idx ON events(case_id,created_at);
+CREATE INDEX IF NOT EXISTS events_actor_idx ON events(actor_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS case_reviews_case_idx ON case_reviews(case_id,created_at);
+CREATE INDEX IF NOT EXISTS case_reviews_school_idx ON case_reviews(school_id,created_at DESC);
+CREATE INDEX IF NOT EXISTS memberships_school_idx ON memberships(school_id,role);
+CREATE INDEX IF NOT EXISTS students_guardian_idx ON students(guardian_id);
+CREATE INDEX IF NOT EXISTS students_class_idx ON students(school_id,class_name);
+CREATE INDEX IF NOT EXISTS items_student_idx ON items(student_id);
+CREATE INDEX IF NOT EXISTS cases_item_idx ON cases(item_id);
+CREATE INDEX IF NOT EXISTS cases_student_idx ON cases(student_id);
+CREATE INDEX IF NOT EXISTS orders_school_idx ON orders(school_id,status);
+CREATE INDEX IF NOT EXISTS orders_status_idx ON orders(status,created_at DESC);
+CREATE INDEX IF NOT EXISTS claims_status_idx ON claims(status);
+CREATE INDEX IF NOT EXISTS house_stars_user_idx ON house_stars(user_id);
+CREATE INDEX IF NOT EXISTS crm_tasks_entity_idx ON crm_tasks(entity_type,entity_id);
+CREATE INDEX IF NOT EXISTS operation_audit_entity_idx ON operation_audit(entity_id,created_at DESC);

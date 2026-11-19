@@ -41,6 +41,8 @@ const categories = z.enum([
   "electronics",
   "other",
 ]);
+// Bump when the Terms or Privacy Notice change in a way people must accept again.
+export const LEGAL_VERSION = "2026-11";
 const clean = (schema, input) => schema.parse(input);
 const plusDays = (n) => new Date(Date.now() + n * 86400000);
 const event = async (db, caseId, user, action, note = "") =>
@@ -74,7 +76,12 @@ export async function createApp({ pool, config = {}, payments, google, daraja, m
   const pay = payments || paymentProvider(cfg);
   await app.register(cookie);
   await app.register(helmet);
-  await app.register(rateLimit, { max: 150, timeWindow: "1 minute" });
+  await app.register(rateLimit, {
+    max: (req, key) => (String(key).startsWith("s:") ? 240 : 150),
+    timeWindow: "1 minute",
+    // A whole school often shares one internet address, so signed-in people are counted per session.
+    keyGenerator: (req) => { const t = sessionToken(req); return t ? "s:" + hash(t).slice(0, 32) : req.ip; },
+  });
   app.removeContentTypeParser("application/json");
   app.addContentTypeParser(
     "application/json",
@@ -319,6 +326,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
           password,
           role: z.enum(["parent", "student"]),
           schoolCode: z.string().trim().max(100).optional().default(""),
+          consent: z.boolean().optional().default(false),
         }),
         req.body,
       );
@@ -336,8 +344,8 @@ If this was you, there is nothing to do. If not, change your password and sign o
       const u = await transaction(pool, async (db) => {
         const u = (
           await db.query(
-            "INSERT INTO users(id,name,email,password_hash,role,school_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *",
-            [id(), data.name, data.email, pw, data.role, school?.id || null],
+            "INSERT INTO users(id,name,email,password_hash,role,school_id,consent_at,consent_version) VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *",
+            [id(), data.name, data.email, pw, data.role, school?.id || null, data.consent ? new Date() : null, data.consent ? LEGAL_VERSION : null],
           )
         ).rows[0];
         await sendToken(db, u, "verify");
@@ -885,7 +893,7 @@ If this was you, there is nothing to do. If not, change your password and sign o
     ).rows;
     return { code: tag.code, school: tag.school_name, child: (tag.child || "").trim().split(/\s+/)[0] || "", boxes };
   });
-  app.post("/api/staff/unclaimed", async (req) => {
+  app.post("/api/staff/unclaimed", { bodyLimit: 320000 }, async (req) => {
     const u = await staff(req);
     const d = clean(
       z.object({

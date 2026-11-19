@@ -244,3 +244,13 @@ li.is-done > div { text-decoration: line-through; opacity: .55; }
   .crm-num strong { font-size: 24px; }
   .crm-main { overflow-x: clip; }
 }
+
+/* Label sheet for an order: only shown when printing. */
+.crm-labels { display: none; }
+@media print {
+  body:has(#crm-labels) * { visibility: hidden; }
+  #crm-labels, #crm-labels * { visibility: visible; }
+  #crm-labels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5mm; position: absolute; left: 0; top: 0; width: 100%; padding: 8mm; background: #fff; color: #123a2e; }
+  #crm-labels figure { display: grid; justify-items: center; gap: 1.5mm; margin: 0; padding: 2mm; border: .2mm dashed #9aa; border-radius: 2mm; break-inside: avoid; }
+  #crm-labels figcaption { font: 700 8pt Arial, sans-serif; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+}

@@ -31,7 +31,7 @@ export async function profileRoutes(app, { pool, user }) {
     emoji: z.string().max(16).regex(/^[^<>&"']*$/).optional(),
     avatar: z.string().max(Math.ceil(MAX_PHOTO * 1.4) + 40).nullable().optional(),
   }).strict();
-  app.post("/api/account/profile", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req) => {
+  app.post("/api/account/profile", { bodyLimit: 320000, config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req) => {
     const u = await user(req);
     const d = schema.parse(req.body || {});
     if (d.avatar) requireThat(validPhoto(d.avatar), 400, "Please choose a PNG, JPEG or WebP photo under 160 KB.");
