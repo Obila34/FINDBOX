@@ -50,8 +50,14 @@
     header @immutable Cache-Control "public, max-age=604800"
     @fresh path /index.html /sw.js /manifest.webmanifest
     header @fresh Cache-Control "no-cache"
-    try_files {path} /index.html
-    file_server
+    # A missing release file must be a real 404, not the home page, or an old tab breaks instead of reloading.
+    handle /assets/* {
+      file_server
+    }
+    handle {
+      try_files {path} /index.html
+      file_server
+    }
   }
 }
 

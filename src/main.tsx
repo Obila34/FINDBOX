@@ -18,6 +18,9 @@ import { App } from './App'
 import { PwaStatus } from '@/components/layout/PwaStatus'
 import { NotificationCenter } from '@/components/layout/NotificationCenter'
 import { FeedbackHost } from '@/platform/feedback'
+import { watchForNewRelease } from '@/lib/staleBuild'
+
+watchForNewRelease()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
